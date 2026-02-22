@@ -1,0 +1,14 @@
+[
+  {
+    "pattern_id": "OSINT-T001",
+    "pattern_name": "Public Metadata Exposure",
+    "category": "Privacy Risk",
+    "risk_level": 0.6
+  },
+  {
+    "pattern_id": "OSINT-T002",
+    "pattern_name": "Repeated Breach Mentions",
+    "category": "Reputation Risk",
+    "risk_level": 0.7
+  }
+]
