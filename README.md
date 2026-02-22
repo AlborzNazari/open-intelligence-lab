@@ -29,26 +29,27 @@ All data is sourced from public, ethical intelligence materials.
 open-intelligence-lab/
 │
 ├── datasets/
-│   ├── threat_entities/
-│   ├── attack_patterns/
-│   └── relations/
+│ ├── threat_entities/
+│ ├── attack_patterns/
+│ └── relations/
 │
 ├── core_engine/
-│   ├── graph_builder.py
-│   ├── risk_analyzer.py
-│   ├── intelligence_explainer.py
-│   └── intelligence_entities.py
+│ ├── graph_builder.py
+│ ├── risk_analyzer.py
+│ ├── intelligence_explainer.py
+│ └── intelligence_entities.py
 │
 ├── visualization/
-│   ├── graph_renderer.py
-│   └── dashboard/
+│ ├── graph_renderer.py
+│ └── dashboard/
 │
 ├── api/
-│   └── intelligence_api.py
+│ └── intelligence_api.py
 │
 ├── research_docs/
 │
 └── README.md
+
 
 
 Each directory has a clear responsibility:
