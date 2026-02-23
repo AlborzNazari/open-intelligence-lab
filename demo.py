@@ -33,6 +33,9 @@ def main():
 
     draw_threat_graph(graph)
 
+    print("Number of nodes in the graph:", graph.number_of_nodes())
+    print("Number of edges in the graph:", graph.number_of_edges())
+
 
 if __name__ == "__main__":
     main()
