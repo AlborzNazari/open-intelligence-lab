@@ -36,7 +36,7 @@ Below is a high‑level overview of how the system works.
 
 ---
 
-## 🧩 System Architecture (Mermaid Diagram)
+## 🧩 System Architecture 
 
 ```mermaid
 flowchart TD
