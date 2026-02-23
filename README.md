@@ -7,8 +7,7 @@
 Open Intelligence Lab is an ethical OSINT research platform focused on public security intelligence representation, graph‑based threat knowledge modeling, and explainable security analytics.  
 The project provides a structured environment for researchers, analysts, and engineers who want to explore open‑source intelligence signals without compromising privacy or ethical standards.
 
-##
-   ____                 ___       _       _             
+## ____                 ___       _       _             
   / __ \___  ___  ____ / (_)___  (_)___  (_)___  ____ _
  / / / / _ \/ _ \/ __ `/ / / __ \/ / __ \/ / __ \/ __ `/
 / /_/ /  __/  __/ /_/ / / / / / / / / / / / / / / /_/ / 
@@ -16,7 +15,7 @@ The project provides a structured environment for researchers, analysts, and eng
                                                         
       Open Intelligence Lab
       Ethical • Explainable • Graph‑Based OSINT
-
+##
 
 ## 🧠 Vision & Philosophy
 
