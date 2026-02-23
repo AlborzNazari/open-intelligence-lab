@@ -45,3 +45,7 @@ Open an issue with:
 - Proposed solutions (optional)  
 
 Thank you for helping build an open, ethical intelligence research platform.
+
+Contact: leftmountains@gmail.com
+
+
