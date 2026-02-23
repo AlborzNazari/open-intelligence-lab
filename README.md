@@ -44,13 +44,12 @@ The goal is not to replicate existing threat‑intel platforms, but to create a 
 
 ## 🧩 System Architecture (Mermaid Diagram)
 
-```mermaid
 flowchart TD
 
     subgraph Datasets
-        TE[threat_entities/]
-        AP[attack_patterns/]
-        RL[relations/]
+        TE[threat_entities]
+        AP[attack_patterns]
+        RL[relations]
     end
 
     subgraph CoreEngine
@@ -62,7 +61,7 @@ flowchart TD
 
     subgraph Visualization
         GR[graph_renderer.py]
-        DB[(dashboard/)]
+        DB[dashboard]
     end
 
     subgraph API
@@ -70,7 +69,7 @@ flowchart TD
     end
 
     subgraph Research
-        RD[research_docs/]
+        RD[research_docs]
     end
 
     TE --> GB
