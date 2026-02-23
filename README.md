@@ -35,7 +35,10 @@ The goal is not to replicate existing threat‑intel platforms, but to create a 
 
 ## 🧩 System Architecture (Mermaid Diagram)
 
+```mermaid
 flowchart TD
+    A --> B
+
 
     subgraph Datasets
         TE[threat_entities]
