@@ -7,7 +7,15 @@
 Open Intelligence Lab is an ethical OSINT research platform focused on public security intelligence representation, graph‑based threat knowledge modeling, and explainable security analytics.  
 The project provides a structured environment for researchers, analysts, and engineers who want to explore open‑source intelligence signals without compromising privacy or ethical standards.
 
----
+   ____                 ___       _       _             
+  / __ \___  ___  ____ / (_)___  (_)___  (_)___  ____ _
+ / / / / _ \/ _ \/ __ `/ / / __ \/ / __ \/ / __ \/ __ `/
+/ /_/ /  __/  __/ /_/ / / / / / / / / / / / / / / /_/ / 
+\____/\___/\___/\__,_/_/_/_/ /_/_/_/ /_/_/_/ /_/\__,_/  
+                                                        
+      Open Intelligence Lab
+      Ethical • Explainable • Graph‑Based OSINT
+
 
 ## 🧠 Vision & Philosophy
 
@@ -34,35 +42,54 @@ The goal is not to replicate existing threat‑intel platforms, but to create a 
 
 ## 🏗️ Repository Architecture
 
-open-intelligence-lab/
-│
-├── datasets/
-│   ├── threat_entities/        # Organizations, domains, categories
-│   ├── attack_patterns/        # Local OSINT attack pattern taxonomy
-│   └── relations/              # Entity-to-entity relationship data
-│
-├── core_engine/
-│   ├── graph_builder.py        # Knowledge graph construction
-│   ├── risk_analyzer.py        # Risk scoring logic
-│   ├── intelligence_explainer.py # Explainable intelligence layer
-│   └── intelligence_entities.py # Entity schema definitions
-│
-├── visualization/
-│   ├── graph_renderer.py       # Network graph visualization
-│   └── dashboard/              # (Future) interactive dashboards
-│
-├── api/
-│   └── intelligence_api.py     # Lightweight API for intelligence queries
-│
-├── research_docs/              # Notes, methodology, experiments
-│
-└── README.md
+## 🧩 System Architecture (Mermaid Diagram)
 
+```mermaid
+flowchart TD
 
-This structure follows clean‑architecture principles:  
-**data → core logic → visualization → API → research documentation**.
+    subgraph Datasets
+        TE[threat_entities/]
+        AP[attack_patterns/]
+        RL[relations/]
+    end
 
----
+    subgraph CoreEngine
+        GB[graph_builder.py]
+        RA[risk_analyzer.py]
+        IE[intelligence_explainer.py]
+        EN[intelligence_entities.py]
+    end
+
+    subgraph Visualization
+        GR[graph_renderer.py]
+        DB[(dashboard/)]
+    end
+
+    subgraph API
+        IA[intelligence_api.py]
+    end
+
+    subgraph Research
+        RD[research_docs/]
+    end
+
+    TE --> GB
+    AP --> GB
+    RL --> GB
+
+    GB --> RA
+    RA --> IE
+
+    GB --> GR
+    RA --> GR
+    IE --> GR
+
+    IE --> IA
+    RA --> IA
+    GB --> IA
+
+    IA --> RD
+
 
 ## ⚙️ Installation
 
