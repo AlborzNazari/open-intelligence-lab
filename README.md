@@ -7,15 +7,6 @@
 Open Intelligence Lab is an ethical OSINT research platform focused on public security intelligence representation, graph‑based threat knowledge modeling, and explainable security analytics.  
 The project provides a structured environment for researchers, analysts, and engineers who want to explore open‑source intelligence signals without compromising privacy or ethical standards.
 
-## ____                 ___       _       _             
-  / __ \___  ___  ____ / (_)___  (_)___  (_)___  ____ _
- / / / / _ \/ _ \/ __ `/ / / __ \/ / __ \/ / __ \/ __ `/
-/ /_/ /  __/  __/ /_/ / / / / / / / / / / / / / / /_/ / 
-\____/\___/\___/\__,_/_/_/_/ /_/_/_/ /_/_/_/ /_/\__,_/  
-                                                        
-      Open Intelligence Lab
-      Ethical • Explainable • Graph‑Based OSINT
-##
 
 ## 🧠 Vision & Philosophy
 
@@ -89,10 +80,51 @@ flowchart TD
 
     IA --> RD
 
+# Open Intelligence Lab  
+A beginner‑friendly, modular framework for learning and experimenting with **OSINT**, **graph‑based intelligence**, and **explainable risk analysis**.
+
+This project is designed so even junior developers can understand how intelligence systems work step‑by‑step.  
+Everything is built in small, simple modules you can explore, modify, and learn from.
+
+## 🌱 What This Project Is (In Simple Words)
+
+This project helps you:
+
+- Load simple public‑data examples (OSINT‑style)
+- Build a **graph** of entities (people, orgs, attacks, etc.)
+- Analyze relationships and detect patterns
+- Compute simple **risk scores**
+- Visualize the graph
+- Access everything through a small **API**
 
 ## ⚙️ Installation
 
+
+---
+
+## 🧰 Requirements
+
+- Python 3.10 or newer  
+- pip (Python package installer)
+
+---
+
+## 🚀 Getting Started (Super Easy)
+
+### 1. Clone the project
+
+```bash
+git clone https://github.com/AlborzNazari/open-intelligence-lab.git
+cd open-intelligence-lab
+
+
 ### 1. Create a virtual environment (recommended)
+
+python -m venv venv
+venv\Scripts\activate
+source venv/bin/activate
+pip install -r requirements.txt
+
 
 ```bash
 python3 -m venv venv
