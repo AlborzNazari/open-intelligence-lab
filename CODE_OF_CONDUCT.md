@@ -22,4 +22,6 @@ Project maintainers may:
 - Ban repeat offenders  
 
 ## Reporting
-If you experience or witness unacceptable behavior, open a confidential issue or contact the maintainers directly.
+If you experience or witness unacceptable behavior, open a confidential issue or contact the maintainers directly. 
+
+Contact: leftmountains@gmail.com
