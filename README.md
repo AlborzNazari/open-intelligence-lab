@@ -35,53 +35,70 @@ The goal is not to replicate existing threat‑intel platforms, but to create a 
 
 ## 🧩 System Architecture (Mermaid Diagram)
 
-```mermaid
 flowchart TD
-    A --> B
 
-
+    %% ===========================
+    %% DATASETS
+    %% ===========================
     subgraph Datasets
-        TE[threat_entities]
-        AP[attack_patterns]
-        RL[relations]
+        TE[threat_entities.json]
+        AP[attack_patterns.json]
+        RL[relations.json]
     end
 
+    %% ===========================
+    %% CORE ENGINE
+    %% ===========================
     subgraph CoreEngine
         GB[graph_builder.py]
         RA[risk_analyzer.py]
-        IE[intelligence_explainer.py]
-        EN[intelligence_entities.py]
+        EX[explainability.py]
     end
 
+    %% ===========================
+    %% VISUALIZATION
+    %% ===========================
     subgraph Visualization
-        GR[graph_renderer.py]
-        DB[dashboard]
+        GV[graph_visualizer.py]
+        DB[dashboards]
     end
 
+    %% ===========================
+    %% API LAYER
+    %% ===========================
     subgraph API
-        IA[intelligence_api.py]
+        IA[intelligence/router.py]
     end
 
+    %% ===========================
+    %% RESEARCH OUTPUT
+    %% ===========================
     subgraph Research
-        RD[research_docs]
+        RD[research_docs/]
     end
 
+    %% DATA → GRAPH
     TE --> GB
     AP --> GB
     RL --> GB
 
+    %% GRAPH → ANALYSIS
     GB --> RA
-    RA --> IE
+    RA --> EX
 
-    GB --> GR
-    RA --> GR
-    IE --> GR
+    %% GRAPH → VISUALIZATION
+    GB --> GV
+    RA --> GV
+    EX --> GV
 
-    IE --> IA
-    RA --> IA
+    %% ENGINE → API
     GB --> IA
+    RA --> IA
+    EX --> IA
 
+    %% API → RESEARCH
     IA --> RD
+
 
 # Open Intelligence Lab  
 A beginner‑friendly, modular framework for learning and experimenting with **OSINT**, **graph‑based intelligence**, and **explainable risk analysis**.
