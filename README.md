@@ -1,3 +1,8 @@
+## 🌐 Live Demo
+
+> **[▶ Open Intelligence Lab — Live Web App](https://alborznazari.github.io/open-intelligence-lab/)**
+
+
 # Open Intelligence Lab
 
 ![Research Status](https://img.shields.io/badge/research-alpha-blue)
@@ -8,6 +13,7 @@ Open Intelligence Lab is an ethical OSINT research platform focused on public‑
 It provides a clean, modular environment for researchers, analysts, and engineers who want to explore open‑source intelligence signals **without compromising privacy or ethics**.
 
 ---
+
 
 ## 🧠 Vision & Philosophy
 
