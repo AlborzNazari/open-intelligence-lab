@@ -16,13 +16,26 @@
 Open Intelligence Lab is an ethical OSINT research platform focused on public‑security intelligence representation, graph‑based threat modeling, and explainable risk analytics.  
 It provides a clean, modular environment for researchers, analysts, and engineers who want to explore open‑source intelligence signals **without compromising privacy or ethics**.
 
----
+
+### Core Principles
+
+
+**No harm clause
+This software may not be used to harass, intimidate, stalk, profile, target, or otherwise harm any individual or group.**
+**No doxxing or exposure
+The database, models, or derived intelligence may not be used to expose personal information, correlate identities for harassment, or facilitate real-world targeting.**
+**No unlawful surveillance
+This project may not be used to conduct unauthorized monitoring, tracking, or surveillance activities.**
+**Defensive and research use only
+The intended use cases are academic research, defensive security analysis, transparency research, and educational experimentation.**
+**No automated punitive decisions
+Outputs from this system must not be used as sole justification for banning, blacklisting, firing, prosecuting, or otherwise penalizing individuals or entities without human review and external verification.**
 
 
 ## 🧠 Vision & Philosophy
 
-Security intelligence is often opaque, proprietary, and difficult to interpret.  
-This project aims to change that by offering:
+**Security intelligence is often opaque, proprietary, and difficult to interpret.  
+This project aims to change that by offering:**
 
 - **Transparent intelligence modeling**  
 - **Human‑readable explanations**  
@@ -30,15 +43,6 @@ This project aims to change that by offering:
 - **Ethical OSINT datasets**  
 - **Research‑friendly tooling**
 
-### Core Principles
-
-- **Public data only** — no private or sensitive information  
-- **Explainability first** — every risk score must be interpretable  
-- **Modular architecture** — easy to extend or replace  
-- **Research transparency** — datasets and logic are fully visible  
-- **Ethical OSINT** — aligned with academic and open‑source norms  
-
----
 
 # 🏗️ Repository Architecture
 
