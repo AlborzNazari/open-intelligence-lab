@@ -8,6 +8,7 @@
 ![Research Status](https://img.shields.io/badge/research-alpha-blue)
 ![Dataset Version](https://img.shields.io/badge/datasets-v0.1-green)
 ![Model Version](https://img.shields.io/badge/intelligence_model-v0.1-orange)
+<img width="928" height="1360" alt="Medium_02" src="https://github.com/user-attachments/assets/1303bad0-185b-4e2a-a3b8-762a93587a99" />
 
 Open Intelligence Lab is an ethical OSINT research platform focused on public‑security intelligence representation, graph‑based threat modeling, and explainable risk analytics.  
 It provides a clean, modular environment for researchers, analysts, and engineers who want to explore open‑source intelligence signals **without compromising privacy or ethics**.
