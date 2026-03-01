@@ -20,12 +20,12 @@ It provides a clean, modular environment for researchers, analysts, and engineer
 ### Core Principles
 
 
-**No harm clause: This software may not be used to harass, intimidate, stalk, profile, target, or otherwise harm any individual or group.**
-**No doxxing or exposure: The database, models, or derived intelligence may not be used to expose personal information, correlate identities for harassment, or facilitate real-world targeting.**
-**No unlawful surveillance: This project may not be used to conduct unauthorized monitoring, tracking, or surveillance activities.**
-**Defensive and research use only: The intended use cases are academic research, defensive security analysis, transparency research, and educational experimentation.**
-**No automated punitive decisions: Outputs from this system must not be used as sole justification for banning, blacklisting, firing, prosecuting, or otherwise penalizing individuals or entities without human review and external verification.**
-**Any public use, publication, or derivative work must clearly state that outputs are probabilistic, context-dependent, and not definitive claims of wrongdoing.**
+- **No harm clause: This software may not be used to harass, intimidate, stalk, profile, target, or otherwise harm any individual or group.**
+- **No doxxing or exposure: The database, models, or derived intelligence may not be used to expose personal information, correlate identities for harassment, or  facilitate real-world targeting.**
+- **No unlawful surveillance: This project may not be used to conduct unauthorized monitoring, tracking, or surveillance activities.**
+- **Defensive and research use only: The intended use cases are academic research, defensive security analysis, transparency research, and educational experimentation.**
+- **No automated punitive decisions: Outputs from this system must not be used as sole justification for banning, blacklisting, firing, prosecuting, or otherwise penalizing individuals or entities without human review and external verification.**
+- **Any public use, publication, or derivative work must clearly state that outputs are probabilistic, context-dependent, and not definitive claims of wrongdoing.**
 
 
 ## 🧠 Vision & Philosophy
