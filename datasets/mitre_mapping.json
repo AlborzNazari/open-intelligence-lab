@@ -1,0 +1,442 @@
+[
+  {
+    "mapping_id": "MITRE-MAP-001",
+    "actor_id": "TA-001",
+    "actor_name": "APT28",
+    "mitre_group_id": "G0007",
+    "description": "APT28 is a highly sophisticated Russian GRU-linked group known for election interference, military espionage, and credential harvesting operations against NATO member states.",
+    "primary_targets": ["government", "military", "elections", "defense"],
+    "techniques": [
+      {
+        "technique_id": "T1566.001",
+        "technique_name": "Spearphishing Attachment",
+        "tactic": "Initial Access",
+        "kill_chain_phase": "initial-access",
+        "frequency": "very_high",
+        "notes": "Primary initial access vector; uses weaponized Office documents with macro payloads."
+      },
+      {
+        "technique_id": "T1078",
+        "technique_name": "Valid Accounts",
+        "tactic": "Persistence / Defense Evasion",
+        "kill_chain_phase": "persistence",
+        "frequency": "high",
+        "notes": "Uses harvested credentials from phishing to blend in with legitimate user activity."
+      },
+      {
+        "technique_id": "T1003",
+        "technique_name": "OS Credential Dumping",
+        "tactic": "Credential Access",
+        "kill_chain_phase": "credential-access",
+        "frequency": "high",
+        "notes": "Uses Mimikatz and custom tools to dump LSASS memory for lateral movement credentials."
+      },
+      {
+        "technique_id": "T1071.001",
+        "technique_name": "Web Protocols (C2)",
+        "tactic": "Command and Control",
+        "kill_chain_phase": "command-and-control",
+        "frequency": "high",
+        "notes": "Uses HTTPS-based C2 to blend with legitimate web traffic; seen with X-Tunnel."
+      },
+      {
+        "technique_id": "T1593.001",
+        "technique_name": "Social Media",
+        "tactic": "Reconnaissance",
+        "kill_chain_phase": "reconnaissance",
+        "frequency": "medium",
+        "notes": "Profiles targets via LinkedIn and Twitter before spearphishing operations."
+      },
+      {
+        "technique_id": "T1027",
+        "technique_name": "Obfuscated Files or Information",
+        "tactic": "Defense Evasion",
+        "kill_chain_phase": "defense-evasion",
+        "frequency": "high",
+        "notes": "Encrypts payloads and uses custom packers to evade AV/EDR detection."
+      },
+      {
+        "technique_id": "T1041",
+        "technique_name": "Exfiltration Over C2 Channel",
+        "tactic": "Exfiltration",
+        "kill_chain_phase": "exfiltration",
+        "frequency": "high",
+        "notes": "Uses X-Tunnel to exfiltrate data collected by X-Agent over encrypted channels."
+      }
+    ],
+    "osint_patterns_used": ["OSINT-T003", "OSINT-T005", "OSINT-T012"],
+    "associated_malware": ["MA-001", "MA-002"],
+    "campaign_refs": ["CAMP-001"],
+    "overall_ttp_coverage": 0.91,
+    "confidence": 0.93,
+    "source": "MITRE ATT&CK G0007 / CISA / NSA Joint Advisory"
+  },
+  {
+    "mapping_id": "MITRE-MAP-002",
+    "actor_id": "TA-002",
+    "actor_name": "APT29",
+    "mitre_group_id": "G0016",
+    "description": "APT29 is a Russian SVR-linked group known for long-duration, stealthy espionage campaigns. Masterminds of the SolarWinds supply chain attack — one of the most sophisticated operations ever documented.",
+    "primary_targets": ["government", "think_tanks", "healthcare", "supply_chain"],
+    "techniques": [
+      {
+        "technique_id": "T1195.002",
+        "technique_name": "Compromise Software Supply Chain",
+        "tactic": "Initial Access",
+        "kill_chain_phase": "initial-access",
+        "frequency": "high",
+        "notes": "Hallmark technique; trojanized SolarWinds Orion update affected 18,000+ organizations."
+      },
+      {
+        "technique_id": "T1036",
+        "technique_name": "Masquerading",
+        "tactic": "Defense Evasion",
+        "kill_chain_phase": "defense-evasion",
+        "frequency": "very_high",
+        "notes": "Mimics legitimate processes and services to avoid detection during long dwell periods."
+      },
+      {
+        "technique_id": "T1552.001",
+        "technique_name": "Credentials In Files",
+        "tactic": "Credential Access",
+        "kill_chain_phase": "credential-access",
+        "frequency": "high",
+        "notes": "Searches for credentials stored in config files, scripts, and application data."
+      },
+      {
+        "technique_id": "T1550.001",
+        "technique_name": "Application Access Token",
+        "tactic": "Defense Evasion / Lateral Movement",
+        "kill_chain_phase": "lateral-movement",
+        "frequency": "high",
+        "notes": "Abuses OAuth tokens and SAML assertions to move laterally across cloud environments."
+      },
+      {
+        "technique_id": "T1098",
+        "technique_name": "Account Manipulation",
+        "tactic": "Persistence",
+        "kill_chain_phase": "persistence",
+        "frequency": "high",
+        "notes": "Adds additional credentials to accounts or modifies permissions to maintain access."
+      },
+      {
+        "technique_id": "T1190",
+        "technique_name": "Exploit Public-Facing Application",
+        "tactic": "Initial Access",
+        "kill_chain_phase": "initial-access",
+        "frequency": "medium",
+        "notes": "Exploited CVE-2024-3400 in PAN-OS GlobalProtect VPN as zero-day for initial access."
+      },
+      {
+        "technique_id": "T1020",
+        "technique_name": "Automated Exfiltration",
+        "tactic": "Exfiltration",
+        "kill_chain_phase": "exfiltration",
+        "frequency": "medium",
+        "notes": "Automates collection and exfiltration of targeted data types at scale."
+      }
+    ],
+    "osint_patterns_used": ["OSINT-T007", "OSINT-T005", "OSINT-T015"],
+    "associated_malware": ["MA-003"],
+    "campaign_refs": ["CAMP-002"],
+    "overall_ttp_coverage": 0.95,
+    "confidence": 0.95,
+    "source": "MITRE ATT&CK G0016 / CISA AA20-352A / Mandiant UNC2452"
+  },
+  {
+    "mapping_id": "MITRE-MAP-003",
+    "actor_id": "TA-003",
+    "actor_name": "APT41",
+    "mitre_group_id": "G0096",
+    "description": "APT41 is a uniquely dual-purpose Chinese state-sponsored group conducting both espionage on behalf of the Chinese government and financially motivated cybercrime simultaneously — making them one of the most prolific and dangerous APTs.",
+    "primary_targets": ["telecom", "finance", "gaming", "healthcare", "technology"],
+    "techniques": [
+      {
+        "technique_id": "T1190",
+        "technique_name": "Exploit Public-Facing Application",
+        "tactic": "Initial Access",
+        "kill_chain_phase": "initial-access",
+        "frequency": "very_high",
+        "notes": "Rapidly weaponizes newly disclosed CVEs within hours of public disclosure."
+      },
+      {
+        "technique_id": "T1195.002",
+        "technique_name": "Compromise Software Supply Chain",
+        "tactic": "Initial Access",
+        "kill_chain_phase": "initial-access",
+        "frequency": "high",
+        "notes": "Has trojanized software installers and gaming platforms to distribute malware."
+      },
+      {
+        "technique_id": "T1059.001",
+        "technique_name": "PowerShell",
+        "tactic": "Execution",
+        "kill_chain_phase": "execution",
+        "frequency": "high",
+        "notes": "Uses PowerShell for post-exploitation, payload delivery, and lateral movement."
+      },
+      {
+        "technique_id": "T1046",
+        "technique_name": "Network Service Scanning",
+        "tactic": "Discovery",
+        "kill_chain_phase": "reconnaissance",
+        "frequency": "high",
+        "notes": "Performs internal and external network scanning to map targets before exploitation."
+      },
+      {
+        "technique_id": "T1090",
+        "technique_name": "Proxy",
+        "tactic": "Command and Control",
+        "kill_chain_phase": "command-and-control",
+        "frequency": "high",
+        "notes": "Uses multi-hop proxies and compromised third-party infrastructure to mask C2."
+      },
+      {
+        "technique_id": "T1136",
+        "technique_name": "Create Account",
+        "tactic": "Persistence",
+        "kill_chain_phase": "persistence",
+        "frequency": "medium",
+        "notes": "Creates backdoor accounts on compromised systems for persistent access."
+      }
+    ],
+    "osint_patterns_used": ["OSINT-T004", "OSINT-T010", "OSINT-T007"],
+    "associated_malware": ["MA-004", "MA-005"],
+    "campaign_refs": ["CAMP-003"],
+    "overall_ttp_coverage": 0.89,
+    "confidence": 0.91,
+    "source": "MITRE ATT&CK G0096 / DOJ Indictment 2020 / Mandiant"
+  },
+  {
+    "mapping_id": "MITRE-MAP-004",
+    "actor_id": "TA-004",
+    "actor_name": "Lazarus Group",
+    "mitre_group_id": "G0032",
+    "description": "Lazarus Group is a North Korean state-sponsored group operating under the RGB (Reconnaissance General Bureau). Their primary mission is generating hard currency for the DPRK regime through financial theft, particularly cryptocurrency, while also conducting espionage and destructive attacks.",
+    "primary_targets": ["finance", "cryptocurrency", "defense", "energy"],
+    "techniques": [
+      {
+        "technique_id": "T1566.002",
+        "technique_name": "Spearphishing Link",
+        "tactic": "Initial Access",
+        "kill_chain_phase": "initial-access",
+        "frequency": "very_high",
+        "notes": "Sends fake job offers and LinkedIn messages with malicious links or attachments to crypto/finance employees."
+      },
+      {
+        "technique_id": "T1204.002",
+        "technique_name": "Malicious File",
+        "tactic": "Execution",
+        "kill_chain_phase": "execution",
+        "frequency": "high",
+        "notes": "Entices targets to open malicious documents disguised as salary negotiation PDFs or job descriptions."
+      },
+      {
+        "technique_id": "T1055",
+        "technique_name": "Process Injection",
+        "tactic": "Defense Evasion / Privilege Escalation",
+        "kill_chain_phase": "privilege-escalation",
+        "frequency": "high",
+        "notes": "Injects BLINDINGCAN and custom RAT payloads into legitimate processes."
+      },
+      {
+        "technique_id": "T1486",
+        "technique_name": "Data Encrypted for Impact",
+        "tactic": "Impact",
+        "kill_chain_phase": "impact",
+        "frequency": "medium",
+        "notes": "Deploys destructive wipers and ransomware (e.g., WannaCry) as cover or sabotage."
+      },
+      {
+        "technique_id": "T1601",
+        "technique_name": "Modify System Image",
+        "tactic": "Defense Evasion",
+        "kill_chain_phase": "defense-evasion",
+        "frequency": "medium",
+        "notes": "Modifies network device firmware to maintain persistence in high-value environments."
+      },
+      {
+        "technique_id": "T1657",
+        "technique_name": "Financial Theft",
+        "tactic": "Impact",
+        "kill_chain_phase": "impact",
+        "frequency": "very_high",
+        "notes": "Primary mission outcome: SWIFT fraud, crypto exchange compromise, and DeFi protocol exploitation."
+      }
+    ],
+    "osint_patterns_used": ["OSINT-T005", "OSINT-T015", "OSINT-T012"],
+    "associated_malware": ["MA-006"],
+    "campaign_refs": ["CAMP-004"],
+    "overall_ttp_coverage": 0.88,
+    "confidence": 0.90,
+    "source": "MITRE ATT&CK G0032 / UN Panel of Experts / US-CERT"
+  },
+  {
+    "mapping_id": "MITRE-MAP-005",
+    "actor_id": "TA-005",
+    "actor_name": "LockBit",
+    "mitre_group_id": "G0139",
+    "description": "LockBit is the world's most prolific Ransomware-as-a-Service operation. It provides affiliates with ransomware tooling and infrastructure in exchange for a percentage of ransom payments. Responsible for more ransomware attacks than any other group in 2022-2023.",
+    "primary_targets": ["healthcare", "finance", "manufacturing", "government", "legal"],
+    "techniques": [
+      {
+        "technique_id": "T1110.004",
+        "technique_name": "Credential Stuffing",
+        "tactic": "Initial Access",
+        "kill_chain_phase": "initial-access",
+        "frequency": "very_high",
+        "notes": "Affiliates purchase or use stolen credentials to authenticate to RDP, VPN, and web portals."
+      },
+      {
+        "technique_id": "T1486",
+        "technique_name": "Data Encrypted for Impact",
+        "tactic": "Impact",
+        "kill_chain_phase": "impact",
+        "frequency": "very_high",
+        "notes": "Core ransomware payload encrypts all accessible files and drops ransom note."
+      },
+      {
+        "technique_id": "T1490",
+        "technique_name": "Inhibit System Recovery",
+        "tactic": "Impact",
+        "kill_chain_phase": "impact",
+        "frequency": "very_high",
+        "notes": "Deletes shadow copies and disables backup services before encryption to prevent recovery."
+      },
+      {
+        "technique_id": "T1083",
+        "technique_name": "File and Directory Discovery",
+        "tactic": "Discovery",
+        "kill_chain_phase": "discovery",
+        "frequency": "high",
+        "notes": "Identifies high-value data directories (finance records, PII, IP) for prioritized encryption and exfiltration."
+      },
+      {
+        "technique_id": "T1021.001",
+        "technique_name": "Remote Desktop Protocol",
+        "tactic": "Lateral Movement",
+        "kill_chain_phase": "lateral-movement",
+        "frequency": "high",
+        "notes": "Uses compromised credentials for RDP lateral movement across victim environments."
+      },
+      {
+        "technique_id": "T1567.002",
+        "technique_name": "Exfiltration to Cloud Storage",
+        "tactic": "Exfiltration",
+        "kill_chain_phase": "exfiltration",
+        "frequency": "high",
+        "notes": "Exfiltrates data to cloud storage before encryption for double-extortion leverage."
+      }
+    ],
+    "osint_patterns_used": ["OSINT-T005", "OSINT-T011", "OSINT-T015"],
+    "associated_malware": ["MA-007"],
+    "campaign_refs": ["CAMP-005"],
+    "overall_ttp_coverage": 0.87,
+    "confidence": 0.92,
+    "source": "CISA Advisory AA23-075A / FBI / Europol"
+  },
+  {
+    "mapping_id": "MITRE-MAP-006",
+    "actor_id": "TA-006",
+    "actor_name": "Cl0p",
+    "mitre_group_id": "G0154",
+    "description": "Cl0p specializes in mass exploitation of zero-day vulnerabilities in widely used enterprise file transfer software, enabling them to breach hundreds of organizations simultaneously in single campaigns.",
+    "primary_targets": ["finance", "retail", "healthcare", "education", "government"],
+    "techniques": [
+      {
+        "technique_id": "T1190",
+        "technique_name": "Exploit Public-Facing Application",
+        "tactic": "Initial Access",
+        "kill_chain_phase": "initial-access",
+        "frequency": "very_high",
+        "notes": "Signature technique: mass exploitation of zero-days in MOVEit, GoAnywhere, and Accellion FTA."
+      },
+      {
+        "technique_id": "T1059.003",
+        "technique_name": "Windows Command Shell",
+        "tactic": "Execution",
+        "kill_chain_phase": "execution",
+        "frequency": "high",
+        "notes": "Executes post-exploitation commands and scripts via cmd.exe on compromised servers."
+      },
+      {
+        "technique_id": "T1213",
+        "technique_name": "Data from Information Repositories",
+        "tactic": "Collection",
+        "kill_chain_phase": "collection",
+        "frequency": "very_high",
+        "notes": "Mass-collects data from file transfer servers before ransomware deployment or extortion."
+      },
+      {
+        "technique_id": "T1657",
+        "technique_name": "Financial Theft",
+        "tactic": "Impact",
+        "kill_chain_phase": "impact",
+        "frequency": "high",
+        "notes": "Extorts organizations with threat of publishing stolen data on their leak site."
+      },
+      {
+        "technique_id": "T1486",
+        "technique_name": "Data Encrypted for Impact",
+        "tactic": "Impact",
+        "kill_chain_phase": "impact",
+        "frequency": "medium",
+        "notes": "Deploys Cl0p ransomware for encryption in cases where extortion alone is insufficient."
+      }
+    ],
+    "osint_patterns_used": ["OSINT-T005", "OSINT-T010", "OSINT-T015"],
+    "associated_malware": ["MA-008"],
+    "campaign_refs": ["CAMP-006"],
+    "overall_ttp_coverage": 0.84,
+    "confidence": 0.87,
+    "source": "CISA Advisory AA23-158A / Microsoft MSTIC"
+  },
+  {
+    "mapping_id": "MITRE-MAP-007",
+    "actor_id": "TA-007",
+    "actor_name": "KillNet",
+    "mitre_group_id": null,
+    "description": "KillNet is a pro-Russian hacktivist collective that emerged in 2022 following Russia's invasion of Ukraine. Primarily conducts DDoS campaigns against NATO countries, government infrastructure, and media outlets. Lower sophistication than APT groups but capable of sustained disruption.",
+    "primary_targets": ["government", "healthcare", "critical_infrastructure", "media"],
+    "techniques": [
+      {
+        "technique_id": "T1498",
+        "technique_name": "Network Denial of Service",
+        "tactic": "Impact",
+        "kill_chain_phase": "impact",
+        "frequency": "very_high",
+        "notes": "Primary weapon; conducts volumetric DDoS attacks using rented botnets and volunteer tools."
+      },
+      {
+        "technique_id": "T1498.001",
+        "technique_name": "Direct Network Flood",
+        "tactic": "Impact",
+        "kill_chain_phase": "impact",
+        "frequency": "high",
+        "notes": "HTTP flood and UDP flood attacks targeting government web portals and hospital systems."
+      },
+      {
+        "technique_id": "T1583.006",
+        "technique_name": "Web Services (Infrastructure)",
+        "tactic": "Resource Development",
+        "kill_chain_phase": "resource-development",
+        "frequency": "high",
+        "notes": "Recruits volunteer attackers via Telegram channels and coordinates attack timing publicly."
+      },
+      {
+        "technique_id": "T1593.001",
+        "technique_name": "Social Media",
+        "tactic": "Reconnaissance",
+        "kill_chain_phase": "reconnaissance",
+        "frequency": "high",
+        "notes": "Uses Telegram and social media for target selection, recruitment, and propaganda."
+      }
+    ],
+    "osint_patterns_used": ["OSINT-T003", "OSINT-T012", "OSINT-T015"],
+    "associated_malware": [],
+    "campaign_refs": ["CAMP-007"],
+    "overall_ttp_coverage": 0.72,
+    "confidence": 0.85,
+    "source": "EU ENISA Threat Landscape 2023 / CISA"
+  }
+]
