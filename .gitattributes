@@ -1,7 +1,14 @@
-# Auto-normalize all text files to LF in the repo
+# Normalize ALL text files to LF in the repo (best for cross-platform)
 * text=auto
 
-# Force specific files if you really need them (optional)
-*.sh text eol=lf
+# Force LF for Python, Markdown, scripts (your project uses these)
+*.py  text eol=lf
+*.md  text eol=lf
+*.sh  text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+
+# If you ever add Windows batch files (rare)
 *.bat text eol=crlf
 *.cmd text eol=crlf
