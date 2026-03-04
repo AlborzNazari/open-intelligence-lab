@@ -1,7 +1,7 @@
-# Normalize ALL text files to LF in the repo (best for cross-platform)
+# Normalize ALL text files to LF in the repo
 * text=auto
 
-# Force LF for Python, Markdown, scripts (your project uses these)
+# Force LF for Python, Markdown, scripts 
 *.py  text eol=lf
 *.md  text eol=lf
 *.sh  text eol=lf
