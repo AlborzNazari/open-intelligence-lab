@@ -12,4 +12,5 @@
 # If you ever add Windows batch files (rare)
 *.bat text eol=crlf
 *.cmd text eol=crlf
-*.html linguist-detectable=false # To deactivate .html through ruby linguist library  
+*.html linguist-detectable=false 
+# To deactivate .html through ruby linguist library  
