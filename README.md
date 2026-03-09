@@ -63,6 +63,7 @@ open-intelligence-lab/
 └── backend/
     └── requirements.txt       ← API/server dependencies
 ```
+<img width="928" height="916" alt="Medium_02" src="https://github.com/user-attachments/assets/769d41e7-2bca-4b4b-978b-01c58a1e095b" />
 
 ---
 
