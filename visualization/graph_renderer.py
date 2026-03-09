@@ -9,7 +9,6 @@ from core_engine.graph_builder import ThreatKnowledgeGraph
 from core_engine.risk_analyzer import RiskAnalyzer
 from core_engine.intelligence_explainer import IntelligenceExplainer
 from core_engine.intelligence_entities import IntelligenceEntity
-from visualization.graph_renderer import draw_threat_graph
 
 
 DATASETS_DIR = os.path.join(os.path.dirname(__file__), "datasets")
