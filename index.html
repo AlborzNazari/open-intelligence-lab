@@ -1,1246 +1,1075 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <title>Open Intelligence Lab</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;600;700&family=Bebas+Neue&family=IBM+Plex+Sans:wght@300;400;600&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --bg:       #04080f;
-      --bg2:      #080f1c;
-      --bg3:      #0d1525;
-      --border:   #162035;
-      --border2:  #1e3050;
-      --cyan:     #00d4ff;
-      --cyan-dim: rgba(0,212,255,0.12);
-      --green:    #00ff88;
-      --green-dim:rgba(0,255,136,0.1);
-      --amber:    #ffb300;
-      --amber-dim:rgba(255,179,0,0.1);
-      --red:      #ff4060;
-      --red-dim:  rgba(255,64,96,0.1);
-      --purple:   #9b59ff;
-      --purple-dim:rgba(155,89,255,0.1);
-      --text:     #c8d8f0;
-      --muted:    #4a6080;
-      --muted2:   #2a3d55;
-    }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Open Intelligence Lab — Threat Knowledge Graph</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<style>
+  :root {
+    --void: #020408;
+    --surface: #080d14;
+    --panel: #0c1420;
+    --border: #1a2535;
+    --border-glow: #1e3a5f;
+    --accent: #00d4ff;
+    --accent2: #ff4d6d;
+    --accent3: #39ff8f;
+    --accent4: #f5a623;
+    --text: #e8f4fd;
+    --muted: #4a6278;
+    --subtle: #1e2d3d;
+    --critical: #ff2d55;
+    --high: #ff6b35;
+    --medium: #f5a623;
+    --low: #39ff8f;
+  }
 
-    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
 
-    html { scroll-behavior: smooth; }
+  body {
+    background: var(--void);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
 
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'IBM Plex Sans', sans-serif;
-      font-size: 14px;
-      line-height: 1.6;
-      overflow-x: hidden;
-    }
+  /* GRID BACKGROUND */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
 
-    /* scanline overlay */
-    body::after {
-      content: '';
-      position: fixed; inset: 0;
-      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
-      pointer-events: none; z-index: 9999;
-    }
+  /* SCANLINE OVERLAY */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.05) 2px,
+      rgba(0,0,0,0.05) 4px
+    );
+    pointer-events: none;
+    z-index: 0;
+  }
 
-    /* grid bg */
-    body::before {
-      content: '';
-      position: fixed; inset: 0;
-      background-image:
-        linear-gradient(rgba(0,212,255,0.025) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(0,212,255,0.025) 1px, transparent 1px);
-      background-size: 48px 48px;
-      pointer-events: none; z-index: 0;
-    }
+  .layout {
+    display: grid;
+    grid-template-columns: 260px 1fr 280px;
+    grid-template-rows: 64px 1fr;
+    min-height: 100vh;
+    position: relative;
+    z-index: 1;
+  }
 
-    /* ── LAYOUT ── */
-    .wrap { max-width: 1100px; margin: 0 auto; padding: 0 2rem; position: relative; z-index: 1; }
+  /* ── HEADER ── */
+  header {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    background: rgba(8,13,20,0.95);
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(12px);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
 
-    /* ── NAV ── */
-    nav {
-      position: sticky; top: 0; z-index: 100;
-      border-bottom: 1px solid var(--border);
-      background: rgba(4,8,15,0.92);
-      backdrop-filter: blur(12px);
-    }
-    .nav-inner {
-      display: flex; align-items: center; gap: 2rem;
-      padding: 0.75rem 2rem; max-width: 1100px; margin: 0 auto;
-    }
-    .nav-logo {
-      font-family: 'IBM Plex Mono', monospace;
-      font-size: 0.72rem; font-weight: 700;
-      color: var(--cyan); letter-spacing: 0.15em;
-      text-transform: uppercase; white-space: nowrap;
-    }
-    .nav-links { display: flex; gap: 1.5rem; margin-left: auto; }
-    .nav-links a {
-      font-family: 'IBM Plex Mono', monospace;
-      font-size: 0.65rem; color: var(--muted);
-      text-decoration: none; letter-spacing: 0.1em;
-      text-transform: uppercase;
-      transition: color 0.2s;
-    }
-    .nav-links a:hover { color: var(--cyan); }
+  .logo-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
 
-    /* ── HERO ── */
-    .hero {
-      padding: 6rem 2rem 5rem;
-      max-width: 1100px; margin: 0 auto;
-      position: relative; z-index: 1;
-    }
-    .hero-label {
-      font-family: 'IBM Plex Mono', monospace;
-      font-size: 0.65rem; color: var(--cyan);
-      letter-spacing: 0.3em; text-transform: uppercase;
-      margin-bottom: 1.5rem;
-      display: flex; align-items: center; gap: 0.75rem;
-    }
-    .hero-label::before {
-      content: ''; display: block;
-      width: 24px; height: 1px; background: var(--cyan);
-    }
-    .hero h1 {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: clamp(4rem, 10vw, 9rem);
-      line-height: 0.95; letter-spacing: 0.02em;
-      color: #fff;
-      margin-bottom: 1.5rem;
-    }
-    .hero h1 span { color: var(--cyan); }
-    .hero-desc {
-      font-size: 1rem; color: var(--muted);
-      max-width: 520px; line-height: 1.8;
-      margin-bottom: 2.5rem;
-      font-weight: 300;
-    }
-    .hero-tags { display: flex; flex-wrap: wrap; gap: 0.6rem; }
-    .hero-tag {
-      font-family: 'IBM Plex Mono', monospace;
-      font-size: 0.65rem;
-      padding: 0.3rem 0.75rem;
-      border: 1px solid var(--border2);
-      color: var(--muted); border-radius: 2px;
-      letter-spacing: 0.1em; text-transform: uppercase;
-    }
+  .logo-icon {
+    width: 36px;
+    height: 36px;
+    position: relative;
+  }
 
-    /* ── STAT ROW ── */
-    .stat-row {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-      gap: 1px;
-      border: 1px solid var(--border);
-      background: var(--border);
-      margin: 3rem 0;
-    }
-    .stat {
-      background: var(--bg2);
-      padding: 1.5rem 1.25rem;
-      text-align: center;
-    }
-    .stat-n {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 2.5rem; color: var(--cyan);
-      display: block; line-height: 1;
-    }
-    .stat-l {
-      font-family: 'IBM Plex Mono', monospace;
-      font-size: 0.6rem; color: var(--muted);
-      text-transform: uppercase; letter-spacing: 0.12em;
-      margin-top: 0.4rem; display: block;
-    }
+  .logo-icon svg { width: 100%; height: 100%; }
 
-    /* ── SECTION ── */
-    section { padding: 4rem 0; }
-    .sec-label {
-      font-family: 'IBM Plex Mono', monospace;
-      font-size: 0.6rem; color: var(--cyan);
-      letter-spacing: 0.3em; text-transform: uppercase;
-      margin-bottom: 0.6rem;
-      display: flex; align-items: center; gap: 0.75rem;
-    }
-    .sec-label::before {
-      content: ''; width: 16px; height: 1px; background: var(--cyan);
-    }
-    h2 {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 2.8rem; color: #fff;
-      letter-spacing: 0.03em; line-height: 1;
-      margin-bottom: 0.6rem;
-    }
-    .sec-desc {
-      color: var(--muted); font-size: 0.85rem;
-      max-width: 500px; line-height: 1.7;
-      margin-bottom: 2.5rem; font-weight: 300;
-    }
-    hr.div { border: none; border-top: 1px solid var(--border); margin: 0; }
+  .logo-text {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 16px;
+    letter-spacing: 0.08em;
+    color: var(--text);
+  }
 
-    /* ── PANEL ── */
-    .panel {
-      background: var(--bg2);
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      position: relative; overflow: hidden;
-    }
-    .panel-top {
-      position: absolute; top: 0; left: 0; right: 0;
-      height: 1px;
-      background: linear-gradient(90deg, transparent 5%, var(--cyan) 50%, transparent 95%);
-    }
-    .panel-head {
-      padding: 1rem 1.25rem;
-      border-bottom: 1px solid var(--border);
-      display: flex; align-items: center; gap: 0.75rem;
-    }
-    .dots { display: flex; gap: 0.35rem; }
-    .dot { width: 9px; height: 9px; border-radius: 50%; }
-    .dot.r { background: #ff4060; }
-    .dot.y { background: #ffb300; }
-    .dot.g { background: #00ff88; }
-    .panel-title {
-      font-family: 'IBM Plex Mono', monospace;
-      font-size: 0.65rem; color: var(--muted);
-      letter-spacing: 0.08em;
-    }
+  .logo-text span {
+    color: var(--accent);
+  }
 
-    /* ── ARCH LAYERS ── */
-    .arch { padding: 1.75rem; display: flex; flex-direction: column; gap: 0.6rem; }
-    .arch-row { display: flex; flex-direction: column; gap: 0.4rem; }
-    .arch-layer-label {
-      font-family: 'IBM Plex Mono', monospace;
-      font-size: 0.6rem; color: var(--muted);
-      letter-spacing: 0.1em; text-transform: uppercase;
-    }
-    .arch-pills { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-    .pill {
-      font-family: 'IBM Plex Mono', monospace;
-      font-size: 0.7rem; font-weight: 600;
-      padding: 0.35rem 0.8rem;
-      border-radius: 2px;
-      transition: filter 0.2s, transform 0.2s;
-      cursor: default;
-    }
-    .pill:hover { filter: brightness(1.3); transform: translateY(-1px); }
-    .pill.c { background: var(--cyan-dim); border: 1px solid rgba(0,212,255,0.35); color: var(--cyan); }
-    .pill.g { background: var(--green-dim); border: 1px solid rgba(0,255,136,0.3); color: var(--green); }
-    .pill.a { background: var(--amber-dim); border: 1px solid rgba(255,179,0,0.3); color: var(--amber); }
-    .pill.r { background: var(--red-dim); border: 1px solid rgba(255,64,96,0.3); color: var(--red); }
-    .pill.p { background: var(--purple-dim); border: 1px solid rgba(155,89,255,0.3); color: var(--purple); }
-    .arch-arrow {
-      text-align: center; color: var(--border2);
-      font-size: 1rem; padding: 0.1rem 0;
-    }
+  .logo-sub {
+    font-size: 9px;
+    color: var(--muted);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    display: block;
+    margin-top: 1px;
+  }
 
-    /* ── CODE BLOCK ── */
-    .code-wrap { margin: 1rem 0; }
-    pre {
-      padding: 1.25rem 1.5rem;
-      font-family: 'IBM Plex Mono', monospace;
-      font-size: 0.72rem; line-height: 1.75;
-      overflow-x: auto; color: #8ba8c8;
-    }
-    .kw { color: #ff6b8a; }
-    .fn { color: #c792ea; }
-    .st { color: #89ddff; }
-    .cm { color: #3d5a7a; font-style: italic; }
-    .nu { color: #f78c6c; }
-    .va { color: #ffcb6b; }
-    .cl { color: #80ffdb; }
+  .header-center {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--subtle);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 6px 14px;
+    font-size: 11px;
+    color: var(--muted);
+  }
 
-    /* ── TERMINAL ── */
-    .term { background: #020609; border: 1px solid #0e1f35; border-radius: 4px; overflow: hidden; }
-    .term-head {
-      background: #060e1a; padding: 0.6rem 1rem;
-      border-bottom: 1px solid #0e1f35;
-      display: flex; align-items: center; gap: 1rem;
-    }
-    .term-ttl { font-family: 'IBM Plex Mono',monospace; font-size:0.65rem; color:var(--muted); }
-    .term-body { padding: 1rem 1.25rem; }
-    .tl {
-      font-family: 'IBM Plex Mono',monospace;
-      font-size: 0.72rem; line-height: 2;
-      opacity: 0;
-      animation: tlin 0.25s ease both;
-    }
-    @keyframes tlin { from { opacity:0; transform:translateX(-6px); } to { opacity:1; transform:none; } }
-    .tp { color: var(--green); }
-    .tc { color: #fff; }
-    .to { color: #3d5a7a; }
-    .tok { color: var(--green); }
-    .ti { color: var(--cyan); }
-    .tw { color: var(--amber); }
-    .cur { display:inline-block; width:7px; height:13px; background:var(--cyan); animation:bl 1s infinite; vertical-align:text-bottom; margin-left:2px; }
-    @keyframes bl { 0%,49%{opacity:1}50%,100%{opacity:0} }
+  .pulse-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent3);
+    animation: pulse 2s infinite;
+  }
 
-    /* ── DATASET CARDS ── */
-    .ds-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(300px,1fr)); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius:4px; overflow:hidden; }
-    .ds-card { background: var(--bg2); padding: 1.5rem; position:relative; }
-    .ds-card::before { content:''; position:absolute; top:0;left:0;right:0; height:2px; }
-    .ds-card.cyan::before { background: var(--cyan); }
-    .ds-card.green::before { background: var(--green); }
-    .ds-card.amber::before { background: var(--amber); }
-    .ds-card.purple::before { background: var(--purple); }
-    .ds-card.red::before { background: var(--red); }
-    .ds-file {
-      font-family: 'IBM Plex Mono',monospace;
-      font-size: 0.68rem; font-weight:700;
-      margin-bottom: 0.5rem;
-    }
-    .ds-card.cyan .ds-file { color: var(--cyan); }
-    .ds-card.green .ds-file { color: var(--green); }
-    .ds-card.amber .ds-file { color: var(--amber); }
-    .ds-card.purple .ds-file { color: var(--purple); }
-    .ds-card.red .ds-file { color: var(--red); }
-    .ds-desc { font-size:0.8rem; color:var(--muted); line-height:1.65; margin-bottom:0.75rem; font-weight:300; }
-    .ds-meta { display:flex; flex-wrap:wrap; gap:0.4rem; }
-    .ds-badge {
-      font-family:'IBM Plex Mono',monospace; font-size:0.58rem;
-      padding:0.15rem 0.5rem; border-radius:2px;
-      background:var(--bg3); border:1px solid var(--border2); color:var(--muted);
-    }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(57,255,143,0.4); }
+    50% { opacity: 0.7; box-shadow: 0 0 0 4px rgba(57,255,143,0); }
+  }
 
-    /* ── THREAT TABLE ── */
-    .tbl-wrap { overflow-x:auto; border:1px solid var(--border); border-radius:4px; background:var(--bg2); }
-    table { width:100%; border-collapse:collapse; }
-    th {
-      background: var(--bg3);
-      padding: 0.7rem 1rem;
-      text-align:left;
-      font-family:'IBM Plex Mono',monospace;
-      font-size:0.6rem; color:var(--muted);
-      text-transform:uppercase; letter-spacing:0.1em;
-      border-bottom: 1px solid var(--border);
-    }
-    td { padding:0.7rem 1rem; font-size:0.78rem; border-bottom:1px solid rgba(22,32,53,0.8); }
-    tr:last-child td { border-bottom:none; }
-    tr:hover td { background: rgba(255,255,255,0.015); }
-    .badge {
-      font-family:'IBM Plex Mono',monospace; font-size:0.6rem; font-weight:700;
-      padding:0.15rem 0.5rem; border-radius:2px;
-      display:inline-block;
-    }
-    .badge.critical { background:rgba(255,64,96,0.15); color:var(--red); border:1px solid rgba(255,64,96,0.3); }
-    .badge.high { background:rgba(255,179,0,0.12); color:var(--amber); border:1px solid rgba(255,179,0,0.3); }
-    .badge.medium { background:rgba(0,212,255,0.1); color:var(--cyan); border:1px solid rgba(0,212,255,0.25); }
-    .badge.nation { background:rgba(155,89,255,0.12); color:var(--purple); border:1px solid rgba(155,89,255,0.3); }
-    .badge.ransomware { background:rgba(255,64,96,0.1); color:var(--red); border:1px solid rgba(255,64,96,0.25); }
-    .badge.hacktivist { background:rgba(0,255,136,0.08); color:var(--green); border:1px solid rgba(0,255,136,0.25); }
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 11px;
+    color: var(--muted);
+  }
 
-    /* ── MITRE HEATMAP ── */
-    .mitre-grid {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      gap: 3px;
-      font-family:'IBM Plex Mono',monospace;
-    }
-    .mitre-tactic {
-      background: var(--bg3);
-      border: 1px solid var(--border);
-      border-radius: 3px;
-      padding: 0.5rem 0.4rem;
-      text-align: center;
-    }
-    .mitre-tactic-name {
-      font-size: 0.52rem; color: var(--muted);
-      text-transform: uppercase; letter-spacing: 0.08em;
-      margin-bottom: 0.5rem; line-height: 1.3;
-    }
-    .mitre-techniques { display:flex; flex-direction:column; gap: 3px; }
-    .mitre-tech {
-      font-size: 0.52rem;
-      padding: 0.2rem 0.3rem;
-      border-radius: 2px;
-      text-align: left;
-      line-height: 1.3;
-    }
-    .mt-red { background:rgba(255,64,96,0.25); color:#ff8a9e; }
-    .mt-amber { background:rgba(255,179,0,0.2); color:#ffd466; }
-    .mt-cyan { background:rgba(0,212,255,0.15); color:#66e0ff; }
-    .mt-purple { background:rgba(155,89,255,0.2); color:#c4a0ff; }
-    .mt-green { background:rgba(0,255,136,0.15); color:#66ffb0; }
+  .badge {
+    background: rgba(0,212,255,0.1);
+    border: 1px solid rgba(0,212,255,0.3);
+    color: var(--accent);
+    padding: 3px 10px;
+    border-radius: 3px;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
 
-    /* ── DIAMOND MODEL ── */
-    .diamond-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:1px; background:var(--border); border:1px solid var(--border); border-radius:4px; overflow:hidden; }
-    .diamond-card { background:var(--bg2); padding:1.25rem 1.5rem; }
-    .diamond-node {
-      font-family:'IBM Plex Mono',monospace;
-      font-size:0.6rem; font-weight:700;
-      text-transform:uppercase; letter-spacing:0.15em;
-      margin-bottom:0.6rem; display:flex; align-items:center; gap:0.5rem;
-    }
-    .diamond-node::before { content:'◆'; }
-    .diamond-card:nth-child(1) .diamond-node { color:var(--red); }
-    .diamond-card:nth-child(2) .diamond-node { color:var(--purple); }
-    .diamond-card:nth-child(3) .diamond-node { color:var(--amber); }
-    .diamond-card:nth-child(4) .diamond-node { color:var(--green); }
-    .diamond-body { font-size:0.78rem; color:var(--muted); line-height:1.7; font-weight:300; }
-    .diamond-body strong { color:var(--text); font-weight:600; }
+  /* ── LEFT SIDEBAR ── */
+  .sidebar-left {
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    padding: 20px 0;
+    overflow-y: auto;
+  }
 
-    /* ── RISK BARS ── */
-    .risk-list { display:flex; flex-direction:column; gap:0.75rem; padding:1.5rem; }
-    .risk-row { display:flex; align-items:center; gap:0.75rem; }
-    .risk-name { font-family:'IBM Plex Mono',monospace; font-size:0.65rem; color:var(--muted); min-width:140px; text-align:right; }
-    .risk-track { flex:1; height:18px; background:rgba(255,255,255,0.03); border-radius:2px; overflow:hidden; }
-    .risk-fill {
-      height:100%; display:flex; align-items:center; padding-left:0.5rem;
-      font-family:'IBM Plex Mono',monospace; font-size:0.62rem; font-weight:700;
-      animation: grow 1.2s cubic-bezier(0.4,0,0.2,1) both;
-    }
-    @keyframes grow { from { width:0 !important; } }
+  .sidebar-section {
+    padding: 0 16px 20px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 20px;
+  }
 
-    /* ── CAMPAIGN CARDS ── */
-    .camp-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:1rem; }
-    .camp-card { background:var(--bg2); border:1px solid var(--border); border-radius:4px; overflow:hidden; }
-    .camp-head { padding:0.9rem 1.25rem; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:flex-start; }
-    .camp-name { font-family:'IBM Plex Mono',monospace; font-size:0.72rem; font-weight:700; color:#fff; line-height:1.4; }
-    .camp-body { padding:1rem 1.25rem; }
-    .camp-actor { font-size:0.75rem; color:var(--muted); margin-bottom:0.6rem; font-weight:300; }
-    .camp-actor strong { color:var(--text); }
-    .camp-impact { font-size:0.72rem; color:var(--muted); line-height:1.6; margin-bottom:0.75rem; font-weight:300; }
-    .camp-tags { display:flex; flex-wrap:wrap; gap:0.35rem; }
-    .camp-tag {
-      font-family:'IBM Plex Mono',monospace; font-size:0.58rem;
-      padding:0.1rem 0.45rem; border-radius:2px;
-      background:var(--bg3); border:1px solid var(--border2); color:var(--muted);
-    }
+  .sidebar-label {
+    font-size: 9px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 12px;
+    padding: 0 4px;
+  }
 
-    /* ── ROADMAP ── */
-    .roadmap { display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--border); border:1px solid var(--border); border-radius:4px; overflow:hidden; }
-    .rm { background:var(--bg2); padding:1.5rem; }
-    .rm-ver {
-      font-family:'IBM Plex Mono',monospace;
-      font-size:0.62rem; font-weight:700;
-      text-transform:uppercase; letter-spacing:0.15em;
-      margin-bottom:1rem;
-    }
-    .rm.v1 .rm-ver { color:var(--green); }
-    .rm.v2 .rm-ver { color:var(--amber); }
-    .rm.v3 .rm-ver { color:var(--purple); }
-    .rm-items { display:flex; flex-direction:column; gap:0.4rem; }
-    .rm-item {
-      font-family:'IBM Plex Mono',monospace; font-size:0.68rem; color:var(--muted);
-      display:flex; align-items:flex-start; gap:0.5rem; line-height:1.5;
-    }
-    .rm.v1 .rm-item::before { content:'✓'; color:var(--green); flex-shrink:0; }
-    .rm.v2 .rm-item::before { content:'○'; color:var(--amber); flex-shrink:0; }
-    .rm.v3 .rm-item::before { content:'◇'; color:var(--purple); flex-shrink:0; }
+  .entity-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+    margin-bottom: 4px;
+  }
 
-    /* ── FLOW ── */
-    .flow { display:flex; align-items:center; flex-wrap:wrap; gap:0; overflow-x:auto; padding:1.5rem; }
-    .fn2 {
-      font-family:'IBM Plex Mono',monospace; font-size:0.65rem; font-weight:700;
-      padding:0.4rem 0.8rem; border-radius:2px; white-space:nowrap;
-    }
-    .fa { color:var(--muted); padding:0 0.4rem; font-size:0.9rem; }
+  .entity-item:hover {
+    background: var(--subtle);
+    border-color: var(--border-glow);
+  }
 
-    /* ── FADE IN ── */
-    .fi { opacity:0; transform:translateY(16px); animation:fi 0.5s ease both; }
-    @keyframes fi { to { opacity:1; transform:none; } }
+  .entity-item.active {
+    background: rgba(0,212,255,0.08);
+    border-color: rgba(0,212,255,0.3);
+  }
 
-    /* ── FOOTER ── */
-    footer {
-      border-top:1px solid var(--border);
-      padding:2.5rem 2rem;
-      text-align:center;
-      font-family:'IBM Plex Mono',monospace;
-      font-size:0.62rem; color:var(--muted);
-      letter-spacing:0.1em;
-    }
+  .entity-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
 
-    @media(max-width:700px) {
-      .mitre-grid { grid-template-columns:repeat(3,1fr); }
-      .roadmap { grid-template-columns:1fr; }
-      .nav-links { display:none; }
-    }
-  </style>
+  .entity-info { flex: 1; min-width: 0; }
+
+  .entity-name {
+    font-size: 11px;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .entity-type {
+    font-size: 9px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-top: 2px;
+  }
+
+  .risk-chip {
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .risk-critical { background: rgba(255,45,85,0.2); color: var(--critical); border: 1px solid rgba(255,45,85,0.3); }
+  .risk-high { background: rgba(255,107,53,0.2); color: var(--high); border: 1px solid rgba(255,107,53,0.3); }
+  .risk-medium { background: rgba(245,166,35,0.2); color: var(--medium); border: 1px solid rgba(245,166,35,0.3); }
+  .risk-low { background: rgba(57,255,143,0.2); color: var(--low); border: 1px solid rgba(57,255,143,0.3); }
+
+  /* ── MAIN CANVAS ── */
+  .main-canvas {
+    background: var(--surface);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .canvas-toolbar {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    z-index: 10;
+    display: flex;
+    gap: 8px;
+  }
+
+  .tool-btn {
+    background: rgba(8,13,20,0.9);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    width: 34px;
+    height: 34px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+    backdrop-filter: blur(8px);
+  }
+
+  .tool-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(0,212,255,0.08);
+  }
+
+  .canvas-info {
+    position: absolute;
+    bottom: 16px;
+    left: 16px;
+    z-index: 10;
+    display: flex;
+    gap: 16px;
+  }
+
+  .info-chip {
+    background: rgba(8,13,20,0.9);
+    border: 1px solid var(--border);
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 10px;
+    color: var(--muted);
+    backdrop-filter: blur(8px);
+  }
+
+  .info-chip span { color: var(--accent); }
+
+  #graph-svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* ── RIGHT PANEL ── */
+  .sidebar-right {
+    background: var(--panel);
+    border-left: 1px solid var(--border);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .panel-section {
+    padding: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .panel-title {
+    font-size: 9px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+
+  /* RISK GAUGE */
+  .risk-gauge {
+    text-align: center;
+    padding: 8px 0;
+  }
+
+  .gauge-ring {
+    width: 100px;
+    height: 100px;
+    margin: 0 auto 12px;
+  }
+
+  .gauge-score {
+    font-family: 'Syne', sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--critical);
+  }
+
+  .gauge-label {
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin-top: 4px;
+  }
+
+  /* METRICS ROW */
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .metric-card {
+    background: var(--subtle);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 12px;
+  }
+
+  .metric-value {
+    font-family: 'Syne', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1;
+  }
+
+  .metric-label {
+    font-size: 9px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-top: 4px;
+  }
+
+  /* EXPLANATION */
+  .explanation-lines {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .expl-line {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.5;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(26,37,53,0.5);
+  }
+
+  .expl-line::before {
+    content: '›';
+    color: var(--accent);
+    flex-shrink: 0;
+    font-size: 14px;
+    line-height: 1.2;
+  }
+
+  /* MITRE TAGS */
+  .mitre-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .mitre-tag {
+    background: rgba(245,166,35,0.1);
+    border: 1px solid rgba(245,166,35,0.25);
+    color: var(--medium);
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 3px;
+    letter-spacing: 0.05em;
+  }
+
+  /* CAMPAIGN TIMELINE */
+  .timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .timeline-item {
+    display: flex;
+    gap: 12px;
+    padding: 10px 0;
+    position: relative;
+  }
+
+  .timeline-item:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    left: 5px;
+    top: 26px;
+    bottom: -10px;
+    width: 1px;
+    background: var(--border);
+  }
+
+  .timeline-dot {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-top: 3px;
+    border: 2px solid currentColor;
+  }
+
+  .timeline-content {}
+
+  .timeline-name {
+    font-size: 11px;
+    color: var(--text);
+    margin-bottom: 2px;
+  }
+
+  .timeline-meta {
+    font-size: 9px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  /* NODE TOOLTIP */
+  .tooltip {
+    position: absolute;
+    background: rgba(8,13,20,0.97);
+    border: 1px solid var(--border-glow);
+    border-radius: 8px;
+    padding: 12px 16px;
+    pointer-events: none;
+    z-index: 200;
+    min-width: 180px;
+    display: none;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,212,255,0.1);
+  }
+
+  .tooltip-name {
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+
+  .tooltip-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: var(--muted);
+    padding: 2px 0;
+  }
+
+  .tooltip-row span:last-child { color: var(--text); }
+
+  /* ANIMATIONS */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .panel-section {
+    animation: fadeUp 0.4s ease both;
+  }
+
+  .panel-section:nth-child(1) { animation-delay: 0.05s; }
+  .panel-section:nth-child(2) { animation-delay: 0.1s; }
+  .panel-section:nth-child(3) { animation-delay: 0.15s; }
+  .panel-section:nth-child(4) { animation-delay: 0.2s; }
+  .panel-section:nth-child(5) { animation-delay: 0.25s; }
+
+  /* SCROLLBARS */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: var(--panel); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+  /* NODE GLOW ANIMATION */
+  @keyframes nodeGlow {
+    0%, 100% { filter: drop-shadow(0 0 4px currentColor); }
+    50% { filter: drop-shadow(0 0 12px currentColor); }
+  }
+
+  .node-selected circle {
+    animation: nodeGlow 2s infinite;
+  }
+</style>
 </head>
 <body>
 
-<!-- NAV -->
-<nav>
-  <div class="nav-inner">
-    <div class="nav-logo">// Open Intelligence Lab</div>
-    <div class="nav-links">
-      <a href="#arch">Architecture</a>
-      <a href="#datasets">Datasets</a>
-      <a href="#threats">Threats</a>
-      <a href="#mitre">MITRE</a>
-      <a href="#campaigns">Campaigns</a>
-      <a href="#roadmap">Roadmap</a>
-    </div>
-  </div>
-</nav>
+<div class="layout">
 
-<!-- HERO -->
-<div class="hero fi">
-  <div class="hero-label">Ethical OSINT Research Platform</div>
-  <h1>Open<br><span>Intelligence</span><br>Lab</h1>
-  <p class="hero-desc">
-    A modular Python platform for graph-based threat knowledge modeling, explainable risk analytics, and ethical open-source intelligence research. Public data only. Explainability first.
-  </p>
-  <div class="hero-tags">
-    <span class="hero-tag">Python</span>
-    <span class="hero-tag">Graph-Based Modeling</span>
-    <span class="hero-tag">OSINT</span>
-    <span class="hero-tag">MITRE ATT&CK</span>
-    <span class="hero-tag">Threat Intelligence</span>
-    <span class="hero-tag">REST API</span>
-    <span class="hero-tag">Explainable AI</span>
-    <span class="hero-tag">STIX-Compatible</span>
-  </div>
+  <!-- HEADER -->
+  <header>
+    <div class="logo-group">
+      <div class="logo-icon">
+        <svg viewBox="0 0 36 36" fill="none">
+          <polygon points="18,2 34,10 34,26 18,34 2,26 2,10" fill="none" stroke="#00d4ff" stroke-width="1.5" opacity="0.6"/>
+          <circle cx="18" cy="18" r="5" fill="#00d4ff" opacity="0.9"/>
+          <circle cx="18" cy="6" r="2" fill="#ff4d6d"/>
+          <circle cx="30" cy="13" r="2" fill="#f5a623"/>
+          <circle cx="30" cy="23" r="2" fill="#39ff8f"/>
+          <circle cx="18" cy="30" r="2" fill="#00d4ff"/>
+          <circle cx="6" cy="23" r="2" fill="#ff4d6d"/>
+          <circle cx="6" cy="13" r="2" fill="#f5a623"/>
+          <line x1="18" y1="13" x2="18" y2="6" stroke="#00d4ff" stroke-width="0.8" opacity="0.5"/>
+          <line x1="18" y1="13" x2="30" y2="13" stroke="#f5a623" stroke-width="0.8" opacity="0.5"/>
+          <line x1="18" y1="23" x2="30" y2="23" stroke="#39ff8f" stroke-width="0.8" opacity="0.5"/>
+          <line x1="18" y1="23" x2="18" y2="30" stroke="#00d4ff" stroke-width="0.8" opacity="0.5"/>
+          <line x1="18" y1="13" x2="6" y2="13" stroke="#f5a623" stroke-width="0.8" opacity="0.5"/>
+          <line x1="18" y1="23" x2="6" y2="23" stroke="#ff4d6d" stroke-width="0.8" opacity="0.5"/>
+        </svg>
+      </div>
+      <div>
+        <div class="logo-text">OPEN <span>INTELLIGENCE</span> LAB</div>
+        <span class="logo-sub">Threat Knowledge Graph · v0.1 · Ethical OSINT</span>
+      </div>
+    </div>
+
+    <div class="header-center">
+      <div class="pulse-dot"></div>
+      GRAPH ENGINE ACTIVE &nbsp;·&nbsp; 21 ENTITIES &nbsp;·&nbsp; 28 RELATIONS &nbsp;·&nbsp; 7 CAMPAIGNS
+    </div>
+
+    <div class="header-right">
+      <span>MITRE ATT&CK ALIGNED</span>
+      <div class="badge">ALPHA</div>
+    </div>
+  </header>
+
+  <!-- LEFT SIDEBAR -->
+  <aside class="sidebar-left">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Threat Actors</div>
+      <div class="entity-item active" onclick="selectEntity('APT29')">
+        <div class="entity-dot" style="background:#ff2d55; box-shadow:0 0 6px #ff2d55"></div>
+        <div class="entity-info">
+          <div class="entity-name">APT29 · Cozy Bear</div>
+          <div class="entity-type">Nation-State · Russia</div>
+        </div>
+        <div class="risk-chip risk-critical">0.97</div>
+      </div>
+      <div class="entity-item" onclick="selectEntity('LockBit')">
+        <div class="entity-dot" style="background:#ff6b35; box-shadow:0 0 6px #ff6b35"></div>
+        <div class="entity-info">
+          <div class="entity-name">LockBit 3.0</div>
+          <div class="entity-type">Ransomware Group</div>
+        </div>
+        <div class="risk-chip risk-high">0.91</div>
+      </div>
+      <div class="entity-item" onclick="selectEntity('Cl0p')">
+        <div class="entity-dot" style="background:#f5a623; box-shadow:0 0 6px #f5a623"></div>
+        <div class="entity-info">
+          <div class="entity-name">Cl0p</div>
+          <div class="entity-type">Ransomware · FIN11</div>
+        </div>
+        <div class="risk-chip risk-high">0.88</div>
+      </div>
+      <div class="entity-item" onclick="selectEntity('Lazarus')">
+        <div class="entity-dot" style="background:#ff2d55; box-shadow:0 0 6px #ff2d55"></div>
+        <div class="entity-info">
+          <div class="entity-name">Lazarus Group</div>
+          <div class="entity-type">Nation-State · DPRK</div>
+        </div>
+        <div class="risk-chip risk-critical">0.95</div>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Malware Families</div>
+      <div class="entity-item" onclick="selectEntity('SUNBURST')">
+        <div class="entity-dot" style="background:#00d4ff; box-shadow:0 0 6px #00d4ff"></div>
+        <div class="entity-info">
+          <div class="entity-name">SUNBURST</div>
+          <div class="entity-type">Backdoor · Supply Chain</div>
+        </div>
+        <div class="risk-chip risk-critical">0.99</div>
+      </div>
+      <div class="entity-item">
+        <div class="entity-dot" style="background:#39ff8f; box-shadow:0 0 6px #39ff8f"></div>
+        <div class="entity-info">
+          <div class="entity-name">TEARDROP</div>
+          <div class="entity-type">Dropper · Memory</div>
+        </div>
+        <div class="risk-chip risk-high">0.87</div>
+      </div>
+      <div class="entity-item">
+        <div class="entity-dot" style="background:#c084fc; box-shadow:0 0 6px #c084fc"></div>
+        <div class="entity-info">
+          <div class="entity-name">Clop Ransomware</div>
+          <div class="entity-type">Ransomware · Exfil</div>
+        </div>
+        <div class="risk-chip risk-high">0.89</div>
+      </div>
+    </div>
+
+    <div class="sidebar-section" style="border:none">
+      <div class="sidebar-label">Infrastructure</div>
+      <div class="entity-item">
+        <div class="entity-dot" style="background:#f5a623; box-shadow:0 0 6px #f5a623"></div>
+        <div class="entity-info">
+          <div class="entity-name">avsvmcloud.com</div>
+          <div class="entity-type">C2 Node · DNS Beacon</div>
+        </div>
+        <div class="risk-chip risk-critical">0.98</div>
+      </div>
+      <div class="entity-item">
+        <div class="entity-dot" style="background:#f5a623; box-shadow:0 0 6px #f5a623"></div>
+        <div class="entity-info">
+          <div class="entity-name">MOVEit Transfer</div>
+          <div class="entity-type">Exploit Target · CVE</div>
+        </div>
+        <div class="risk-chip risk-critical">0.96</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN GRAPH CANVAS -->
+  <main class="main-canvas">
+    <div class="canvas-toolbar">
+      <div class="tool-btn" onclick="zoomIn()" title="Zoom In">+</div>
+      <div class="tool-btn" onclick="zoomOut()" title="Zoom Out">−</div>
+      <div class="tool-btn" onclick="resetZoom()" title="Reset">⊙</div>
+      <div class="tool-btn" onclick="toggleLabels()" title="Toggle Labels">⊞</div>
+    </div>
+    <svg id="graph-svg"></svg>
+    <div class="canvas-info">
+      <div class="info-chip">NODES: <span id="node-count">21</span></div>
+      <div class="info-chip">EDGES: <span id="edge-count">28</span></div>
+      <div class="info-chip">SELECTED: <span id="selected-label">APT29</span></div>
+    </div>
+    <div class="tooltip" id="tooltip">
+      <div class="tooltip-name" id="tt-name"></div>
+      <div class="tooltip-row"><span>Type</span><span id="tt-type"></span></div>
+      <div class="tooltip-row"><span>Risk</span><span id="tt-risk"></span></div>
+      <div class="tooltip-row"><span>Confidence</span><span id="tt-conf"></span></div>
+      <div class="tooltip-row"><span>Connections</span><span id="tt-conn"></span></div>
+    </div>
+  </main>
+
+  <!-- RIGHT PANEL -->
+  <aside class="sidebar-right">
+
+    <div class="panel-section">
+      <div class="panel-title">Risk Assessment · APT29</div>
+      <div class="risk-gauge">
+        <div class="gauge-ring">
+          <svg viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="40" fill="none" stroke="#1a2535" stroke-width="8"/>
+            <circle cx="50" cy="50" r="40" fill="none" stroke="#ff2d55" stroke-width="8"
+              stroke-dasharray="219" stroke-dashoffset="16"
+              stroke-linecap="round"
+              transform="rotate(-90 50 50)"
+              style="filter:drop-shadow(0 0 6px #ff2d55)"/>
+            <text x="50" y="46" text-anchor="middle" fill="#e8f4fd" font-family="Syne,sans-serif" font-size="18" font-weight="800">0.97</text>
+            <text x="50" y="60" text-anchor="middle" fill="#4a6278" font-family="JetBrains Mono,monospace" font-size="7" letter-spacing="2">CRITICAL</text>
+          </svg>
+        </div>
+      </div>
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-value" style="color:#ff2d55">0.97</div>
+          <div class="metric-label">Likelihood</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value" style="color:#f5a623">0.99</div>
+          <div class="metric-label">Confidence</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value" style="color:#00d4ff">8</div>
+          <div class="metric-label">Connections</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value" style="color:#39ff8f">CIA</div>
+          <div class="metric-label">Impact Triad</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-title">Explainability Rationale</div>
+      <div class="explanation-lines">
+        <div class="expl-line">risk_score=0.97 · confidence=0.99</div>
+        <div class="expl-line">connected_nodes=8 · high centrality actor</div>
+        <div class="expl-line">Supply chain compromise via SUNBURST backdoor</div>
+        <div class="expl-line">Targets: Gov, Critical Infrastructure, Tech</div>
+        <div class="expl-line">Attribution: SVR · Russian Federation · TA-002</div>
+        <div class="expl-line">CIA triad fully compromised · dwell time: 9mo</div>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-title">MITRE ATT&CK TTPs</div>
+      <div class="mitre-tags">
+        <span class="mitre-tag">T1195.002</span>
+        <span class="mitre-tag">T1078</span>
+        <span class="mitre-tag">T1071.004</span>
+        <span class="mitre-tag">T1027</span>
+        <span class="mitre-tag">T1562</span>
+        <span class="mitre-tag">T1055</span>
+        <span class="mitre-tag">T1059</span>
+        <span class="mitre-tag">T1486</span>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-title">Active Campaigns</div>
+      <div class="timeline">
+        <div class="timeline-item">
+          <div class="timeline-dot" style="color:#ff2d55"></div>
+          <div class="timeline-content">
+            <div class="timeline-name">SolarWinds · SUNBURST</div>
+            <div class="timeline-meta">APT29 · 2020 · Espionage</div>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot" style="color:#ff6b35"></div>
+          <div class="timeline-content">
+            <div class="timeline-name">MOVEit Transfer</div>
+            <div class="timeline-meta">Cl0p · 2023 · Data Theft</div>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot" style="color:#f5a623"></div>
+          <div class="timeline-content">
+            <div class="timeline-name">LockBit 3.0 Rebuild</div>
+            <div class="timeline-meta">LockBit · 2024 · Ransomware</div>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot" style="color:#39ff8f"></div>
+          <div class="timeline-content">
+            <div class="timeline-name">Bybit Crypto Heist</div>
+            <div class="timeline-meta">Lazarus · 2025 · Financial</div>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot" style="color:#00d4ff"></div>
+          <div class="timeline-content">
+            <div class="timeline-name">Log4Shell Exploitation</div>
+            <div class="timeline-meta">Multiple · 2021 · RCE</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </aside>
+
 </div>
 
-<!-- STAT ROW -->
-<div class="wrap fi" style="animation-delay:0.1s">
-  <div class="stat-row">
-    <div class="stat"><span class="stat-n">5</span><span class="stat-l">Dataset Files</span></div>
-    <div class="stat"><span class="stat-n">21</span><span class="stat-l">Threat Entities</span></div>
-    <div class="stat"><span class="stat-n">15</span><span class="stat-l">Attack Patterns</span></div>
-    <div class="stat"><span class="stat-n">28</span><span class="stat-l">Graph Relations</span></div>
-    <div class="stat"><span class="stat-n">7</span><span class="stat-l">Campaigns</span></div>
-    <div class="stat"><span class="stat-n">40+</span><span class="stat-l">MITRE Techniques</span></div>
-  </div>
-</div>
+<script>
+// ── GRAPH DATA ──
+const nodes = [
+  { id: "APT29",     label: "APT29",         type: "threat_actor",  risk: 0.97, color: "#ff2d55", size: 18 },
+  { id: "LockBit",   label: "LockBit 3.0",   type: "threat_actor",  risk: 0.91, color: "#ff6b35", size: 16 },
+  { id: "Cl0p",      label: "Cl0p",          type: "threat_actor",  risk: 0.88, color: "#f5a623", size: 15 },
+  { id: "Lazarus",   label: "Lazarus",        type: "threat_actor",  risk: 0.95, color: "#ff2d55", size: 17 },
+  { id: "SUNBURST",  label: "SUNBURST",       type: "malware",       risk: 0.99, color: "#00d4ff", size: 14 },
+  { id: "TEARDROP",  label: "TEARDROP",       type: "malware",       risk: 0.87, color: "#39ff8f", size: 12 },
+  { id: "ClopRW",    label: "Clop RW",        type: "malware",       risk: 0.89, color: "#c084fc", size: 13 },
+  { id: "avsvmcloud",label: "avsvmcloud.com", type: "infrastructure",risk: 0.98, color: "#f5a623", size: 12 },
+  { id: "MOVEit",    label: "MOVEit",         type: "cve",           risk: 0.96, color: "#f5a623", size: 13 },
+  { id: "CVE_LOG4J", label: "Log4Shell",      type: "cve",           risk: 0.94, color: "#ff6b35", size: 12 },
+  { id: "GOV",       label: "Gov Sector",     type: "sector",        risk: 0.80, color: "#4a9eff", size: 11 },
+  { id: "FINANCE",   label: "Finance",        type: "sector",        risk: 0.82, color: "#4a9eff", size: 11 },
+  { id: "HEALTH",    label: "Healthcare",     type: "sector",        risk: 0.75, color: "#4a9eff", size: 10 },
+  { id: "ENERGY",    label: "Energy",         type: "sector",        risk: 0.78, color: "#4a9eff", size: 10 },
+  { id: "T1195",     label: "T1195.002",      type: "ttp",           risk: 0.92, color: "#f5a623", size: 9  },
+  { id: "T1078",     label: "T1078",          type: "ttp",           risk: 0.85, color: "#f5a623", size: 9  },
+  { id: "T1486",     label: "T1486",          type: "ttp",           risk: 0.88, color: "#f5a623", size: 9  },
+  { id: "SOLAR_C",   label: "SolarWinds",     type: "campaign",      risk: 0.97, color: "#ff2d55", size: 11 },
+  { id: "MOVEIT_C",  label: "MOVEit Camp",    type: "campaign",      risk: 0.93, color: "#c084fc", size: 10 },
+  { id: "LOCKBIT_C", label: "LockBit Camp",   type: "campaign",      risk: 0.90, color: "#ff6b35", size: 10 },
+  { id: "BYBIT_C",   label: "Bybit Heist",    type: "campaign",      risk: 0.96, color: "#39ff8f", size: 10 },
+];
 
-<hr class="div">
+const links = [
+  { source: "APT29",   target: "SUNBURST",   rel: "uses",            conf: 0.99 },
+  { source: "APT29",   target: "TEARDROP",   rel: "uses",            conf: 0.97 },
+  { source: "APT29",   target: "avsvmcloud", rel: "controls",        conf: 0.98 },
+  { source: "APT29",   target: "T1195",      rel: "employs_ttp",     conf: 0.99 },
+  { source: "APT29",   target: "T1078",      rel: "employs_ttp",     conf: 0.95 },
+  { source: "APT29",   target: "GOV",        rel: "targets",         conf: 0.97 },
+  { source: "APT29",   target: "SOLAR_C",    rel: "conducted",       conf: 0.99 },
+  { source: "LockBit", target: "T1486",      rel: "employs_ttp",     conf: 0.91 },
+  { source: "LockBit", target: "HEALTH",     rel: "targets",         conf: 0.89 },
+  { source: "LockBit", target: "FINANCE",    rel: "targets",         conf: 0.88 },
+  { source: "LockBit", target: "LOCKBIT_C",  rel: "conducted",       conf: 0.91 },
+  { source: "Cl0p",    target: "ClopRW",     rel: "uses",            conf: 0.93 },
+  { source: "Cl0p",    target: "MOVEit",     rel: "exploits",        conf: 0.96 },
+  { source: "Cl0p",    target: "MOVEIT_C",   rel: "conducted",       conf: 0.96 },
+  { source: "Cl0p",    target: "FINANCE",    rel: "targets",         conf: 0.90 },
+  { source: "Lazarus", target: "FINANCE",    rel: "targets",         conf: 0.95 },
+  { source: "Lazarus", target: "BYBIT_C",    rel: "conducted",       conf: 0.97 },
+  { source: "Lazarus", target: "CVE_LOG4J",  rel: "exploits",        conf: 0.82 },
+  { source: "SUNBURST",target: "avsvmcloud", rel: "beacons_to",      conf: 0.99 },
+  { source: "SOLAR_C", target: "GOV",        rel: "impacted",        conf: 0.99 },
+  { source: "SOLAR_C", target: "ENERGY",     rel: "impacted",        conf: 0.88 },
+  { source: "MOVEIT_C",target: "HEALTH",     rel: "impacted",        conf: 0.94 },
+  { source: "BYBIT_C", target: "FINANCE",    rel: "impacted",        conf: 0.97 },
+  { source: "MOVEit",  target: "T1078",      rel: "enables",         conf: 0.88 },
+  { source: "CVE_LOG4J",target: "GOV",       rel: "exposes",         conf: 0.85 },
+  { source: "T1195",   target: "SOLAR_C",    rel: "used_in",         conf: 0.99 },
+  { source: "ClopRW",  target: "MOVEIT_C",   rel: "deployed_in",     conf: 0.93 },
+  { source: "TEARDROP",target: "SOLAR_C",    rel: "deployed_in",     conf: 0.96 },
+];
 
-<!-- ── SECTION 01: ARCHITECTURE ── -->
-<section id="arch" class="wrap fi" style="animation-delay:0.1s">
-  <div class="sec-label">01 — Architecture</div>
-  <h2>How It's Built</h2>
-  <p class="sec-desc">The actual folder structure of the repo, not an imagined stack. Six modules with clearly separated responsibilities.</p>
+// ── D3 SETUP ──
+const svg = d3.select("#graph-svg");
+const container = svg.append("g");
 
-  <div class="panel">
-    <div class="panel-top"></div>
-    <div class="panel-head">
-      <div class="dots"><div class="dot r"></div><div class="dot y"></div><div class="dot g"></div></div>
-      <span class="panel-title">Repository Architecture — AlborzNazari/open-intelligence-lab</span>
-    </div>
-    <div class="arch">
-      <div class="arch-row">
-        <div class="arch-layer-label">▸ Entry Points</div>
-        <div class="arch-pills">
-          <span class="pill c">🖥 demo.py</span>
-          <span class="pill c">🌐 index.html</span>
-        </div>
-      </div>
-      <div class="arch-arrow">↓</div>
-      <div class="arch-row">
-        <div class="arch-layer-label">▸ API Layer — api/intelligence/router.py</div>
-        <div class="arch-pills">
-          <span class="pill p">GET /entities</span>
-          <span class="pill p">GET /patterns</span>
-          <span class="pill p">GET /relations</span>
-          <span class="pill p">GET /risk-score</span>
-        </div>
-      </div>
-      <div class="arch-arrow">↓</div>
-      <div class="arch-row">
-        <div class="arch-layer-label">▸ Core Engine — core_engine/</div>
-        <div class="arch-pills">
-          <span class="pill g">🕸 graph_builder.py</span>
-          <span class="pill g">📊 risk_analyzer.py</span>
-          <span class="pill g">💡 explainability.py</span>
-        </div>
-      </div>
-      <div class="arch-arrow">↓</div>
-      <div class="arch-row">
-        <div class="arch-layer-label">▸ Visualization — visualization/</div>
-        <div class="arch-pills">
-          <span class="pill a">📈 graph_visualizer.py</span>
-          <span class="pill a">📊 dashboards/</span>
-        </div>
-      </div>
-      <div class="arch-arrow">↓</div>
-      <div class="arch-row">
-        <div class="arch-layer-label">▸ Backend — backend/</div>
-        <div class="arch-pills">
-          <span class="pill r">⚙ Data processing</span>
-          <span class="pill r">⚙ Ingestion pipeline</span>
-        </div>
-      </div>
-      <div class="arch-arrow">↓</div>
-      <div class="arch-row">
-        <div class="arch-layer-label">▸ Datasets — datasets/ (the ground truth)</div>
-        <div class="arch-pills">
-          <span class="pill c">threat_entities.json</span>
-          <span class="pill g">attack_patterns.json</span>
-          <span class="pill a">relations.json</span>
-          <span class="pill p">mitre_mapping.json</span>
-          <span class="pill r">campaigns.json</span>
-        </div>
-      </div>
-    </div>
-  </div>
+let showLabels = true;
+let selectedNode = "APT29";
 
-  <!-- DATA FLOW -->
-  <div style="margin-top:1.5rem">
-    <div class="panel">
-      <div class="panel-top"></div>
-      <div class="panel-head">
-        <div class="dots"><div class="dot r"></div><div class="dot y"></div><div class="dot g"></div></div>
-        <span class="panel-title">Data Flow — from JSON to Risk Score</span>
-      </div>
-      <div class="flow">
-        <span class="fn2" style="background:var(--cyan-dim);border:1px solid rgba(0,212,255,0.3);color:var(--cyan)">datasets/*.json</span>
-        <span class="fa">→</span>
-        <span class="fn2" style="background:var(--green-dim);border:1px solid rgba(0,255,136,0.25);color:var(--green)">graph_builder.py</span>
-        <span class="fa">→</span>
-        <span class="fn2" style="background:var(--green-dim);border:1px solid rgba(0,255,136,0.25);color:var(--green)">risk_analyzer.py</span>
-        <span class="fa">→</span>
-        <span class="fn2" style="background:var(--green-dim);border:1px solid rgba(0,255,136,0.25);color:var(--green)">explainability.py</span>
-        <span class="fa">→</span>
-        <span class="fn2" style="background:var(--purple-dim);border:1px solid rgba(155,89,255,0.3);color:var(--purple)">api/router.py</span>
-        <span class="fa">→</span>
-        <span class="fn2" style="background:var(--amber-dim);border:1px solid rgba(255,179,0,0.3);color:var(--amber)">graph_visualizer.py</span>
-        <span class="fa">→</span>
-        <span class="fn2" style="background:var(--red-dim);border:1px solid rgba(255,64,96,0.3);color:var(--red)">research_docs/</span>
-      </div>
-    </div>
-  </div>
-</section>
+const width = () => document.querySelector(".main-canvas").clientWidth;
+const height = () => document.querySelector(".main-canvas").clientHeight;
 
-<hr class="div">
+// ZOOM
+const zoom = d3.zoom()
+  .scaleExtent([0.3, 4])
+  .on("zoom", (e) => container.attr("transform", e.transform));
+svg.call(zoom);
 
-<!-- ── SECTION 02: DATASETS ── -->
-<section id="datasets" class="wrap fi" style="animation-delay:0.1s">
-  <div class="sec-label">02 — Datasets</div>
-  <h2>What Data We Have</h2>
-  <p class="sec-desc">Five JSON files form the complete intelligence knowledge base. Every file cross-references the others by ID — together they form a traversable graph.</p>
+// ARROW MARKERS
+const defs = svg.append("defs");
+const markerColors = ["#ff2d55","#ff6b35","#f5a623","#00d4ff","#39ff8f","#c084fc","#4a9eff"];
+markerColors.forEach(c => {
+  defs.append("marker")
+    .attr("id", `arrow-${c.slice(1)}`)
+    .attr("viewBox", "0 -4 8 8")
+    .attr("refX", 20)
+    .attr("refY", 0)
+    .attr("markerWidth", 6)
+    .attr("markerHeight", 6)
+    .attr("orient", "auto")
+    .append("path")
+    .attr("d", "M0,-4L8,0L0,4")
+    .attr("fill", c)
+    .attr("opacity", 0.7);
+});
 
-  <div class="ds-grid">
+// SIMULATION
+const sim = d3.forceSimulation(nodes)
+  .force("link", d3.forceLink(links).id(d => d.id).distance(90).strength(0.5))
+  .force("charge", d3.forceManyBody().strength(-280))
+  .force("center", d3.forceCenter(0, 0))
+  .force("collision", d3.forceCollide(d => d.size + 14));
 
-    <div class="ds-card cyan">
-      <div class="ds-file">📁 datasets/threat_entities.json</div>
-      <div class="ds-desc">The entity registry — 21 objects across 5 types. Every actor, malware sample, infrastructure node, vulnerability, and target sector the platform knows about. IDs referenced by all other files.</div>
-      <div class="ds-meta">
-        <span class="ds-badge">7 threat actors</span>
-        <span class="ds-badge">8 malware families</span>
-        <span class="ds-badge">2 infrastructure nodes</span>
-        <span class="ds-badge">2 vulnerabilities</span>
-        <span class="ds-badge">3 target sectors</span>
-        <span class="ds-badge">risk_score 0–1</span>
-        <span class="ds-badge">STIX-compatible IDs</span>
-      </div>
-    </div>
+// LINKS
+const link = container.append("g")
+  .selectAll("line")
+  .data(links)
+  .join("line")
+  .attr("stroke", d => {
+    const src = nodes.find(n => n.id === (d.source.id || d.source));
+    return src ? src.color : "#1a2535";
+  })
+  .attr("stroke-opacity", 0.35)
+  .attr("stroke-width", d => d.conf * 1.8)
+  .attr("marker-end", d => {
+    const src = nodes.find(n => n.id === (d.source.id || d.source));
+    return src ? `url(#arrow-${src.color.slice(1)})` : "";
+  });
 
-    <div class="ds-card green">
-      <div class="ds-file">📁 datasets/attack_patterns.json</div>
-      <div class="ds-desc">15 OSINT-specific attack patterns with MITRE ATT&CK technique references, kill chain phase, detection guidance, and mitigation. Covers everything from metadata exposure to dark web monitoring.</div>
-      <div class="ds-meta">
-        <span class="ds-badge">15 patterns</span>
-        <span class="ds-badge">OSINT-T001 → T015</span>
-        <span class="ds-badge">MITRE technique refs</span>
-        <span class="ds-badge">kill_chain_phase</span>
-        <span class="ds-badge">detection + mitigation</span>
-        <span class="ds-badge">risk_level 0–1</span>
-      </div>
-    </div>
+// NODE GROUPS
+const node = container.append("g")
+  .selectAll("g")
+  .data(nodes)
+  .join("g")
+  .attr("class", "node-group")
+  .style("cursor", "pointer")
+  .call(d3.drag()
+    .on("start", (e, d) => { if (!e.active) sim.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; })
+    .on("drag",  (e, d) => { d.fx = e.x; d.fy = e.y; })
+    .on("end",   (e, d) => { if (!e.active) sim.alphaTarget(0); d.fx = null; d.fy = null; })
+  )
+  .on("click", (e, d) => {
+    selectedNode = d.id;
+    document.getElementById("selected-label").textContent = d.label;
+    selectEntity(d.id);
+    updateHighlight(d.id);
+  })
+  .on("mouseover", (e, d) => showTooltip(e, d))
+  .on("mousemove", (e) => moveTooltip(e))
+  .on("mouseout",  () => hideTooltip());
 
-    <div class="ds-card amber">
-      <div class="ds-file">📁 datasets/relations.json</div>
-      <div class="ds-desc">28 directed edges that turn flat entity lists into a graph. Maps: actor → uses → malware, actor → exploits → CVE, actor → targets → sector, actor → uses_pattern → attack pattern. This is what graph_builder.py reads to build the node graph.</div>
-      <div class="ds-meta">
-        <span class="ds-badge">28 edges</span>
-        <span class="ds-badge">4 relation types</span>
-        <span class="ds-badge">confidence score</span>
-        <span class="ds-badge">first/last_observed</span>
-        <span class="ds-badge">source references</span>
-      </div>
-    </div>
+// OUTER GLOW RING
+node.append("circle")
+  .attr("r", d => d.size + 6)
+  .attr("fill", "none")
+  .attr("stroke", d => d.color)
+  .attr("stroke-opacity", 0.15)
+  .attr("stroke-width", 1);
 
-    <div class="ds-card purple">
-      <div class="ds-file">📁 datasets/mitre_mapping.json</div>
-      <div class="ds-desc">7 actor-level ATT&CK profiles. Each maps an actor to their specific techniques with frequency ratings (very_high / high / medium), tactic, kill chain phase, and analyst notes. Bridges threat actors to the ATT&CK framework for TTP-based detection.</div>
-      <div class="ds-meta">
-        <span class="ds-badge">7 actor profiles</span>
-        <span class="ds-badge">40+ techniques</span>
-        <span class="ds-badge">frequency ratings</span>
-        <span class="ds-badge">kill_chain_phase</span>
-        <span class="ds-badge">mitre_group_id</span>
-        <span class="ds-badge">osint_patterns_used</span>
-      </div>
-    </div>
+// MAIN CIRCLE
+node.append("circle")
+  .attr("r", d => d.size)
+  .attr("fill", d => d.color + "22")
+  .attr("stroke", d => d.color)
+  .attr("stroke-width", 1.5)
+  .style("filter", d => `drop-shadow(0 0 6px ${d.color}88)`);
 
-    <div class="ds-card red" style="grid-column: span 1;">
-      <div class="ds-file">📁 datasets/campaigns.json</div>
-      <div class="ds-desc">7 real-world campaigns structured using the Diamond Model of Intrusion Analysis. Each connects adversary + capability + infrastructure + victim with timeline, kill chain coverage, impact assessment, and attribution confidence. The highest-level view of how actors operate.</div>
-      <div class="ds-meta">
-        <span class="ds-badge">7 campaigns</span>
-        <span class="ds-badge">Diamond Model</span>
-        <span class="ds-badge">kill chain checklist</span>
-        <span class="ds-badge">financial impact</span>
-        <span class="ds-badge">attribution confidence</span>
-        <span class="ds-badge">vulnerability refs</span>
-      </div>
-    </div>
+// INNER DOT
+node.append("circle")
+  .attr("r", d => d.size * 0.35)
+  .attr("fill", d => d.color)
+  .attr("opacity", 0.9);
 
-  </div>
+// LABELS
+const labels = node.append("text")
+  .attr("dy", d => d.size + 13)
+  .attr("text-anchor", "middle")
+  .attr("fill", "#e8f4fd")
+  .attr("font-family", "JetBrains Mono, monospace")
+  .attr("font-size", d => d.size > 14 ? 10 : 9)
+  .attr("opacity", 0.85)
+  .text(d => d.label);
 
-  <!-- CORE ENGINE CODE -->
-  <div style="margin-top:2rem">
-    <div class="panel">
-      <div class="panel-top"></div>
-      <div class="panel-head">
-        <div class="dots"><div class="dot r"></div><div class="dot y"></div><div class="dot g"></div></div>
-        <span class="panel-title">core_engine/graph_builder.py — How the three base datasets become a graph</span>
-      </div>
-      <pre><span class="kw">import</span> json, networkx <span class="kw">as</span> nx
-<span class="kw">from</span> pathlib <span class="kw">import</span> Path
+// TICK
+sim.on("tick", () => {
+  link
+    .attr("x1", d => d.source.x)
+    .attr("y1", d => d.source.y)
+    .attr("x2", d => d.target.x)
+    .attr("y2", d => d.target.y);
+  node.attr("transform", d => `translate(${d.x},${d.y})`);
+});
 
-<span class="kw">class</span> <span class="cl">GraphBuilder</span>:
-    <span class="cm">"""Reads the 3 base datasets and builds a NetworkX property graph."""</span>
+// Center after stabilization
+sim.on("end", () => {
+  const bounds = container.node().getBBox();
+  const w = width(), h = height();
+  const scale = 0.75 * Math.min(w / bounds.width, h / bounds.height);
+  const tx = w/2 - scale * (bounds.x + bounds.width/2);
+  const ty = h/2 - scale * (bounds.y + bounds.height/2);
+  svg.call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(scale));
+});
 
-    <span class="kw">def</span> <span class="fn">__init__</span>(self, datasets_path: str = <span class="st">"datasets/"</span>):
-        self.path = Path(datasets_path)
-        self.G = nx.<span class="fn">DiGraph</span>()   <span class="cm"># Directed graph: actor → malware, actor → sector</span>
+// HIGHLIGHT
+function updateHighlight(id) {
+  const connected = new Set([id]);
+  links.forEach(l => {
+    const s = l.source.id || l.source;
+    const t = l.target.id || l.target;
+    if (s === id) connected.add(t);
+    if (t === id) connected.add(s);
+  });
 
-    <span class="kw">def</span> <span class="fn">build</span>(self) -> nx.<span class="cl">DiGraph</span>:
-        <span class="cm"># 1. Load all 5 dataset files</span>
-        entities  = self.<span class="fn">_load</span>(<span class="st">"threat_entities.json"</span>)
-        patterns  = self.<span class="fn">_load</span>(<span class="st">"attack_patterns.json"</span>)
-        relations = self.<span class="fn">_load</span>(<span class="st">"relations.json"</span>)
-        mitre     = self.<span class="fn">_load</span>(<span class="st">"mitre_mapping.json"</span>)
-        campaigns = self.<span class="fn">_load</span>(<span class="st">"campaigns.json"</span>)
+  node.selectAll("circle")
+    .attr("opacity", (d2) => connected.has(d2.id) ? 1 : 0.2);
+  labels.attr("opacity", (d2) => connected.has(d2.id) ? 0.9 : 0.1);
+  link
+    .attr("stroke-opacity", l => {
+      const s = l.source.id || l.source, t = l.target.id || l.target;
+      return (s === id || t === id) ? 0.8 : 0.05;
+    })
+    .attr("stroke-width", l => {
+      const s = l.source.id || l.source, t = l.target.id || l.target;
+      return (s === id || t === id) ? l.conf * 3 : l.conf * 0.5;
+    });
+}
 
-        <span class="cm"># 2. Add entity nodes with all attributes as node properties</span>
-        <span class="kw">for</span> e <span class="kw">in</span> entities:
-            self.G.<span class="fn">add_node</span>(e[<span class="st">"entity_id"</span>], **e)
+// TOOLTIP
+function showTooltip(e, d) {
+  const tt = document.getElementById("tooltip");
+  const conns = links.filter(l => (l.source.id||l.source)===d.id || (l.target.id||l.target)===d.id).length;
+  document.getElementById("tt-name").textContent = d.label;
+  document.getElementById("tt-type").textContent = d.type.replace("_"," ").toUpperCase();
+  document.getElementById("tt-risk").textContent = d.risk.toFixed(2);
+  document.getElementById("tt-conf").textContent = (d.risk * 1.02).toFixed(2);
+  document.getElementById("tt-conn").textContent = conns;
+  tt.style.display = "block";
+  moveTooltip(e);
+}
+function moveTooltip(e) {
+  const tt = document.getElementById("tooltip");
+  const rect = document.querySelector(".main-canvas").getBoundingClientRect();
+  tt.style.left = (e.clientX - rect.left + 12) + "px";
+  tt.style.top  = (e.clientY - rect.top  - 40) + "px";
+}
+function hideTooltip() {
+  document.getElementById("tooltip").style.display = "none";
+}
 
-        <span class="cm"># 3. Add attack patterns as nodes</span>
-        <span class="kw">for</span> p <span class="kw">in</span> patterns:
-            self.G.<span class="fn">add_node</span>(p[<span class="st">"pattern_id"</span>], **p)
+// ZOOM CONTROLS
+function zoomIn()    { svg.transition().duration(300).call(zoom.scaleBy, 1.4); }
+function zoomOut()   { svg.transition().duration(300).call(zoom.scaleBy, 0.7); }
+function resetZoom() { svg.transition().duration(500).call(zoom.transform, d3.zoomIdentity.translate(width()/2, height()/2).scale(0.85)); }
+function toggleLabels() {
+  showLabels = !showLabels;
+  labels.attr("display", showLabels ? null : "none");
+}
 
-        <span class="cm"># 4. Add directed edges from relations.json</span>
-        <span class="kw">for</span> r <span class="kw">in</span> relations:
-            self.G.<span class="fn">add_edge</span>(
-                r[<span class="st">"source_id"</span>], r[<span class="st">"target_id"</span>],
-                relation_type=r[<span class="st">"relation_type"</span>],
-                confidence=r[<span class="st">"confidence"</span>]
-            )
+// SELECT ENTITY (sidebar click)
+function selectEntity(id) {
+  document.querySelectorAll(".entity-item").forEach(el => el.classList.remove("active"));
+  updateHighlight(id);
+  document.getElementById("selected-label").textContent = id;
+}
 
-        <span class="cm"># 5. Attach MITRE TTP data to existing actor nodes</span>
-        <span class="kw">for</span> m <span class="kw">in</span> mitre:
-            <span class="kw">if</span> m[<span class="st">"actor_id"</span>] <span class="kw">in</span> self.G:
-                self.G.nodes[m[<span class="st">"actor_id"</span>]][<span class="st">"mitre_techniques"</span>] = m[<span class="st">"techniques"</span>]
+// INITIAL HIGHLIGHT
+setTimeout(() => updateHighlight("APT29"), 1200);
 
-        <span class="kw">return</span> self.G
-
-    <span class="kw">def</span> <span class="fn">_load</span>(self, filename) -> list:
-        <span class="kw">with</span> <span class="fn">open</span>(self.path / filename) <span class="kw">as</span> f:
-            <span class="kw">return</span> json.<span class="fn">load</span>(f)</pre>
-    </div>
-  </div>
-
-  <!-- RISK ANALYZER CODE -->
-  <div style="margin-top:1rem">
-    <div class="panel">
-      <div class="panel-top"></div>
-      <div class="panel-head">
-        <div class="dots"><div class="dot r"></div><div class="dot y"></div><div class="dot g"></div></div>
-        <span class="panel-title">core_engine/risk_analyzer.py — How risk scores are calculated</span>
-      </div>
-      <pre><span class="kw">class</span> <span class="cl">RiskAnalyzer</span>:
-    <span class="cm">"""
-    Risk Score = (Threat Likelihood × Impact) × Confidence Weight
-    Outputs 0.0–1.0 mapped to: LOW | MEDIUM | HIGH | CRITICAL
-    """</span>
-
-    SEVERITY = {
-        (<span class="nu">0.9</span>, <span class="nu">1.0</span>): <span class="st">"CRITICAL"</span>,
-        (<span class="nu">0.7</span>, <span class="nu">0.9</span>): <span class="st">"HIGH"</span>,
-        (<span class="nu">0.4</span>, <span class="nu">0.7</span>): <span class="st">"MEDIUM"</span>,
-        (<span class="nu">0.0</span>, <span class="nu">0.4</span>): <span class="st">"LOW"</span>
-    }
-
-    <span class="kw">def</span> <span class="fn">score_entity</span>(self, entity: dict, graph) -> dict:
-        <span class="cm"># Likelihood: how often has this actor targeted this sector?</span>
-        likelihood = entity.get(<span class="st">"risk_score"</span>, <span class="nu">0.5</span>)
-
-        <span class="cm"># Impact: CIA triad — Confidentiality, Integrity, Availability</span>
-        impact = self.<span class="fn">_calc_impact</span>(entity)
-
-        <span class="cm"># Confidence: how reliable is the intelligence source?</span>
-        conf = entity.get(<span class="st">"confidence"</span>, <span class="nu">0.5</span>)
-
-        score = <span class="fn">min</span>(likelihood * impact * conf, <span class="nu">1.0</span>)
-        severity = self.<span class="fn">_band</span>(score)
-
-        <span class="kw">return</span> {
-            <span class="st">"entity_id"</span>: entity[<span class="st">"entity_id"</span>],
-            <span class="st">"risk_score"</span>: <span class="fn">round</span>(score, <span class="nu">3</span>),
-            <span class="st">"severity"</span>: severity,
-            <span class="st">"rationale"</span>: self.<span class="fn">_explain</span>(entity, score, graph)
-        }
-
-    <span class="kw">def</span> <span class="fn">_explain</span>(self, entity, score, graph) -> str:
-        <span class="cm"># explainability.py uses this to generate human-readable rationale</span>
-        neighbors = <span class="fn">list</span>(graph.<span class="fn">successors</span>(entity[<span class="st">"entity_id"</span>]))
-        <span class="kw">return</span> (
-            <span class="st">f"Score {score:.2f} based on: risk_score={entity.get('risk_score')}, "</span>
-            <span class="st">f"confidence={entity.get('confidence')}, "</span>
-            <span class="st">f"connected_nodes={len(neighbors)}"</span>
-        )</pre>
-    </div>
-  </div>
-</section>
-
-<hr class="div">
-
-<!-- ── SECTION 03: THREATS ── -->
-<section id="threats" class="wrap fi" style="animation-delay:0.1s">
-  <div class="sec-label">03 — Threat Actors</div>
-  <h2>Who We Track</h2>
-  <p class="sec-desc">Seven adversaries across four categories, sourced from MITRE ATT&CK, CISA advisories, and public threat intelligence reports. These are what your threat_entities.json contains.</p>
-
-  <div class="tbl-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Actor</th>
-          <th>Origin</th>
-          <th>Type</th>
-          <th>Primary Targets</th>
-          <th>Risk Score</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td style="font-family:'IBM Plex Mono',monospace;font-size:0.65rem;color:var(--muted)">TA-001</td>
-          <td><strong>APT28</strong> <span style="color:var(--muted);font-size:0.72rem">/ Fancy Bear</span></td>
-          <td>🇷🇺 Russia (GRU)</td>
-          <td><span class="badge nation">Nation-State</span></td>
-          <td>Government · Military · Elections</td>
-          <td><span class="badge critical">0.95</span></td>
-        </tr>
-        <tr>
-          <td style="font-family:'IBM Plex Mono',monospace;font-size:0.65rem;color:var(--muted)">TA-002</td>
-          <td><strong>APT29</strong> <span style="color:var(--muted);font-size:0.72rem">/ Cozy Bear</span></td>
-          <td>🇷🇺 Russia (SVR)</td>
-          <td><span class="badge nation">Nation-State</span></td>
-          <td>Government · Healthcare · Supply Chain</td>
-          <td><span class="badge critical">0.97</span></td>
-        </tr>
-        <tr>
-          <td style="font-family:'IBM Plex Mono',monospace;font-size:0.65rem;color:var(--muted)">TA-003</td>
-          <td><strong>APT41</strong> <span style="color:var(--muted);font-size:0.72rem">/ Double Dragon</span></td>
-          <td>🇨🇳 China (PLA)</td>
-          <td><span class="badge nation">Nation-State</span></td>
-          <td>Telecom · Finance · Gaming · Healthcare</td>
-          <td><span class="badge critical">0.93</span></td>
-        </tr>
-        <tr>
-          <td style="font-family:'IBM Plex Mono',monospace;font-size:0.65rem;color:var(--muted)">TA-004</td>
-          <td><strong>Lazarus Group</strong> <span style="color:var(--muted);font-size:0.72rem">/ Hidden Cobra</span></td>
-          <td>🇰🇵 DPRK (RGB)</td>
-          <td><span class="badge nation">Nation-State</span></td>
-          <td>Finance · Cryptocurrency · Defense</td>
-          <td><span class="badge critical">0.94</span></td>
-        </tr>
-        <tr>
-          <td style="font-family:'IBM Plex Mono',monospace;font-size:0.65rem;color:var(--muted)">TA-005</td>
-          <td><strong>LockBit</strong> <span style="color:var(--muted);font-size:0.72rem">/ LockBit 3.0</span></td>
-          <td>Unknown</td>
-          <td><span class="badge ransomware">Ransomware</span></td>
-          <td>Healthcare · Finance · Manufacturing</td>
-          <td><span class="badge critical">0.91</span></td>
-        </tr>
-        <tr>
-          <td style="font-family:'IBM Plex Mono',monospace;font-size:0.65rem;color:var(--muted)">TA-006</td>
-          <td><strong>Cl0p</strong> <span style="color:var(--muted);font-size:0.72rem">/ TA505</span></td>
-          <td>Unknown</td>
-          <td><span class="badge ransomware">Ransomware</span></td>
-          <td>Finance · Healthcare · Education</td>
-          <td><span class="badge high">0.88</span></td>
-        </tr>
-        <tr>
-          <td style="font-family:'IBM Plex Mono',monospace;font-size:0.65rem;color:var(--muted)">TA-007</td>
-          <td><strong>KillNet</strong></td>
-          <td>🇷🇺 Russia</td>
-          <td><span class="badge hacktivist">Hacktivist</span></td>
-          <td>Government · Healthcare · NATO</td>
-          <td><span class="badge medium">0.72</span></td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-
-  <!-- RISK BARS -->
-  <div style="margin-top:1.5rem">
-    <div class="panel">
-      <div class="panel-top"></div>
-      <div class="panel-head">
-        <div class="dots"><div class="dot r"></div><div class="dot y"></div><div class="dot g"></div></div>
-        <span class="panel-title">Actor Risk Scores — from threat_entities.json → risk_analyzer.py output</span>
-      </div>
-      <div class="risk-list">
-        <div class="risk-row"><span class="risk-name">APT29</span><div class="risk-track"><div class="risk-fill" style="width:97%;background:linear-gradient(90deg,#ff4060,#ff6b8a)"><span style="color:#fff">0.97</span></div></div></div>
-        <div class="risk-row"><span class="risk-name">APT28</span><div class="risk-track"><div class="risk-fill" style="width:95%;background:linear-gradient(90deg,#ff4060,#ff8a9e)"><span style="color:#fff">0.95</span></div></div></div>
-        <div class="risk-row"><span class="risk-name">Lazarus Group</span><div class="risk-track"><div class="risk-fill" style="width:94%;background:linear-gradient(90deg,#ff4060,#ff9eb4)"><span style="color:#fff">0.94</span></div></div></div>
-        <div class="risk-row"><span class="risk-name">APT41</span><div class="risk-track"><div class="risk-fill" style="width:93%;background:linear-gradient(90deg,#ff4060,#ffb3c8)"><span style="color:#000">0.93</span></div></div></div>
-        <div class="risk-row"><span class="risk-name">LockBit</span><div class="risk-track"><div class="risk-fill" style="width:91%;background:linear-gradient(90deg,#ffb300,#ffd466)"><span style="color:#000">0.91</span></div></div></div>
-        <div class="risk-row"><span class="risk-name">Cl0p</span><div class="risk-track"><div class="risk-fill" style="width:88%;background:linear-gradient(90deg,#ffb300,#ffe08a)"><span style="color:#000">0.88</span></div></div></div>
-        <div class="risk-row"><span class="risk-name">KillNet</span><div class="risk-track"><div class="risk-fill" style="width:72%;background:linear-gradient(90deg,#00d4ff,#66e0ff)"><span style="color:#000">0.72</span></div></div></div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<hr class="div">
-
-<!-- ── SECTION 04: MITRE MAPPING ── -->
-<section id="mitre" class="wrap fi" style="animation-delay:0.1s">
-  <div class="sec-label">04 — MITRE ATT&CK</div>
-  <h2>Technique Coverage</h2>
-  <p class="sec-desc">mitre_mapping.json maps every tracked actor to their known ATT&CK techniques. This heatmap shows coverage across the kill chain — each cell is a real technique in your dataset.</p>
-
-  <div class="panel">
-    <div class="panel-top"></div>
-    <div class="panel-head">
-      <div class="dots"><div class="dot r"></div><div class="dot y"></div><div class="dot g"></div></div>
-      <span class="panel-title">mitre_mapping.json — TTP Heatmap (frequency: red=very_high · amber=high · cyan=medium)</span>
-    </div>
-    <div style="padding:1.25rem;overflow-x:auto;">
-      <div class="mitre-grid">
-        <div class="mitre-tactic">
-          <div class="mitre-tactic-name">Recon</div>
-          <div class="mitre-techniques">
-            <div class="mitre-tech mt-red">T1593.001 Social Media</div>
-            <div class="mitre-tech mt-red">T1590.002 DNS Enum</div>
-            <div class="mitre-tech mt-amber">T1046 Net Scan</div>
-            <div class="mitre-tech mt-cyan">T1591 Org Info</div>
-          </div>
-        </div>
-        <div class="mitre-tactic">
-          <div class="mitre-tactic-name">Initial Access</div>
-          <div class="mitre-techniques">
-            <div class="mitre-tech mt-red">T1566.001 Spearphish</div>
-            <div class="mitre-tech mt-red">T1190 Exploit App</div>
-            <div class="mitre-tech mt-red">T1195.002 Supply Chain</div>
-            <div class="mitre-tech mt-amber">T1110.004 Cred Stuffing</div>
-          </div>
-        </div>
-        <div class="mitre-tactic">
-          <div class="mitre-tactic-name">Persistence</div>
-          <div class="mitre-techniques">
-            <div class="mitre-tech mt-red">T1078 Valid Accts</div>
-            <div class="mitre-tech mt-amber">T1098 Acct Manip</div>
-            <div class="mitre-tech mt-amber">T1136 Create Acct</div>
-          </div>
-        </div>
-        <div class="mitre-tactic">
-          <div class="mitre-tactic-name">Defense Evasion</div>
-          <div class="mitre-techniques">
-            <div class="mitre-tech mt-red">T1036 Masquerade</div>
-            <div class="mitre-tech mt-amber">T1027 Obfuscation</div>
-            <div class="mitre-tech mt-amber">T1550.001 Token Abuse</div>
-            <div class="mitre-tech mt-cyan">T1055 Proc Inject</div>
-          </div>
-        </div>
-        <div class="mitre-tactic">
-          <div class="mitre-tactic-name">Credential Access</div>
-          <div class="mitre-techniques">
-            <div class="mitre-tech mt-red">T1003 Cred Dump</div>
-            <div class="mitre-tech mt-amber">T1552.001 Creds in Files</div>
-          </div>
-        </div>
-        <div class="mitre-tactic">
-          <div class="mitre-tactic-name">Impact</div>
-          <div class="mitre-techniques">
-            <div class="mitre-tech mt-red">T1498 DoS</div>
-            <div class="mitre-tech mt-red">T1486 Encrypt</div>
-            <div class="mitre-tech mt-red">T1657 Fin Theft</div>
-            <div class="mitre-tech mt-amber">T1490 Block Recovery</div>
-          </div>
-        </div>
-        <div class="mitre-tactic">
-          <div class="mitre-tactic-name">Exfiltration</div>
-          <div class="mitre-techniques">
-            <div class="mitre-tech mt-amber">T1041 Over C2</div>
-            <div class="mitre-tech mt-amber">T1567.002 Cloud Storage</div>
-            <div class="mitre-tech mt-cyan">T1020 Auto Exfil</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<hr class="div">
-
-<!-- ── SECTION 05: DIAMOND MODEL ── -->
-<section class="wrap fi" style="animation-delay:0.1s">
-  <div class="sec-label">05 — Threat Modeling</div>
-  <h2>Diamond Model</h2>
-  <p class="sec-desc">Every campaign in campaigns.json is structured using the Diamond Model — four nodes that together describe a complete intrusion. Here's the model using the SolarWinds campaign as the example.</p>
-
-  <div class="diamond-grid">
-    <div class="diamond-card">
-      <div class="diamond-node">Adversary</div>
-      <div class="diamond-body">
-        <strong>APT29 / Cozy Bear</strong><br>
-        Russia SVR · G0016<br>
-        Motivation: Espionage<br>
-        Sophistication: Elite<br>
-        actor_id: TA-002<br>
-        Confidence: 0.99
-      </div>
-    </div>
-    <div class="diamond-card">
-      <div class="diamond-node">Capability</div>
-      <div class="diamond-body">
-        <strong>SUNBURST backdoor (MA-003)</strong><br>
-        Techniques: T1195.002 · T1036 · T1550.001<br>
-        Supply chain trojanization<br>
-        SAML token abuse<br>
-        Long dwell time (14+ months)<br>
-        zero detection during operation
-      </div>
-    </div>
-    <div class="diamond-card">
-      <div class="diamond-node">Infrastructure</div>
-      <div class="diamond-body">
-        <strong>avsvmcloud.com C2</strong><br>
-        Blended with legitimate SolarWinds traffic<br>
-        CDN-hosted relay infrastructure<br>
-        US-based cloud services abused<br>
-        DNS beaconing for C2 comm
-      </div>
-    </div>
-    <div class="diamond-card">
-      <div class="diamond-node">Victim</div>
-      <div class="diamond-body">
-        <strong>~18,000 organizations</strong><br>
-        sector_id: SECTOR-003<br>
-        US Treasury · DHS · DoJ<br>
-        Microsoft · FireEye/Mandiant<br>
-        Countries: USA · UK · Canada · Israel<br>
-        Impact: Critical espionage
-      </div>
-    </div>
-  </div>
-</section>
-
-<hr class="div">
-
-<!-- ── SECTION 06: CAMPAIGNS ── -->
-<section id="campaigns" class="wrap fi" style="animation-delay:0.1s">
-  <div class="sec-label">06 — Campaigns</div>
-  <h2>Tracked Operations</h2>
-  <p class="sec-desc">Seven documented campaigns from campaigns.json. Each links actor → malware → vulnerability → victim sector using Diamond Model structure and real-world attribution data.</p>
-
-  <div class="camp-grid">
-
-    <div class="camp-card">
-      <div class="camp-head">
-        <div class="camp-name">Operation Fancy Bear<br>Election Targeting</div>
-        <span class="badge critical">0.95</span>
-      </div>
-      <div class="camp-body">
-        <div class="camp-actor">Actor: <strong>APT28</strong> (TA-001) · Russia GRU · 2014–ongoing</div>
-        <div class="camp-impact">Spearphishing + credential harvesting against election infrastructure, political orgs, and NATO governments. Deployed X-Agent + X-Tunnel. Affected USA, Germany, France, Ukraine.</div>
-        <div class="camp-tags">
-          <span class="camp-tag">CAMP-001</span><span class="camp-tag">espionage</span><span class="camp-tag">elections</span><span class="camp-tag">influence-ops</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="camp-card">
-      <div class="camp-head">
-        <div class="camp-name">Operation SolarWinds<br>SUNBURST</div>
-        <span class="badge critical">0.99</span>
-      </div>
-      <div class="camp-body">
-        <div class="camp-actor">Actor: <strong>APT29</strong> (TA-002) · Russia SVR · 2019–2020</div>
-        <div class="camp-impact">Most sophisticated supply chain attack ever documented. Trojanized SolarWinds Orion update → SUNBURST backdoor → ~18,000 orgs. US Treasury, DHS, Microsoft, FireEye compromised in depth.</div>
-        <div class="camp-tags">
-          <span class="camp-tag">CAMP-002</span><span class="camp-tag">supply-chain</span><span class="camp-tag">sunburst</span><span class="camp-tag">elite-ttps</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="camp-card">
-      <div class="camp-head">
-        <div class="camp-name">Operation Double Dragon<br>Telecom & Healthcare</div>
-        <span class="badge critical">0.90</span>
-      </div>
-      <div class="camp-body">
-        <div class="camp-actor">Actor: <strong>APT41</strong> (TA-003) · China · 2014–ongoing</div>
-        <div class="camp-impact">Dual-mission: state espionage (SMS/call interception via MESSAGETAP on telecom networks) + financially motivated attacks on healthcare and gaming. Rapid zero-day exploitation.</div>
-        <div class="camp-tags">
-          <span class="camp-tag">CAMP-003</span><span class="camp-tag">telecom</span><span class="camp-tag">dual-use</span><span class="camp-tag">messagetap</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="camp-card">
-      <div class="camp-head">
-        <div class="camp-name">Operation AppleJeus<br>Crypto Heists</div>
-        <span class="badge critical">0.94</span>
-      </div>
-      <div class="camp-body">
-        <div class="camp-actor">Actor: <strong>Lazarus Group</strong> (TA-004) · DPRK · 2018–ongoing</div>
-        <div class="camp-impact">Fake job offers + trojanized crypto apps → BLINDINGCAN RAT → $3B+ stolen in cryptocurrency for DPRK regime. Targets 50+ exchanges, DeFi protocols, NFT platforms.</div>
-        <div class="camp-tags">
-          <span class="camp-tag">CAMP-004</span><span class="camp-tag">crypto-theft</span><span class="camp-tag">$3B+</span><span class="camp-tag">applej eus</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="camp-card">
-      <div class="camp-head">
-        <div class="camp-name">LockBit Global<br>Ransomware Campaign</div>
-        <span class="badge critical">0.92</span>
-      </div>
-      <div class="camp-body">
-        <div class="camp-actor">Actor: <strong>LockBit</strong> (TA-005) · Unknown · 2019–disrupted 2024</div>
-        <div class="camp-impact">World's most prolific RaaS. 2,000+ victims in 60+ countries. Boeing, Royal Mail, hospitals. $91M+ USD in ransoms from US victims alone. Disrupted by Operation Cronos (Feb 2024).</div>
-        <div class="camp-tags">
-          <span class="camp-tag">CAMP-005</span><span class="camp-tag">raas</span><span class="camp-tag">double-extortion</span><span class="camp-tag">op-cronos</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="camp-card">
-      <div class="camp-head">
-        <div class="camp-name">Operation MOVEit<br>Mass Zero-Day Exploit</div>
-        <span class="badge critical">0.97</span>
-      </div>
-      <div class="camp-body">
-        <div class="camp-actor">Actor: <strong>Cl0p</strong> (TA-006) · Unknown · May–Sep 2023</div>
-        <div class="camp-impact">CVE-2023-34362 SQL injection in MOVEit Transfer → 2,600+ orgs breached simultaneously, 77M+ individuals. US Dept of Energy, Shell, BBC, British Airways. $9.9B estimated economic impact.</div>
-        <div class="camp-tags">
-          <span class="camp-tag">CAMP-006</span><span class="camp-tag">VUL-001</span><span class="camp-tag">moveit</span><span class="camp-tag">77M-victims</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="camp-card">
-      <div class="camp-head">
-        <div class="camp-name">KillNet NATO<br>DDoS Campaign</div>
-        <span class="badge medium">0.73</span>
-      </div>
-      <div class="camp-body">
-        <div class="camp-actor">Actor: <strong>KillNet</strong> (TA-007) · Russia · Feb 2022–ongoing</div>
-        <div class="camp-impact">Sustained DDoS campaign vs NATO infrastructure following Ukraine invasion. Coordinated via Telegram. Hit US Congress, Lockheed Martin, hospitals in Netherlands & Germany, airports across Europe.</div>
-        <div class="camp-tags">
-          <span class="camp-tag">CAMP-007</span><span class="camp-tag">ddos</span><span class="camp-tag">nato</span><span class="camp-tag">hacktivist</span>
-        </div>
-      </div>
-    </div>
-
-  </div>
-</section>
-
-<hr class="div">
-
-<!-- ── SECTION 07: TERMINAL ── -->
-<section class="wrap fi" style="animation-delay:0.1s">
-  <div class="sec-label">07 — Running the Project</div>
-  <h2>Real Usage</h2>
-  <p class="sec-desc">This reflects what actually exists: demo.py as the entry point, the datasets directory, and the core_engine pipeline. No imaginary CLI flags or API endpoints.</p>
-
-  <div class="term">
-    <div class="term-head">
-      <div class="dots"><div class="dot r"></div><div class="dot y"></div><div class="dot g"></div></div>
-      <span class="term-ttl">bash — open-intelligence-lab/</span>
-    </div>
-    <div class="term-body">
-      <div class="tl" style="animation-delay:0.3s"><span class="tp">$ </span><span class="tc">git clone https://github.com/AlborzNazari/open-intelligence-lab && cd open-intelligence-lab</span></div>
-      <div class="tl" style="animation-delay:0.7s"><span class="tok">✓  Cloned. 56 commits.</span></div>
-      <div class="tl" style="animation-delay:1.1s"><span class="tp">$ </span><span class="tc">ls datasets/</span></div>
-      <div class="tl" style="animation-delay:1.4s"><span class="ti">  attack_patterns.json   threat_entities.json   relations.json   mitre_mapping.json   campaigns.json</span></div>
-      <div class="tl" style="animation-delay:1.8s"><span class="tp">$ </span><span class="tc">pip install -r requirements.txt</span></div>
-      <div class="tl" style="animation-delay:2.1s"><span class="tok">✓  networkx, pydantic, fastapi, rich ... installed.</span></div>
-      <div class="tl" style="animation-delay:2.5s"><span class="tp">$ </span><span class="tc">python demo.py</span></div>
-      <div class="tl" style="animation-delay:2.8s"><span class="ti">  [GraphBuilder]    Loading 5 dataset files ...</span></div>
-      <div class="tl" style="animation-delay:3.1s"><span class="to">  ├─ threat_entities.json   21 nodes loaded    ✓</span></div>
-      <div class="tl" style="animation-delay:3.4s"><span class="to">  ├─ attack_patterns.json   15 patterns loaded ✓</span></div>
-      <div class="tl" style="animation-delay:3.7s"><span class="to">  ├─ relations.json         28 edges loaded    ✓</span></div>
-      <div class="tl" style="animation-delay:4.0s"><span class="to">  ├─ mitre_mapping.json     7 actor TTPs       ✓</span></div>
-      <div class="tl" style="animation-delay:4.3s"><span class="to">  └─ campaigns.json         7 campaigns        ✓</span></div>
-      <div class="tl" style="animation-delay:4.6s"><span class="ti">  [RiskAnalyzer]    Scoring all entities ...</span></div>
-      <div class="tl" style="animation-delay:4.9s"><span class="tw">  ⚡  APT29         risk=0.970  CRITICAL</span></div>
-      <div class="tl" style="animation-delay:5.2s"><span class="tw">  ⚡  APT28         risk=0.950  CRITICAL</span></div>
-      <div class="tl" style="animation-delay:5.5s"><span class="tw">  ⚡  Lazarus Group risk=0.940  CRITICAL</span></div>
-      <div class="tl" style="animation-delay:5.8s"><span class="ti">  [Explainability]  Generating rationale ...</span></div>
-      <div class="tl" style="animation-delay:6.1s"><span class="tok">  ✓  Report saved: research_docs/intel_report.json</span></div>
-      <div class="tl" style="animation-delay:6.4s"><span class="tp">$ </span><span class="cur"></span></div>
-    </div>
-  </div>
-</section>
-
-<hr class="div">
-
-<!-- ── SECTION 08: ROADMAP ── -->
-<section id="roadmap" class="wrap fi" style="animation-delay:0.1s">
-  <div class="sec-label">08 — Roadmap</div>
-  <h2>Where It's Going</h2>
-  <p class="sec-desc">v1 is the current state of the repo — datasets + core engine + API skeleton. What comes next is grounded in what's actually missing.</p>
-
-  <div class="roadmap">
-    <div class="rm v1">
-      <div class="rm-ver">✅ v1 — Current State</div>
-      <div class="rm-items">
-        <div class="rm-item">5 dataset files (JSON)</div>
-        <div class="rm-item">21 threat entities</div>
-        <div class="rm-item">28 graph relations</div>
-        <div class="rm-item">15 OSINT attack patterns</div>
-        <div class="rm-item">7 MITRE actor mappings</div>
-        <div class="rm-item">7 campaigns (Diamond Model)</div>
-        <div class="rm-item">graph_builder + risk_analyzer</div>
-        <div class="rm-item">explainability module</div>
-        <div class="rm-item">API router skeleton</div>
-        <div class="rm-item">demo.py entry point</div>
-      </div>
-    </div>
-    <div class="rm v2">
-      <div class="rm-ver">🚧 v2 — Platform</div>
-      <div class="rm-items">
-        <div class="rm-item">STIX 2.1 schema compliance</div>
-        <div class="rm-item">TAXII feed export</div>
-        <div class="rm-item">OpenCTI / MISP integration</div>
-        <div class="rm-item">threat_model.json (STRIDE)</div>
-        <div class="rm-item">adversary_profiles/ directory</div>
-        <div class="rm-item">IOC ingestion pipeline</div>
-        <div class="rm-item">D3.js graph visualization</div>
-        <div class="rm-item">FastAPI fully wired up</div>
-        <div class="rm-item">Docker deployment</div>
-        <div class="rm-item">CI/CD + GitHub Actions</div>
-      </div>
-    </div>
-    <div class="rm v3">
-      <div class="rm-ver">🔭 v3 — Intelligence</div>
-      <div class="rm-items">
-        <div class="rm-item">Neo4j graph database</div>
-        <div class="rm-item">Multi-hop actor pivoting</div>
-        <div class="rm-item">ML-based risk scoring</div>
-        <div class="rm-item">ATT&CK Navigator export</div>
-        <div class="rm-item">Live threat feed ingestion</div>
-        <div class="rm-item">Dark web monitoring layer</div>
-        <div class="rm-item">Campaign timeline viz</div>
-        <div class="rm-item">Sector-based risk reports</div>
-        <div class="rm-item">API key auth + RBAC</div>
-        <div class="rm-item">Research publication output</div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<hr class="div">
-
-<footer>
-  Open Intelligence Lab · AlborzNazari · github.com/AlborzNazari/open-intelligence-lab · 2026
-</footer>
-
+// RESIZE
+window.addEventListener("resize", () => {
+  resetZoom();
+});
+</script>
 </body>
 </html>
