@@ -8,7 +8,7 @@
 ![Research Status](https://img.shields.io/badge/research-alpha-blue)
 ![Dataset Version](https://img.shields.io/badge/datasets-v0.1-green)
 ![Model Version](https://img.shields.io/badge/intelligence_model-v0.1-orange)
-[![Research Status](https://img.shields.io/badge/Research-Alpha-000000?logo=medium&logoColor=white)](https://medium.com/@alborznazari4/open-intelligence-lab-v-0-1-1-from-a-black-box-to-a-transparent-modular-and-open-source-model-0c099f728294)
+[![Research Status](https://img.shields.io/badge/Research-Alpha-000000?logo=medium&logoColor=white)](https://medium.com/@alborznazari4/open-intelligence-lab-on-git-from-a-black-box-to-a-transparent-modular-and-open-source-model-ffa154962964)
 
 
 <img width="928" height="916" alt="Medium_02" src="https://github.com/user-attachments/assets/617c605d-4140-40e2-a745-b0a992df88a4" />
