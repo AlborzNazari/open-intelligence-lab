@@ -59,6 +59,8 @@ flowchart TD
         TE[threat_entities.json]
         AP[attack_patterns.json]
         RL[relations.json]
+        CA[campaigns.json]
+        MM[mitre_mapping.json]
     end
 
     %% ===========================
@@ -96,6 +98,8 @@ flowchart TD
     TE --> GB
     AP --> GB
     RL --> GB
+    CA --> GB
+    MM --> GB
 
     %% GRAPH → ANALYSIS
     GB --> RA
@@ -113,6 +117,3 @@ flowchart TD
 
     %% API → RESEARCH
     IA --> RD
-
-
-
