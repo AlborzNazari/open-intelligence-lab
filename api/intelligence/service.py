@@ -1,22 +1,22 @@
-from core_engine.graph_builder import GraphBuilder
+from core_engine.graph_builder import ThreatKnowledgeGraph
 from core_engine.risk_analyzer import RiskAnalyzer
-from core_engine.explainability import ExplainabilityEngine
+from core_engine.intelligence_explainer import IntelligenceExplainer
 
 def analyze_entity(entity_id: str):
     # Build graph
-    builder = GraphBuilder()
-    graph = builder.build_graph_from_dataset("datasets/attack_patterns")
+    kg = ThreatKnowledgeGraph()
+    graph = kg.get_graph()
 
     # Compute risk
-    analyzer = RiskAnalyzer()
-    risk_score = analyzer.compute_entity_risk(graph, entity_id)
+    analyzer = RiskAnalyzer(graph)
+    analyzer.compute_all_risks()
 
     # Explain result
-    explainer = ExplainabilityEngine()
-    explanation = explainer.explain_entity_risk(graph, entity_id)
+    explainer = IntelligenceExplainer(graph)
+    explanation = explainer.explain_entity(entity_id)
 
     return {
         "entity_id": entity_id,
-        "risk_score": risk_score,
-        "explanation": explanation
+        "risk_score": explanation["risk_score"],
+        "explanation": explanation["explanation"]
     }
