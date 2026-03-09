@@ -1,30 +1,37 @@
-import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
-import matplotlib.patheffects as pe
+"""
+graph_renderer.py — Open Intelligence Lab
+Interactive threat knowledge graph powered by Plotly.
+Opens in your browser: fully zoomable, pannable, clickable.
+"""
+
+import math
+import webbrowser
+import tempfile
 import networkx as nx
+import plotly.graph_objects as go
 
 
-# ── THEME ──────────────────────────────────────────────────────────────────────
-BG_VOID      = "#020408"
-BG_PANEL     = "#080d14"
-BORDER       = "#1a2535"
-TEXT_PRIMARY = "#e8f4fd"
-TEXT_MUTED   = "#4a6278"
-ACCENT       = "#00d4ff"
+# ── PALETTE ───────────────────────────────────────────────────────────────────
+BG_VOID   = "#020408"
+BG_PANEL  = "#080d14"
+BORDER    = "#1a2535"
+TEXT_PRI  = "#e8f4fd"
+TEXT_MUT  = "#4a6278"
+ACCENT    = "#00d4ff"
 
-ENTITY_STYLES = {
-    "organization":     {"color": "#00d4ff", "glow": "#00d4ff66", "marker": "●"},
-    "domain":           {"color": "#39ff8f", "glow": "#39ff8f66", "marker": "◆"},
-    "incident_category":{"color": "#ff4d6d", "glow": "#ff4d6d66", "marker": "▲"},
-    "threat_actor":     {"color": "#ff2d55", "glow": "#ff2d5566", "marker": "★"},
-    "malware":          {"color": "#c084fc", "glow": "#c084fc66", "marker": "■"},
-    "infrastructure":   {"color": "#f5a623", "glow": "#f5a62366", "marker": "⬟"},
-    "cve":              {"color": "#ff6b35", "glow": "#ff6b3566", "marker": "◉"},
-    "sector":           {"color": "#4a9eff", "glow": "#4a9eff66", "marker": "⬡"},
+ENTITY_COLOR = {
+    "organization":      "#00d4ff",
+    "domain":            "#39ff8f",
+    "incident_category": "#ff4d6d",
+    "threat_actor":      "#ff2d55",
+    "malware":           "#c084fc",
+    "infrastructure":    "#f5a623",
+    "cve":               "#ff6b35",
+    "sector":            "#4a9eff",
 }
-DEFAULT_STYLE = {"color": "#4a6278", "glow": "#4a627866", "marker": "●"}
+DEFAULT_COLOR = "#4a6278"
 
-RISK_COLORS = {
+RISK_COLOR = {
     "critical": "#ff2d55",
     "high":     "#ff6b35",
     "medium":   "#f5a623",
@@ -37,252 +44,229 @@ def _risk_band(score: float) -> str:
     if score >= 0.40: return "medium"
     return "low"
 
+def _node_size(risk: float) -> int:
+    return int(22 + risk * 32)
 
-# ── MAIN DRAW FUNCTION ─────────────────────────────────────────────────────────
+def _hex_rgba(hex_color: str, alpha: float) -> str:
+    h = hex_color.lstrip("#")
+    r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+    return f"rgba({r},{g},{b},{alpha})"
+
+
+# ── MAIN ──────────────────────────────────────────────────────────────────────
 def draw_threat_graph(graph: nx.DiGraph) -> None:
 
-    fig, ax = plt.subplots(figsize=(14, 9))
-    fig.patch.set_facecolor(BG_VOID)
-    ax.set_facecolor(BG_PANEL)
+    if graph.number_of_nodes() == 0:
+        print("[graph_renderer] Empty graph — nothing to render.")
+        return
 
-    # subtle grid
-    ax.grid(True, color=BORDER, linewidth=0.4, linestyle="--", alpha=0.5)
-    ax.set_axisbelow(True)
-    for spine in ax.spines.values():
-        spine.set_edgecolor(BORDER)
-        spine.set_linewidth(1)
+    pos = nx.spring_layout(graph, seed=42, k=2.2)
 
-    # ── LAYOUT ────────────────────────────────────────────────────────────────
-    pos = nx.spring_layout(graph, seed=42, k=2.8)
+    # ── EDGE ARROWS ──────────────────────────────────────────────────────────
+    annotations = []
+    edge_hover_xs, edge_hover_ys, edge_hover_texts = [], [], []
 
-    # ── COLLECT NODE PROPERTIES ───────────────────────────────────────────────
-    node_colors, node_sizes, node_edge_colors = [], [], []
-    for n in graph.nodes:
-        attrs = graph.nodes[n]
-        etype = attrs.get("entity_type", "unknown")
-        style = ENTITY_STYLES.get(etype, DEFAULT_STYLE)
-        risk  = attrs.get("risk_score", 0.5)
-        node_colors.append(style["color"] + "33")      # translucent fill
-        node_sizes.append(1800 + risk * 2200)           # size scales with risk
-        node_edge_colors.append(style["color"])
-
-    # ── DRAW GLOW HALOS ────────────────────────────────────────────────────────
-    for n, (x, y) in pos.items():
-        attrs  = graph.nodes[n]
-        etype  = attrs.get("entity_type", "unknown")
-        style  = ENTITY_STYLES.get(etype, DEFAULT_STYLE)
-        risk   = attrs.get("risk_score", 0.5)
-        radius = (1800 + risk * 2200) / 28000
-        circle = plt.Circle(
-            (x, y), radius * 2.8,
-            color=style["glow"], linewidth=0, alpha=0.25, zorder=1
-        )
-        ax.add_patch(circle)
-
-    # ── DRAW EDGES ────────────────────────────────────────────────────────────
-    edge_styles = []
     for u, v, data in graph.edges(data=True):
-        rel  = data.get("relation_type", "related_to")
-        conf = data.get("confidence", 0.7)
-        src_style = ENTITY_STYLES.get(
-            graph.nodes[u].get("entity_type", ""), DEFAULT_STYLE
-        )
-        edge_styles.append((u, v, src_style["color"], conf))
+        x0, y0 = pos[u]
+        x1, y1 = pos[v]
+        rel   = data.get("relation_type", "related_to")
+        conf  = data.get("confidence", 0.7)
+        color = ENTITY_COLOR.get(graph.nodes[u].get("entity_type", ""), DEFAULT_COLOR)
+        rgba  = _hex_rgba(color, 0.2 + conf * 0.5)
 
-    for u, v, color, conf in edge_styles:
-        nx.draw_networkx_edges(
-            graph, pos, edgelist=[(u, v)], ax=ax,
-            edge_color=color,
-            alpha=0.25 + conf * 0.45,
-            width=0.6 + conf * 1.6,
-            arrows=True,
-            arrowsize=16,
-            arrowstyle="-|>",
-            node_size=2800,
-            connectionstyle="arc3,rad=0.08",
-            min_source_margin=18,
-            min_target_margin=18,
-        )
+        # arrow
+        annotations.append(dict(
+            ax=x0, ay=y0, x=x1, y=y1,
+            xref="x", yref="y", axref="x", ayref="y",
+            showarrow=True,
+            arrowhead=2, arrowsize=1.2,
+            arrowwidth=0.8 + conf * 1.8,
+            arrowcolor=rgba,
+        ))
 
-    # ── DRAW NODES ────────────────────────────────────────────────────────────
-    nx.draw_networkx_nodes(
-        graph, pos, ax=ax,
-        node_color=node_colors,
-        node_size=node_sizes,
-        linewidths=1.8,
+        # edge label at midpoint
+        mx, my = (x0 + x1) / 2, (y0 + y1) / 2
+        annotations.append(dict(
+            x=mx, y=my, xref="x", yref="y",
+            text=f"<span style='font-size:9px;color:{TEXT_MUT};font-family:monospace'>{rel}</span>",
+            showarrow=False,
+            bgcolor=BG_VOID,
+            bordercolor=BORDER,
+            borderwidth=0.5,
+            borderpad=2,
+            opacity=0.85,
+        ))
+
+        edge_hover_xs.append(mx)
+        edge_hover_ys.append(my)
+        edge_hover_texts.append(f"<b>{rel}</b><br>confidence: {conf:.2f}")
+
+    # invisible edge hover trace
+    edge_trace = go.Scatter(
+        x=edge_hover_xs, y=edge_hover_ys,
+        mode="markers",
+        marker=dict(size=10, color="rgba(0,0,0,0)"),
+        hovertemplate="%{customdata}<extra></extra>",
+        customdata=edge_hover_texts,
+        showlegend=False,
     )
-    # coloured borders drawn separately for full control
-    for i, n in enumerate(graph.nodes):
-        nx.draw_networkx_nodes(
-            graph, pos, ax=ax,
-            nodelist=[n],
-            node_color="none",
-            node_size=node_sizes[i],
-            linewidths=1.8,
-            edgecolors=node_edge_colors[i],
-        )
 
-    # ── DRAW LABELS ───────────────────────────────────────────────────────────
-    for n, (x, y) in pos.items():
-        attrs = graph.nodes[n]
-        name  = attrs.get("name", n)
-        risk  = attrs.get("risk_score", None)
-        label = name if len(name) <= 18 else name[:16] + "…"
+    # ── GLOW HALOS ────────────────────────────────────────────────────────────
+    glow_xs, glow_ys, glow_sizes, glow_colors = [], [], [], []
+    for n in graph.nodes:
+        x, y  = pos[n]
+        risk  = graph.nodes[n].get("risk_score", 0.5)
+        etype = graph.nodes[n].get("entity_type", "unknown")
+        color = ENTITY_COLOR.get(etype, DEFAULT_COLOR)
+        glow_xs.append(x)
+        glow_ys.append(y)
+        glow_sizes.append(_node_size(risk) * 2.6)
+        glow_colors.append(_hex_rgba(color, 0.09))
 
-        # main label
-        ax.text(
-            x, y + 0.01, label,
-            fontsize=8.5, fontweight="600",
-            color=TEXT_PRIMARY, ha="center", va="center",
-            fontfamily="monospace",
-            zorder=10,
-            path_effects=[
-                pe.withStroke(linewidth=3, foreground=BG_PANEL)
-            ],
-        )
+    glow_trace = go.Scatter(
+        x=glow_xs, y=glow_ys,
+        mode="markers",
+        marker=dict(size=glow_sizes, color=glow_colors, line=dict(width=0)),
+        hoverinfo="skip",
+        showlegend=False,
+    )
 
-        # risk badge below node
-        if risk is not None:
+    # ── NODE TRACES (grouped by entity type for legend) ───────────────────────
+    types_map: dict = {}
+    for n in graph.nodes:
+        etype = graph.nodes[n].get("entity_type", "unknown")
+        types_map.setdefault(etype, []).append(n)
+
+    node_traces = []
+    for etype, node_ids in types_map.items():
+        color = ENTITY_COLOR.get(etype, DEFAULT_COLOR)
+        xs, ys, sizes, texts, hovers, borders = [], [], [], [], [], []
+
+        for n in node_ids:
+            attrs = graph.nodes[n]
+            x, y  = pos[n]
+            name  = attrs.get("name", n)
+            risk  = attrs.get("risk_score", 0.5)
             band  = _risk_band(risk)
-            rcolor = RISK_COLORS[band]
-            ax.text(
-                x, y - 0.095,
-                f"{risk:.2f}",
-                fontsize=7, fontweight="bold",
-                color=rcolor, ha="center", va="center",
-                fontfamily="monospace",
-                zorder=10,
-                path_effects=[
-                    pe.withStroke(linewidth=2.5, foreground=BG_PANEL)
-                ],
+            rc    = RISK_COLOR[band]
+            conf  = attrs.get("confidence_level", 0.8)
+            deg   = graph.degree(n)
+
+            xs.append(x)
+            ys.append(y)
+            sizes.append(_node_size(risk))
+            borders.append(rc)
+            texts.append(
+                f"<span style='font-family:monospace;font-size:10px;color:{TEXT_PRI}'>{name}</span>"
+                f"<br><span style='font-family:monospace;font-size:8px;color:{rc}'>{risk:.2f} · {band.upper()}</span>"
+            )
+            hovers.append(
+                f"<b style='color:{color};font-family:monospace'>{name}</b><br>"
+                f"<span style='color:{TEXT_MUT}'>type · </span>{etype}<br>"
+                f"<span style='color:{TEXT_MUT}'>risk · </span><span style='color:{rc}'>{risk:.2f} ({band.upper()})</span><br>"
+                f"<span style='color:{TEXT_MUT}'>confidence · </span>{conf:.2f}<br>"
+                f"<span style='color:{TEXT_MUT}'>connections · </span>{deg}"
             )
 
-    # ── EDGE RELATION LABELS (mid-edge) ──────────────────────────────────────
-    edge_labels = {
-        (u, v): data.get("relation_type", "")
-        for u, v, data in graph.edges(data=True)
-        if data.get("relation_type")
-    }
-    if edge_labels:
-        nx.draw_networkx_edge_labels(
-            graph, pos, edge_labels=edge_labels, ax=ax,
-            font_size=6.5,
-            font_color=TEXT_MUTED,
-            font_family="monospace",
-            bbox=dict(
-                boxstyle="round,pad=0.2",
-                facecolor=BG_VOID, edgecolor=BORDER,
-                alpha=0.75, linewidth=0.6,
+        node_traces.append(go.Scatter(
+            x=xs, y=ys,
+            mode="markers+text",
+            name=etype.replace("_", " ").title(),
+            text=texts,
+            textposition="bottom center",
+            hovertemplate="%{customdata}<extra></extra>",
+            customdata=hovers,
+            marker=dict(
+                size=sizes,
+                color=_hex_rgba(color, 0.15),
+                line=dict(color=borders, width=2.2),
+                symbol="circle",
             ),
-            rotate=False,
-            label_pos=0.5,
-        )
+        ))
 
-    # ── LEGEND ────────────────────────────────────────────────────────────────
-    present_types = {
-        graph.nodes[n].get("entity_type", "unknown")
-        for n in graph.nodes
-    }
-    legend_handles = []
-    for etype, style in ENTITY_STYLES.items():
-        if etype in present_types:
-            legend_handles.append(
-                mpatches.Patch(
-                    facecolor=style["color"] + "33",
-                    edgecolor=style["color"],
-                    linewidth=1.5,
-                    label=etype.replace("_", " ").title(),
-                )
-            )
+    # ── FIGURE ────────────────────────────────────────────────────────────────
+    n_nodes = graph.number_of_nodes()
+    n_edges = graph.number_of_edges()
 
-    if legend_handles:
-        legend = ax.legend(
-            handles=legend_handles,
-            loc="lower left",
-            frameon=True,
-            framealpha=0.85,
-            facecolor=BG_PANEL,
-            edgecolor=BORDER,
-            fontsize=8,
-            title="ENTITY TYPES",
-            title_fontsize=7,
-            labelcolor=TEXT_PRIMARY,
-            handlelength=1.2,
-            handleheight=1.0,
-            borderpad=0.8,
-            labelspacing=0.55,
-        )
-        legend.get_title().set_color(TEXT_MUTED)
-        legend.get_title().set_fontfamily("monospace")
+    fig = go.Figure(data=[glow_trace, edge_trace] + node_traces)
 
-    # ── RISK SCALE (top-right) ────────────────────────────────────────────────
-    risk_handles = [
-        mpatches.Patch(facecolor=RISK_COLORS["critical"] + "33",
-                       edgecolor=RISK_COLORS["critical"], linewidth=1.5,
-                       label="Critical  ≥ 0.90"),
-        mpatches.Patch(facecolor=RISK_COLORS["high"] + "33",
-                       edgecolor=RISK_COLORS["high"], linewidth=1.5,
-                       label="High      ≥ 0.70"),
-        mpatches.Patch(facecolor=RISK_COLORS["medium"] + "33",
-                       edgecolor=RISK_COLORS["medium"], linewidth=1.5,
-                       label="Medium    ≥ 0.40"),
-        mpatches.Patch(facecolor=RISK_COLORS["low"] + "33",
-                       edgecolor=RISK_COLORS["low"], linewidth=1.5,
-                       label="Low       < 0.40"),
-    ]
-    risk_legend = ax.legend(
-        handles=risk_handles,
-        loc="lower right",
-        frameon=True,
-        framealpha=0.85,
-        facecolor=BG_PANEL,
-        edgecolor=BORDER,
-        fontsize=8,
-        title="RISK BANDS",
-        title_fontsize=7,
-        labelcolor=TEXT_PRIMARY,
-        handlelength=1.2,
-        handleheight=1.0,
-        borderpad=0.8,
-        labelspacing=0.55,
-    )
-    risk_legend.get_title().set_color(TEXT_MUTED)
-    risk_legend.get_title().set_fontfamily("monospace")
-    ax.add_artist(legend)   # re-add first legend (matplotlib replaces it)
-
-    # ── TITLE & STATS BAR ─────────────────────────────────────────────────────
-    node_count = graph.number_of_nodes()
-    edge_count = graph.number_of_edges()
-
-    fig.text(
-        0.5, 0.965,
-        "OPEN INTELLIGENCE LAB  —  Threat Knowledge Graph",
-        ha="center", va="top",
-        fontsize=14, fontweight="bold",
-        color=TEXT_PRIMARY, fontfamily="monospace",
-    )
-    fig.text(
-        0.5, 0.942,
-        f"Nodes: {node_count}   ·   Edges: {edge_count}   ·   "
-        "Ethical OSINT  ·  MITRE ATT&CK Aligned  ·  v0.1",
-        ha="center", va="top",
-        fontsize=8, color=TEXT_MUTED, fontfamily="monospace",
+    fig.update_layout(
+        title=dict(
+            text=(
+                f"<span style='font-family:monospace;font-size:18px;color:{TEXT_PRI};letter-spacing:4px'>"
+                f"OPEN INTELLIGENCE LAB</span>"
+                f"<span style='font-family:monospace;font-size:14px;color:{ACCENT}'>  —  Threat Knowledge Graph</span><br>"
+                f"<span style='font-family:monospace;font-size:10px;color:{TEXT_MUT}'>"
+                f"Nodes: {n_nodes}  ·  Edges: {n_edges}  ·  Ethical OSINT  ·  MITRE ATT&CK Aligned  ·  v0.1"
+                f"</span>"
+            ),
+            x=0.5, xanchor="center",
+            y=0.97, yanchor="top",
+        ),
+        paper_bgcolor=BG_VOID,
+        plot_bgcolor=BG_PANEL,
+        font=dict(family="monospace", color=TEXT_PRI),
+        showlegend=True,
+        legend=dict(
+            bgcolor=BG_PANEL,
+            bordercolor=BORDER,
+            borderwidth=1,
+            font=dict(family="monospace", size=10, color=TEXT_PRI),
+            title=dict(text="<b>ENTITY TYPES</b>", font=dict(size=9, color=TEXT_MUT)),
+            x=0.01, y=0.01,
+            xanchor="left", yanchor="bottom",
+        ),
+        xaxis=dict(showgrid=True, gridcolor=BORDER, gridwidth=0.4,
+                   zeroline=False, showticklabels=False, showline=True, linecolor=BORDER),
+        yaxis=dict(showgrid=True, gridcolor=BORDER, gridwidth=0.4,
+                   zeroline=False, showticklabels=False, showline=True, linecolor=BORDER),
+        annotations=annotations,
+        margin=dict(l=20, r=20, t=110, b=20),
+        hovermode="closest",
+        hoverlabel=dict(
+            bgcolor=BG_PANEL, bordercolor=BORDER,
+            font=dict(family="monospace", size=11, color=TEXT_PRI),
+        ),
+        dragmode="pan",
     )
 
-    # top accent line
-    fig.add_artist(
-        plt.Line2D(
-            [0.04, 0.96], [0.935, 0.935],
-            transform=fig.transFigure,
-            color=ACCENT, linewidth=0.6, alpha=0.5,
-        )
+    # risk band legend (bottom right)
+    fig.add_annotation(
+        x=0.99, y=0.01, xref="paper", yref="paper",
+        xanchor="right", yanchor="bottom",
+        text=(
+            f"<span style='font-family:monospace;font-size:9px;color:{TEXT_MUT}'>RISK BANDS<br></span>"
+            + "".join([
+                f"<span style='font-family:monospace;font-size:9px;color:{RISK_COLOR[b]}'>{b.upper():<9}</span>"
+                f"<span style='font-family:monospace;font-size:9px;color:{TEXT_MUT}'>{t}<br></span>"
+                for b, t in [("critical","≥ 0.90"),("high","≥ 0.70"),("medium","≥ 0.40"),("low","< 0.40")]
+            ])
+        ),
+        showarrow=False, align="left",
+        bgcolor=BG_PANEL, bordercolor=BORDER,
+        borderwidth=1, borderpad=8, opacity=0.92,
     )
 
-    ax.set_xlim(ax.get_xlim()[0] - 0.15, ax.get_xlim()[1] + 0.15)
-    ax.set_ylim(ax.get_ylim()[0] - 0.18, ax.get_ylim()[1] + 0.10)
-    ax.tick_params(colors=BORDER)
-    ax.set_xticks([])
-    ax.set_yticks([])
-
-    plt.tight_layout(rect=[0, 0, 1, 0.93])
-    plt.show()
+    # ── OPEN IN BROWSER ───────────────────────────────────────────────────────
+    tmp = tempfile.NamedTemporaryFile(suffix=".html", delete=False, prefix="oi_lab_")
+    fig.write_html(
+        tmp.name,
+        include_plotlyjs="cdn",
+        config={
+            "scrollZoom": True,
+            "displayModeBar": True,
+            "modeBarButtonsToRemove": ["select2d", "lasso2d"],
+            "toImageButtonOptions": {
+                "format": "png",
+                "filename": "open_intelligence_lab",
+                "width": 1920, "height": 1080,
+            },
+        },
+    )
+    webbrowser.open(f"file://{tmp.name}")
+    print(f"\n[Open Intelligence Lab] ✓ Graph opened in browser")
+    print(f"  → Zoom with scroll wheel")
+    print(f"  → Pan by dragging")
+    print(f"  → Hover nodes & edges for details")
+    print(f"  → Click legend items to filter entity types")
+    print(f"  → Save as PNG via the camera icon\n")
