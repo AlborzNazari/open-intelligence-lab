@@ -1,272 +1,127 @@
 """
-graph_renderer.py — Open Intelligence Lab
-Interactive threat knowledge graph powered by Plotly.
-Opens in your browser: fully zoomable, pannable, clickable.
+demo.py — Open Intelligence Lab
+Loads all 5 real datasets and runs the full intelligence pipeline.
 """
 
-import math
-import webbrowser
-import tempfile
-import networkx as nx
-import plotly.graph_objects as go
+import json
+import os
+from core_engine.graph_builder import ThreatKnowledgeGraph
+from core_engine.risk_analyzer import RiskAnalyzer
+from core_engine.intelligence_explainer import IntelligenceExplainer
+from core_engine.intelligence_entities import IntelligenceEntity
+from visualization.graph_renderer import draw_threat_graph
 
 
-# ── PALETTE ───────────────────────────────────────────────────────────────────
-BG_VOID   = "#020408"
-BG_PANEL  = "#080d14"
-BORDER    = "#1a2535"
-TEXT_PRI  = "#e8f4fd"
-TEXT_MUT  = "#4a6278"
-ACCENT    = "#00d4ff"
-
-ENTITY_COLOR = {
-    "organization":      "#00d4ff",
-    "domain":            "#39ff8f",
-    "incident_category": "#ff4d6d",
-    "threat_actor":      "#ff2d55",
-    "malware":           "#c084fc",
-    "infrastructure":    "#f5a623",
-    "cve":               "#ff6b35",
-    "sector":            "#4a9eff",
-}
-DEFAULT_COLOR = "#4a6278"
-
-RISK_COLOR = {
-    "critical": "#ff2d55",
-    "high":     "#ff6b35",
-    "medium":   "#f5a623",
-    "low":      "#39ff8f",
-}
-
-def _risk_band(score: float) -> str:
-    if score >= 0.90: return "critical"
-    if score >= 0.70: return "high"
-    if score >= 0.40: return "medium"
-    return "low"
-
-def _node_size(risk: float) -> int:
-    return int(22 + risk * 32)
-
-def _hex_rgba(hex_color: str, alpha: float) -> str:
-    h = hex_color.lstrip("#")
-    r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
-    return f"rgba({r},{g},{b},{alpha})"
+DATASETS_DIR = os.path.join(os.path.dirname(__file__), "datasets")
 
 
-# ── MAIN ──────────────────────────────────────────────────────────────────────
-def draw_threat_graph(graph: nx.DiGraph) -> None:
+def load_json(filename: str) -> list:
+    path = os.path.join(DATASETS_DIR, filename)
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)
 
-    if graph.number_of_nodes() == 0:
-        print("[graph_renderer] Empty graph — nothing to render.")
-        return
 
-    pos = nx.spring_layout(graph, seed=42, k=2.2)
+def main():
+    print("\n╔══════════════════════════════════════════════════════╗")
+    print("║        OPEN INTELLIGENCE LAB  —  v0.1               ║")
+    print("║        Ethical OSINT · Graph-Based Threat Intel      ║")
+    print("╚══════════════════════════════════════════════════════╝\n")
 
-    # ── EDGE ARROWS ──────────────────────────────────────────────────────────
-    annotations = []
-    edge_hover_xs, edge_hover_ys, edge_hover_texts = [], [], []
+    # ── LOAD DATASETS ─────────────────────────────────────────────────────────
+    print("[1/5] Loading datasets...")
+    threat_entities  = load_json("threat_entities.json")
+    attack_patterns  = load_json("attack_patterns.json")
+    relations        = load_json("relations.json")
+    campaigns        = load_json("campaigns.json")
+    mitre_mapping    = load_json("mitre_mapping.json")
 
-    for u, v, data in graph.edges(data=True):
-        x0, y0 = pos[u]
-        x1, y1 = pos[v]
-        rel   = data.get("relation_type", "related_to")
-        conf  = data.get("confidence", 0.7)
-        color = ENTITY_COLOR.get(graph.nodes[u].get("entity_type", ""), DEFAULT_COLOR)
-        rgba  = _hex_rgba(color, 0.2 + conf * 0.5)
+    print(f"      ✓ threat_entities  → {len(threat_entities)} entities")
+    print(f"      ✓ attack_patterns  → {len(attack_patterns)} patterns")
+    print(f"      ✓ relations        → {len(relations)} edges")
+    print(f"      ✓ campaigns        → {len(campaigns)} campaigns")
+    print(f"      ✓ mitre_mapping    → {len(mitre_mapping)} mappings")
 
-        # arrow
-        annotations.append(dict(
-            ax=x0, ay=y0, x=x1, y=y1,
-            xref="x", yref="y", axref="x", ayref="y",
-            showarrow=True,
-            arrowhead=2, arrowsize=1.2,
-            arrowwidth=0.8 + conf * 1.8,
-            arrowcolor=rgba,
-        ))
+    # ── BUILD GRAPH ───────────────────────────────────────────────────────────
+    print("\n[2/5] Building knowledge graph...")
+    kg = ThreatKnowledgeGraph()
 
-        # edge label at midpoint
-        mx, my = (x0 + x1) / 2, (y0 + y1) / 2
-        annotations.append(dict(
-            x=mx, y=my, xref="x", yref="y",
-            text=f"<span style='font-size:9px;color:{TEXT_MUT};font-family:monospace'>{rel}</span>",
-            showarrow=False,
-            bgcolor=BG_VOID,
-            bordercolor=BORDER,
-            borderwidth=0.5,
-            borderpad=2,
-            opacity=0.85,
-        ))
+    # Add all entities from threat_entities.json
+    for item in threat_entities:
+        entity = IntelligenceEntity(
+            id=item["entity_id"],
+            entity_type=item["entity_type"],
+            name=item["name"],
+            risk_score=item.get("risk_score", 0.5),
+            confidence_level=item.get("confidence", 0.5),
+        )
+        kg.add_entity(entity)
 
-        edge_hover_xs.append(mx)
-        edge_hover_ys.append(my)
-        edge_hover_texts.append(f"<b>{rel}</b><br>confidence: {conf:.2f}")
+    # Add attack patterns as nodes
+    for ap in attack_patterns:
+        entity = IntelligenceEntity(
+            id=ap["pattern_id"],
+            entity_type="attack_pattern",
+            name=ap["name"],
+            risk_score=ap.get("severity_score", 0.5),
+            confidence_level=ap.get("confidence", 0.7),
+        )
+        kg.add_entity(entity)
 
-    # invisible edge hover trace
-    edge_trace = go.Scatter(
-        x=edge_hover_xs, y=edge_hover_ys,
-        mode="markers",
-        marker=dict(size=10, color="rgba(0,0,0,0)"),
-        hovertemplate="%{customdata}<extra></extra>",
-        customdata=edge_hover_texts,
-        showlegend=False,
-    )
+    # Add all relations as edges
+    for rel in relations:
+        kg.add_relationship(
+            source_id=rel["source_id"],
+            target_id=rel["target_id"],
+            relation_type=rel["relation_type"],
+            metadata={"confidence": rel.get("confidence", 0.7)},
+        )
 
-    # ── GLOW HALOS ────────────────────────────────────────────────────────────
-    glow_xs, glow_ys, glow_sizes, glow_colors = [], [], [], []
-    for n in graph.nodes:
-        x, y  = pos[n]
-        risk  = graph.nodes[n].get("risk_score", 0.5)
-        etype = graph.nodes[n].get("entity_type", "unknown")
-        color = ENTITY_COLOR.get(etype, DEFAULT_COLOR)
-        glow_xs.append(x)
-        glow_ys.append(y)
-        glow_sizes.append(_node_size(risk) * 2.6)
-        glow_colors.append(_hex_rgba(color, 0.09))
+    graph = kg.get_graph()
+    print(f"      ✓ Graph built → {graph.number_of_nodes()} nodes, {graph.number_of_edges()} edges")
 
-    glow_trace = go.Scatter(
-        x=glow_xs, y=glow_ys,
-        mode="markers",
-        marker=dict(size=glow_sizes, color=glow_colors, line=dict(width=0)),
-        hoverinfo="skip",
-        showlegend=False,
-    )
+    # ── RISK ANALYSIS ─────────────────────────────────────────────────────────
+    print("\n[3/5] Running risk analysis...")
+    risk_analyzer = RiskAnalyzer(graph)
+    risk_analyzer.compute_all_risks()
+    print("      ✓ Risk scores computed for all entities")
 
-    # ── NODE TRACES (grouped by entity type for legend) ───────────────────────
-    types_map: dict = {}
-    for n in graph.nodes:
-        etype = graph.nodes[n].get("entity_type", "unknown")
-        types_map.setdefault(etype, []).append(n)
+    # ── EXPLAINABILITY ────────────────────────────────────────────────────────
+    print("\n[4/5] Generating intelligence explanations...")
+    explainer = IntelligenceExplainer(graph)
 
-    node_traces = []
-    for etype, node_ids in types_map.items():
-        color = ENTITY_COLOR.get(etype, DEFAULT_COLOR)
-        xs, ys, sizes, texts, hovers, borders = [], [], [], [], [], []
+    # Run explanations on all threat actors
+    threat_actors = [e for e in threat_entities if e["entity_type"] == "threat_actor"]
+    print(f"\n{'─'*60}")
+    print(f"  {'ENTITY':<25} {'RISK':>6}  {'BAND':<10}  EXPLANATION")
+    print(f"{'─'*60}")
 
-        for n in node_ids:
-            attrs = graph.nodes[n]
-            x, y  = pos[n]
-            name  = attrs.get("name", n)
-            risk  = attrs.get("risk_score", 0.5)
-            band  = _risk_band(risk)
-            rc    = RISK_COLOR[band]
-            conf  = attrs.get("confidence_level", 0.8)
-            deg   = graph.degree(n)
+    for actor in threat_actors:
+        eid = actor["entity_id"]
+        try:
+            result = explainer.explain_entity(eid)
+            score  = result["risk_score"]
+            band   = "CRITICAL" if score >= 0.9 else "HIGH" if score >= 0.7 else "MEDIUM" if score >= 0.4 else "LOW"
+            first_line = result["explanation"][0] if result["explanation"] else ""
+            print(f"  {actor['name']:<25} {score:>6.2f}  {band:<10}  {first_line}")
+        except Exception:
+            print(f"  {actor['name']:<25}  —  (no risk data)")
 
-            xs.append(x)
-            ys.append(y)
-            sizes.append(_node_size(risk))
-            borders.append(rc)
-            texts.append(
-                f"<span style='font-family:monospace;font-size:10px;color:{TEXT_PRI}'>{name}</span>"
-                f"<br><span style='font-family:monospace;font-size:8px;color:{rc}'>{risk:.2f} · {band.upper()}</span>"
-            )
-            hovers.append(
-                f"<b style='color:{color};font-family:monospace'>{name}</b><br>"
-                f"<span style='color:{TEXT_MUT}'>type · </span>{etype}<br>"
-                f"<span style='color:{TEXT_MUT}'>risk · </span><span style='color:{rc}'>{risk:.2f} ({band.upper()})</span><br>"
-                f"<span style='color:{TEXT_MUT}'>confidence · </span>{conf:.2f}<br>"
-                f"<span style='color:{TEXT_MUT}'>connections · </span>{deg}"
-            )
+    print(f"{'─'*60}")
 
-        node_traces.append(go.Scatter(
-            x=xs, y=ys,
-            mode="markers+text",
-            name=etype.replace("_", " ").title(),
-            text=texts,
-            textposition="bottom center",
-            hovertemplate="%{customdata}<extra></extra>",
-            customdata=hovers,
-            marker=dict(
-                size=sizes,
-                color=_hex_rgba(color, 0.15),
-                line=dict(color=borders, width=2.2),
-                symbol="circle",
-            ),
-        ))
+    # ── CAMPAIGN SUMMARY ──────────────────────────────────────────────────────
+    print(f"\n[5/5] Campaign intelligence summary...")
+    print(f"\n  {'CAMPAIGN':<30} {'ADVERSARY':<15} {'OBJECTIVE'}")
+    print(f"  {'─'*65}")
+    for c in campaigns:
+        name      = c.get("campaign_name", c.get("name", "Unknown"))[:28]
+        adversary = c.get("adversary", c.get("attributed_to", "Unknown"))[:13]
+        objective = c.get("objective", c.get("motivation", ""))[:35]
+        print(f"  {name:<30} {adversary:<15} {objective}")
 
-    # ── FIGURE ────────────────────────────────────────────────────────────────
-    n_nodes = graph.number_of_nodes()
-    n_edges = graph.number_of_edges()
+    # ── VISUALIZE ─────────────────────────────────────────────────────────────
+    print("\n[✓] Launching interactive threat graph in browser...\n")
+    draw_threat_graph(graph)
 
-    fig = go.Figure(data=[glow_trace, edge_trace] + node_traces)
 
-    fig.update_layout(
-        title=dict(
-            text=(
-                f"<span style='font-family:monospace;font-size:18px;color:{TEXT_PRI};letter-spacing:4px'>"
-                f"OPEN INTELLIGENCE LAB</span>"
-                f"<span style='font-family:monospace;font-size:14px;color:{ACCENT}'>  —  Threat Knowledge Graph</span><br>"
-                f"<span style='font-family:monospace;font-size:10px;color:{TEXT_MUT}'>"
-                f"Nodes: {n_nodes}  ·  Edges: {n_edges}  ·  Ethical OSINT  ·  MITRE ATT&CK Aligned  ·  v0.1"
-                f"</span>"
-            ),
-            x=0.5, xanchor="center",
-            y=0.97, yanchor="top",
-        ),
-        paper_bgcolor=BG_VOID,
-        plot_bgcolor=BG_PANEL,
-        font=dict(family="monospace", color=TEXT_PRI),
-        showlegend=True,
-        legend=dict(
-            bgcolor=BG_PANEL,
-            bordercolor=BORDER,
-            borderwidth=1,
-            font=dict(family="monospace", size=10, color=TEXT_PRI),
-            title=dict(text="<b>ENTITY TYPES</b>", font=dict(size=9, color=TEXT_MUT)),
-            x=0.01, y=0.01,
-            xanchor="left", yanchor="bottom",
-        ),
-        xaxis=dict(showgrid=True, gridcolor=BORDER, gridwidth=0.4,
-                   zeroline=False, showticklabels=False, showline=True, linecolor=BORDER),
-        yaxis=dict(showgrid=True, gridcolor=BORDER, gridwidth=0.4,
-                   zeroline=False, showticklabels=False, showline=True, linecolor=BORDER),
-        annotations=annotations,
-        margin=dict(l=20, r=20, t=110, b=20),
-        hovermode="closest",
-        hoverlabel=dict(
-            bgcolor=BG_PANEL, bordercolor=BORDER,
-            font=dict(family="monospace", size=11, color=TEXT_PRI),
-        ),
-        dragmode="pan",
-    )
-
-    # risk band legend (bottom right)
-    fig.add_annotation(
-        x=0.99, y=0.01, xref="paper", yref="paper",
-        xanchor="right", yanchor="bottom",
-        text=(
-            f"<span style='font-family:monospace;font-size:9px;color:{TEXT_MUT}'>RISK BANDS<br></span>"
-            + "".join([
-                f"<span style='font-family:monospace;font-size:9px;color:{RISK_COLOR[b]}'>{b.upper():<9}</span>"
-                f"<span style='font-family:monospace;font-size:9px;color:{TEXT_MUT}'>{t}<br></span>"
-                for b, t in [("critical","≥ 0.90"),("high","≥ 0.70"),("medium","≥ 0.40"),("low","< 0.40")]
-            ])
-        ),
-        showarrow=False, align="left",
-        bgcolor=BG_PANEL, bordercolor=BORDER,
-        borderwidth=1, borderpad=8, opacity=0.92,
-    )
-
-    # ── OPEN IN BROWSER ───────────────────────────────────────────────────────
-    tmp = tempfile.NamedTemporaryFile(suffix=".html", delete=False, prefix="oi_lab_")
-    fig.write_html(
-        tmp.name,
-        include_plotlyjs="cdn",
-        config={
-            "scrollZoom": True,
-            "displayModeBar": True,
-            "modeBarButtonsToRemove": ["select2d", "lasso2d"],
-            "toImageButtonOptions": {
-                "format": "png",
-                "filename": "open_intelligence_lab",
-                "width": 1920, "height": 1080,
-            },
-        },
-    )
-    webbrowser.open(f"file://{tmp.name}")
-    print(f"\n[Open Intelligence Lab] ✓ Graph opened in browser")
-    print(f"  → Zoom with scroll wheel")
-    print(f"  → Pan by dragging")
-    print(f"  → Hover nodes & edges for details")
-    print(f"  → Click legend items to filter entity types")
-    print(f"  → Save as PNG via the camera icon\n")
+if __name__ == "__main__":
+    main()
