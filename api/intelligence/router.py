@@ -8,7 +8,7 @@ from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query
 
-from api.service import analyze_entity, list_entities, get_graph_summary
+from api.intelligence.service import analyze_entity, list_entities, get_graph_summary
 
 router = APIRouter(prefix="/intelligence", tags=["Intelligence"])
 
