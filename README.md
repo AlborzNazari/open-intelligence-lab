@@ -11,7 +11,11 @@
 
 It provides a clean, modular environment for researchers, analysts, and engineers who want to explore open-source intelligence signals **without compromising privacy or ethics** — using only public data, with every risk score backed by an interpretable rationale.
 
+**How Software Works?**
 > 📖 Read the full article: [From a Black Box to a Transparent, Modular, and Open-Source Model](https://medium.com/@alborznazari4/open-intelligence-lab-on-git-from-a-black-box-to-a-transparent-modular-and-open-source-model-ffa154962964)
+
+**Visual Doc**
+> 📖 Read the full article: [Visual Lab](https://alborznazari.github.io/open-intelligence-lab/)
 
 ---
 
