@@ -17,6 +17,9 @@ def load(filename):
     with open(os.path.join(BASE, "datasets", filename), encoding="utf-8") as f:
         return json.load(f)
 
+def get_name(e):
+    return e.get("name", e.get("pattern_name", e.get("entity_id", "unknown")))
+
 def risk_band(score):
     if score >= 0.90: return "CRITICAL", "#ff2d55"
     if score >= 0.70: return "HIGH",     "#ff6b35"
@@ -36,10 +39,10 @@ def explain(entity, relations, all_entities):
     targets = [r["target_id"] for r in connected if r["source_id"] == eid]
     sources = [r["source_id"] for r in connected if r["target_id"] == eid]
     if targets:
-        names = [next((e["name"] for e in all_entities if e["entity_id"] == t), t) for t in targets[:3]]
+        names = [next((get_name(e) for e in all_entities if e["entity_id"] == t), t) for t in targets[:3]]
         lines.append(f"Outbound links: {', '.join(names)}")
     if sources:
-        names = [next((e["name"] for e in all_entities if e["entity_id"] == s), s) for s in sources[:3]]
+        names = [next((get_name(e) for e in all_entities if e["entity_id"] == s), s) for s in sources[:3]]
         lines.append(f"Referenced by: {', '.join(names)}")
     if entity.get("motivation"):
         lines.append(f"Motivation: {', '.join(entity['motivation'])}")
@@ -66,7 +69,6 @@ def spring_layout(node_ids, edge_pairs, iterations=140, k=2.8, seed=42):
     random.seed(seed)
     n = len(node_ids)
     pos = {nid: [random.uniform(-2, 2), random.uniform(-2, 2)] for nid in node_ids}
-    id_set = set(node_ids)
     nl = list(node_ids)
     for it in range(iterations):
         disp = {nid: [0.0, 0.0] for nid in node_ids}
@@ -129,7 +131,7 @@ def main():
     print(f"  {'─' * 64}")
     for e in sorted(all_ents, key=lambda x: -x.get("risk_score", 0)):
         s = e.get("risk_score", 0)
-        print(f"  {e['name']:<28} {e['entity_type']:<18} {s:>6.2f}  {e['_band']}")
+        print(f"  {get_name(e):<28} {e['entity_type']:<18} {s:>6.2f}  {e['_band']}")
 
     print("\n[3/4] Computing graph layout...")
     nids = [e["entity_id"] for e in all_ents]
@@ -153,7 +155,7 @@ def main():
             "id":     nid,
             "x":      round(x, 4),
             "y":      round(y, 4),
-            "name":   e["name"],
+            "name":   get_name(e),
             "type":   e["entity_type"].replace("_", " ").title(),
             "score":  round(score, 3),
             "band":   band,
@@ -168,10 +170,10 @@ def main():
         if r["source_id"] in nset and r["target_id"] in nset:
             src = next((e for e in all_ents if e["entity_id"] == r["source_id"]), None)
             edges_js.append({
-                "s":    r["source_id"],
-                "t":    r["target_id"],
-                "rel":  r["relation_type"],
-                "conf": round(r.get("confidence", 0.7), 2),
+                "s":     r["source_id"],
+                "t":     r["target_id"],
+                "rel":   r["relation_type"],
+                "conf":  round(r.get("confidence", 0.7), 2),
                 "color": ecolor(src["entity_type"]) if src else DEFAULT_COLOR,
             })
 
@@ -186,8 +188,6 @@ def main():
     NJ = json.dumps(nodes_js)
     EJ = json.dumps(edges_js)
     CJ = json.dumps(camps_js)
-
-    n_critical = sum(1 for e in all_ents if e.get("risk_score", 0) >= 0.9)
 
     html = """<!DOCTYPE html>
 <html lang="en">
@@ -206,7 +206,6 @@ body{background:var(--void);color:var(--text);font-family:'JetBrains Mono',monos
 body::before{content:'';position:fixed;inset:0;
   background-image:linear-gradient(rgba(0,212,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,.025) 1px,transparent 1px);
   background-size:44px 44px;pointer-events:none;z-index:0}
-
 header{height:56px;background:rgba(8,13,20,.97);border-bottom:1px solid var(--border);
   display:flex;align-items:center;justify-content:space-between;padding:0 20px;
   flex-shrink:0;position:relative;z-index:10}
@@ -221,9 +220,7 @@ header{height:56px;background:rgba(8,13,20,.97);border-bottom:1px solid var(--bo
 .live{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--muted)}
 .dot{width:6px;height:6px;border-radius:50%;background:var(--low);animation:blink 2s infinite}
 @keyframes blink{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(57,255,143,.5)}50%{opacity:.6;box-shadow:0 0 0 5px rgba(57,255,143,0)}}
-
 .workspace{display:flex;flex:1;overflow:hidden;position:relative;z-index:1}
-
 .left-panel{width:236px;background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
 .panel-head{padding:11px 13px 8px;border-bottom:1px solid var(--border);flex-shrink:0}
 .panel-label{font-size:8px;letter-spacing:.25em;text-transform:uppercase;color:var(--muted)}
@@ -237,7 +234,6 @@ header{height:56px;background:rgba(8,13,20,.97);border-bottom:1px solid var(--bo
 .ename{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)}
 .etype{font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-top:1px}
 .escore{font-size:9px;padding:1px 5px;border-radius:2px;flex-shrink:0;font-weight:500}
-
 .canvas-wrap{flex:1;position:relative;overflow:hidden}
 canvas{position:absolute;inset:0;cursor:grab;display:block}
 canvas:active{cursor:grabbing}
@@ -255,7 +251,6 @@ canvas:active{cursor:grabbing}
 .tt-name{font-family:'Syne',sans-serif;font-size:12px;font-weight:700;margin-bottom:5px}
 .tt-row{display:flex;justify-content:space-between;font-size:9px;color:var(--muted);padding:1px 0}
 .tt-row span:last-child{color:var(--text)}
-
 .right-panel{width:258px;background:var(--panel);border-left:1px solid var(--border);
   display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
 .rsec{padding:13px;border-bottom:1px solid var(--border);flex-shrink:0}
@@ -311,19 +306,17 @@ canvas:active{cursor:grabbing}
   </div>
   <div class="live"><div class="dot"></div>GRAPH ENGINE ACTIVE</div>
 </header>
-
 <div class="workspace">
   <div class="left-panel">
     <div class="panel-head"><div class="panel-label">Entity Registry — sorted by risk</div></div>
     <div class="elist" id="elist"></div>
   </div>
-
   <div class="canvas-wrap">
     <div class="toolbar">
       <div class="tbtn" onclick="zoomIn()">+</div>
       <div class="tbtn" onclick="zoomOut()">−</div>
       <div class="tbtn" onclick="resetView()">⊙</div>
-      <div class="tbtn" onclick="toggleLabels()" id="lbtn">⊞</div>
+      <div class="tbtn" onclick="toggleLabels()">⊞</div>
     </div>
     <canvas id="gc"></canvas>
     <div class="hints">
@@ -338,7 +331,6 @@ canvas:active{cursor:grabbing}
       <div class="tt-row"><span>Connections</span><span id="tt-conn"></span></div>
     </div>
   </div>
-
   <div class="right-panel">
     <div class="rsec">
       <div class="rsec-title">Entity Intelligence</div>
@@ -376,7 +368,6 @@ canvas:active{cursor:grabbing}
     <div class="legend" id="leg"></div>
   </div>
 </div>
-
 <script>
 const NODES=NODE_DATA_PLACEHOLDER;
 const EDGES=EDGE_DATA_PLACEHOLDER;
@@ -387,7 +378,6 @@ document.getElementById('h-e').textContent=EDGES.length;
 document.getElementById('h-c').textContent=CAMPS.length;
 document.getElementById('h-k').textContent=NODES.filter(n=>n.score>=0.9).length;
 
-// entity list
 const elist=document.getElementById('elist');
 [...NODES].sort((a,b)=>b.score-a.score).forEach(n=>{
   const d=document.createElement('div');
@@ -399,7 +389,6 @@ const elist=document.getElementById('elist');
   elist.appendChild(d);
 });
 
-// campaigns
 const campsEl=document.getElementById('camps');
 CAMPS.forEach(c=>{
   const d=document.createElement('div');d.className='camp-item';
@@ -407,7 +396,6 @@ CAMPS.forEach(c=>{
   campsEl.appendChild(d);
 });
 
-// legend
 const LCOLS={'Threat Actor':'#ff2d55','Malware':'#c084fc','Infrastructure':'#f5a623','Vulnerability':'#ff6b35','Target Sector':'#4a9eff','Attack Pattern':'#fbbf24'};
 const legEl=document.getElementById('leg');
 Object.entries(LCOLS).forEach(([k,c])=>{
@@ -416,7 +404,6 @@ Object.entries(LCOLS).forEach(([k,c])=>{
   legEl.appendChild(d);
 });
 
-// canvas
 const canvas=document.getElementById('gc');
 const ctx=canvas.getContext('2d');
 let W,H,ox=0,oy=0,scale=1,showLabels=true,selId=null,hovId=null;
@@ -436,7 +423,6 @@ function resize(){
 }
 
 function ws(wx,wy){return[wx*scale+ox+W/2,wy*scale+oy+H/2];}
-function sw(sx,sy){return[(sx-W/2-ox)/scale,(sy-H/2-oy)/scale];}
 
 function hexA(h,a){
   const c=h.replace('#','');
@@ -454,7 +440,6 @@ function draw(){
   ctx.fillStyle='#080d14';ctx.fillRect(0,0,W,H);
   const conn=selId?connectedTo(selId):null;
 
-  // edges
   EDGES.forEach(e=>{
     const s=nmap[e.s],t=nmap[e.t];if(!s||!t)return;
     const[sx,sy]=ws(s.x,s.y),[tx,ty]=ws(t.x,t.y);
@@ -464,7 +449,6 @@ function draw(){
     ctx.strokeStyle=hexA(e.color,alpha);
     ctx.lineWidth=active?(0.7+e.conf*1.6)*Math.min(scale,1.5):0.5;
     ctx.stroke();
-    // arrow on active
     if(active&&selId){
       const ang=Math.atan2(ty-sy,tx-sx);
       const mx=(sx+tx)/2,my=(sy+ty)/2,al=9;
@@ -481,13 +465,11 @@ function draw(){
     }
   });
 
-  // nodes
   NODES.forEach(n=>{
     const[sx,sy]=ws(n.x,n.y);
     const r=Math.max(7,n.size*scale*0.36);
     const isSel=n.id===selId,isHov=n.id===hovId;
     const dim=selId&&!conn.has(n.id);
-
     if(isSel||isHov){
       const g=ctx.createRadialGradient(sx,sy,r*.4,sx,sy,r*2.6);
       g.addColorStop(0,hexA(n.color,.22));g.addColorStop(1,hexA(n.color,0));
@@ -500,7 +482,6 @@ function draw(){
     ctx.lineWidth=isSel?2.4:1.4;ctx.stroke();
     ctx.beginPath();ctx.arc(sx,sy,r*.3,0,Math.PI*2);
     ctx.fillStyle=dim?hexA(n.color,.15):n.color;ctx.fill();
-
     if(showLabels&&!dim){
       const fs=Math.max(8,Math.min(11,9.5*Math.min(scale*.6,1)));
       ctx.font=`${fs}px JetBrains Mono`;ctx.textAlign='center';
