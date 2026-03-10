@@ -20,7 +20,7 @@ class IntelligenceExplainer:
         explanation_lines: List[str] = []
 
         explanation_lines.append(
-            f"Entity '{node.get('name')}' has degree {self.graph.degree(node_id)} in the threat graph."
+            f"Entity '{node.get('label', node.get('name'))}' has degree {self.graph.degree(node_id)} in the threat graph."
         )
 
         if incident_neighbors:
@@ -38,7 +38,7 @@ class IntelligenceExplainer:
 
         return {
             "entity_id": node_id,
-            "name": node.get("name"),
+            "name": node.get("label", node.get("name")),
             "risk_score": risk_score,
             "explanation": explanation_lines,
         }
