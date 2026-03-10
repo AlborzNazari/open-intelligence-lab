@@ -11,9 +11,6 @@ All contributions must follow the principles of transparency, privacy protection
 ### Line Endings (CRLF / LF)
 We use a `.gitattributes` file in the root to enforce consistent line endings across Windows, macOS, and Linux.
 
-- All text files are automatically normalized to LF in the repository.
-- After cloning or pulling, run this **once** if you see weird `^M` characters:
-
 ## Contribution Guidelines
 
 ### 1. Ethical Requirements
