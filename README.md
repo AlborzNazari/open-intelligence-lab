@@ -153,8 +153,19 @@ When `demo.py` runs, it opens a browser dashboard with:
 ```bash
 uvicorn api.main:app --reload --port 8000
 ```
-
-Then open:
+If not working:
+```bash
+python -m uvicorn api.main:app --reload --port 8000
+```
+If still not working:
+```bash
+pip install uvicorn fastapi
+```
+then
+Then repeat the first line:
+```bash
+uvicorn api.main:app --reload --port 8000
+```
 - **Interactive docs:** [http://localhost:8000/docs](http://localhost:8000/docs)
 - **Risk endpoint:** `http://localhost:8000/intelligence/risk/{entity_id}`
 
