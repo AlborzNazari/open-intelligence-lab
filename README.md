@@ -161,7 +161,7 @@ If still not working:
 ```bash
 pip install uvicorn fastapi
 ```
-then
+
 Then repeat the first line:
 ```bash
 uvicorn api.main:app --reload --port 8000
