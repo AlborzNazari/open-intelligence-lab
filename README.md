@@ -15,7 +15,7 @@ It provides a clean, modular environment for researchers, analysts, and engineer
 > 📖 Read the full article: [From a Black Box to a Transparent, Modular, and Open-Source Model](https://medium.com/@alborznazari4/open-intelligence-lab-on-git-from-a-black-box-to-a-transparent-modular-and-open-source-model-ffa154962964)
 
 **Visual Doc**
-> 📖 Read the full article: [Visual Lab](https://alborznazari.github.io/open-intelligence-lab/)
+> 📖 See in samples: [Visual Lab](https://alborznazari.github.io/open-intelligence-lab/)
 
 ---
 
