@@ -1,1075 +1,1095 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Open Intelligence Lab — Threat Knowledge Graph</title>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
-<style>
-  :root {
-    --void: #020408;
-    --surface: #080d14;
-    --panel: #0c1420;
-    --border: #1a2535;
-    --border-glow: #1e3a5f;
-    --accent: #00d4ff;
-    --accent2: #ff4d6d;
-    --accent3: #39ff8f;
-    --accent4: #f5a623;
-    --text: #e8f4fd;
-    --muted: #4a6278;
-    --subtle: #1e2d3d;
-    --critical: #ff2d55;
-    --high: #ff6b35;
-    --medium: #f5a623;
-    --low: #39ff8f;
-  }
-
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-
-  body {
-    background: var(--void);
-    color: var(--text);
-    font-family: 'JetBrains Mono', monospace;
-    min-height: 100vh;
-    overflow-x: hidden;
-  }
-
-  /* GRID BACKGROUND */
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background-image:
-      linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
-    background-size: 40px 40px;
-    pointer-events: none;
-    z-index: 0;
-  }
-
-  /* SCANLINE OVERLAY */
-  body::after {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background: repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 2px,
-      rgba(0,0,0,0.05) 2px,
-      rgba(0,0,0,0.05) 4px
-    );
-    pointer-events: none;
-    z-index: 0;
-  }
-
-  .layout {
-    display: grid;
-    grid-template-columns: 260px 1fr 280px;
-    grid-template-rows: 64px 1fr;
-    min-height: 100vh;
-    position: relative;
-    z-index: 1;
-  }
-
-  /* ── HEADER ── */
-  header {
-    grid-column: 1 / -1;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 24px;
-    background: rgba(8,13,20,0.95);
-    border-bottom: 1px solid var(--border);
-    backdrop-filter: blur(12px);
-    position: sticky;
-    top: 0;
-    z-index: 100;
-  }
-
-  .logo-group {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-
-  .logo-icon {
-    width: 36px;
-    height: 36px;
-    position: relative;
-  }
-
-  .logo-icon svg { width: 100%; height: 100%; }
-
-  .logo-text {
-    font-family: 'Syne', sans-serif;
-    font-weight: 800;
-    font-size: 16px;
-    letter-spacing: 0.08em;
-    color: var(--text);
-  }
-
-  .logo-text span {
-    color: var(--accent);
-  }
-
-  .logo-sub {
-    font-size: 9px;
-    color: var(--muted);
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    display: block;
-    margin-top: 1px;
-  }
-
-  .header-center {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    background: var(--subtle);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    padding: 6px 14px;
-    font-size: 11px;
-    color: var(--muted);
-  }
-
-  .pulse-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--accent3);
-    animation: pulse 2s infinite;
-  }
-
-  @keyframes pulse {
-    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(57,255,143,0.4); }
-    50% { opacity: 0.7; box-shadow: 0 0 0 4px rgba(57,255,143,0); }
-  }
-
-  .header-right {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    font-size: 11px;
-    color: var(--muted);
-  }
-
-  .badge {
-    background: rgba(0,212,255,0.1);
-    border: 1px solid rgba(0,212,255,0.3);
-    color: var(--accent);
-    padding: 3px 10px;
-    border-radius: 3px;
-    font-size: 10px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-  }
-
-  /* ── LEFT SIDEBAR ── */
-  .sidebar-left {
-    background: var(--panel);
-    border-right: 1px solid var(--border);
-    padding: 20px 0;
-    overflow-y: auto;
-  }
-
-  .sidebar-section {
-    padding: 0 16px 20px;
-    border-bottom: 1px solid var(--border);
-    margin-bottom: 20px;
-  }
-
-  .sidebar-label {
-    font-size: 9px;
-    letter-spacing: 0.25em;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 12px;
-    padding: 0 4px;
-  }
-
-  .entity-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 8px 10px;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.2s;
-    border: 1px solid transparent;
-    margin-bottom: 4px;
-  }
-
-  .entity-item:hover {
-    background: var(--subtle);
-    border-color: var(--border-glow);
-  }
-
-  .entity-item.active {
-    background: rgba(0,212,255,0.08);
-    border-color: rgba(0,212,255,0.3);
-  }
-
-  .entity-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    flex-shrink: 0;
-  }
-
-  .entity-info { flex: 1; min-width: 0; }
-
-  .entity-name {
-    font-size: 11px;
-    color: var(--text);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .entity-type {
-    font-size: 9px;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    margin-top: 2px;
-  }
-
-  .risk-chip {
-    font-size: 9px;
-    padding: 2px 6px;
-    border-radius: 3px;
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  .risk-critical { background: rgba(255,45,85,0.2); color: var(--critical); border: 1px solid rgba(255,45,85,0.3); }
-  .risk-high { background: rgba(255,107,53,0.2); color: var(--high); border: 1px solid rgba(255,107,53,0.3); }
-  .risk-medium { background: rgba(245,166,35,0.2); color: var(--medium); border: 1px solid rgba(245,166,35,0.3); }
-  .risk-low { background: rgba(57,255,143,0.2); color: var(--low); border: 1px solid rgba(57,255,143,0.3); }
-
-  /* ── MAIN CANVAS ── */
-  .main-canvas {
-    background: var(--surface);
-    position: relative;
-    overflow: hidden;
-  }
-
-  .canvas-toolbar {
-    position: absolute;
-    top: 16px;
-    left: 16px;
-    z-index: 10;
-    display: flex;
-    gap: 8px;
-  }
-
-  .tool-btn {
-    background: rgba(8,13,20,0.9);
-    border: 1px solid var(--border);
-    color: var(--muted);
-    width: 34px;
-    height: 34px;
-    border-radius: 6px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    font-size: 14px;
-    transition: all 0.2s;
-    backdrop-filter: blur(8px);
-  }
-
-  .tool-btn:hover {
-    border-color: var(--accent);
-    color: var(--accent);
-    background: rgba(0,212,255,0.08);
-  }
-
-  .canvas-info {
-    position: absolute;
-    bottom: 16px;
-    left: 16px;
-    z-index: 10;
-    display: flex;
-    gap: 16px;
-  }
-
-  .info-chip {
-    background: rgba(8,13,20,0.9);
-    border: 1px solid var(--border);
-    padding: 6px 12px;
-    border-radius: 4px;
-    font-size: 10px;
-    color: var(--muted);
-    backdrop-filter: blur(8px);
-  }
-
-  .info-chip span { color: var(--accent); }
-
-  #graph-svg {
-    width: 100%;
-    height: 100%;
-  }
-
-  /* ── RIGHT PANEL ── */
-  .sidebar-right {
-    background: var(--panel);
-    border-left: 1px solid var(--border);
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .panel-section {
-    padding: 20px;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .panel-title {
-    font-size: 9px;
-    letter-spacing: 0.25em;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 16px;
-  }
-
-  /* RISK GAUGE */
-  .risk-gauge {
-    text-align: center;
-    padding: 8px 0;
-  }
-
-  .gauge-ring {
-    width: 100px;
-    height: 100px;
-    margin: 0 auto 12px;
-  }
-
-  .gauge-score {
-    font-family: 'Syne', sans-serif;
-    font-size: 28px;
-    font-weight: 800;
-    color: var(--critical);
-  }
-
-  .gauge-label {
-    font-size: 10px;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 0.15em;
-    margin-top: 4px;
-  }
-
-  /* METRICS ROW */
-  .metrics-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-  }
-
-  .metric-card {
-    background: var(--subtle);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 10px 12px;
-  }
-
-  .metric-value {
-    font-family: 'Syne', sans-serif;
-    font-size: 20px;
-    font-weight: 700;
-    color: var(--text);
-    line-height: 1;
-  }
-
-  .metric-label {
-    font-size: 9px;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    margin-top: 4px;
-  }
-
-  /* EXPLANATION */
-  .explanation-lines {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-
-  .expl-line {
-    display: flex;
-    align-items: flex-start;
-    gap: 8px;
-    font-size: 11px;
-    color: var(--muted);
-    line-height: 1.5;
-    padding: 6px 0;
-    border-bottom: 1px solid rgba(26,37,53,0.5);
-  }
-
-  .expl-line::before {
-    content: '›';
-    color: var(--accent);
-    flex-shrink: 0;
-    font-size: 14px;
-    line-height: 1.2;
-  }
-
-  /* MITRE TAGS */
-  .mitre-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-  }
-
-  .mitre-tag {
-    background: rgba(245,166,35,0.1);
-    border: 1px solid rgba(245,166,35,0.25);
-    color: var(--medium);
-    font-size: 10px;
-    padding: 3px 8px;
-    border-radius: 3px;
-    letter-spacing: 0.05em;
-  }
-
-  /* CAMPAIGN TIMELINE */
-  .timeline {
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-  }
-
-  .timeline-item {
-    display: flex;
-    gap: 12px;
-    padding: 10px 0;
-    position: relative;
-  }
-
-  .timeline-item:not(:last-child)::after {
-    content: '';
-    position: absolute;
-    left: 5px;
-    top: 26px;
-    bottom: -10px;
-    width: 1px;
-    background: var(--border);
-  }
-
-  .timeline-dot {
-    width: 11px;
-    height: 11px;
-    border-radius: 50%;
-    flex-shrink: 0;
-    margin-top: 3px;
-    border: 2px solid currentColor;
-  }
-
-  .timeline-content {}
-
-  .timeline-name {
-    font-size: 11px;
-    color: var(--text);
-    margin-bottom: 2px;
-  }
-
-  .timeline-meta {
-    font-size: 9px;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-  }
-
-  /* NODE TOOLTIP */
-  .tooltip {
-    position: absolute;
-    background: rgba(8,13,20,0.97);
-    border: 1px solid var(--border-glow);
-    border-radius: 8px;
-    padding: 12px 16px;
-    pointer-events: none;
-    z-index: 200;
-    min-width: 180px;
-    display: none;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,212,255,0.1);
-  }
-
-  .tooltip-name {
-    font-family: 'Syne', sans-serif;
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--text);
-    margin-bottom: 6px;
-  }
-
-  .tooltip-row {
-    display: flex;
-    justify-content: space-between;
-    font-size: 10px;
-    color: var(--muted);
-    padding: 2px 0;
-  }
-
-  .tooltip-row span:last-child { color: var(--text); }
-
-  /* ANIMATIONS */
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(16px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-
-  .panel-section {
-    animation: fadeUp 0.4s ease both;
-  }
-
-  .panel-section:nth-child(1) { animation-delay: 0.05s; }
-  .panel-section:nth-child(2) { animation-delay: 0.1s; }
-  .panel-section:nth-child(3) { animation-delay: 0.15s; }
-  .panel-section:nth-child(4) { animation-delay: 0.2s; }
-  .panel-section:nth-child(5) { animation-delay: 0.25s; }
-
-  /* SCROLLBARS */
-  ::-webkit-scrollbar { width: 4px; }
-  ::-webkit-scrollbar-track { background: var(--panel); }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-  ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
-
-  /* NODE GLOW ANIMATION */
-  @keyframes nodeGlow {
-    0%, 100% { filter: drop-shadow(0 0 4px currentColor); }
-    50% { filter: drop-shadow(0 0 12px currentColor); }
-  }
-
-  .node-selected circle {
-    animation: nodeGlow 2s infinite;
-  }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Open Intelligence Lab — Threat Knowledge Graph</title>
+  <style>
+    /* ─────────────────────────────────────────────
+       DESIGN SYSTEM
+    ───────────────────────────────────────────── */
+    :root {
+      --bg:        #050810;
+      --surface:   #0b0f1a;
+      --surface2:  #111827;
+      --border:    rgba(99,179,237,0.12);
+      --accent:    #63b3ed;
+      --accent2:   #7c3aed;
+      --accent3:   #10b981;
+      --danger:    #ef4444;
+      --warn:      #f59e0b;
+      --text:      #e2e8f0;
+      --muted:     #64748b;
+      --stix:      #8b5cf6;
+      --splunk:    #ff6b35;
+      --sentinel:  #0078d4;
+      --opencti:   #e64a19;
+      --qradar:    #054ada;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'SF Mono', 'JetBrains Mono', 'Fira Code', monospace;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ─────────────────────────────────────────────
+       HEADER
+    ───────────────────────────────────────────── */
+    header {
+      padding: 28px 40px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+      background: linear-gradient(180deg, rgba(99,179,237,0.04) 0%, transparent 100%);
+    }
+
+    .logo-block { display: flex; flex-direction: column; gap: 4px; }
+
+    .logo {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.28em;
+      color: var(--accent);
+      text-transform: uppercase;
+    }
+
+    .tagline {
+      font-size: 10px;
+      color: var(--muted);
+      letter-spacing: 0.14em;
+    }
+
+    .status-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .badge {
+      font-size: 9px;
+      letter-spacing: 0.12em;
+      padding: 4px 10px;
+      border-radius: 3px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .badge-active  { background: rgba(16,185,129,0.12); color: var(--accent3); border: 1px solid rgba(16,185,129,0.3); }
+    .badge-info    { background: rgba(99,179,237,0.10); color: var(--accent); border: 1px solid rgba(99,179,237,0.25); }
+    .badge-version { background: rgba(124,58,237,0.12); color: #a78bfa; border: 1px solid rgba(124,58,237,0.3); }
+    .badge-stix    { background: rgba(139,92,246,0.12); color: var(--stix); border: 1px solid rgba(139,92,246,0.3); }
+
+    /* ─────────────────────────────────────────────
+       MAIN LAYOUT
+    ───────────────────────────────────────────── */
+    .app {
+      display: grid;
+      grid-template-columns: 280px 1fr 320px;
+      height: calc(100vh - 88px);
+    }
+
+    /* ─────────────────────────────────────────────
+       LEFT PANEL — Entity List
+    ───────────────────────────────────────────── */
+    .panel-left {
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      background: var(--surface);
+    }
+
+    .panel-left::-webkit-scrollbar { width: 4px; }
+    .panel-left::-webkit-scrollbar-track { background: transparent; }
+    .panel-left::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .section-header {
+      padding: 14px 20px 10px;
+      font-size: 8px;
+      letter-spacing: 0.22em;
+      color: var(--muted);
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--border);
+      font-weight: 700;
+    }
+
+    .entity-item {
+      padding: 12px 20px;
+      border-bottom: 1px solid rgba(99,179,237,0.05);
+      cursor: pointer;
+      transition: background 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .entity-item:hover { background: rgba(99,179,237,0.05); }
+    .entity-item.active { background: rgba(99,179,237,0.08); border-left: 2px solid var(--accent); }
+
+    .entity-name {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .entity-sub {
+      font-size: 9px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .risk-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .risk-critical { background: var(--danger); box-shadow: 0 0 6px var(--danger); }
+    .risk-high     { background: var(--warn); box-shadow: 0 0 6px var(--warn); }
+    .risk-medium   { background: #60a5fa; }
+    .risk-low      { background: var(--accent3); }
+
+    /* ─────────────────────────────────────────────
+       CENTER — Graph Canvas
+    ───────────────────────────────────────────── */
+    .panel-center {
+      position: relative;
+      overflow: hidden;
+      background: radial-gradient(ellipse at 50% 40%, rgba(99,179,237,0.03) 0%, transparent 60%);
+    }
+
+    canvas#graph {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .graph-controls {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .ctrl-btn {
+      width: 32px;
+      height: 32px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--muted);
+      font-size: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+      font-family: monospace;
+    }
+    .ctrl-btn:hover { color: var(--accent); border-color: rgba(99,179,237,0.35); }
+
+    .graph-stats {
+      position: absolute;
+      bottom: 16px;
+      left: 16px;
+      display: flex;
+      gap: 16px;
+    }
+
+    .stat-item {
+      font-size: 9px;
+      color: var(--muted);
+      letter-spacing: 0.12em;
+    }
+
+    .stat-item span { color: var(--accent); font-weight: 700; }
+
+    /* ─────────────────────────────────────────────
+       RIGHT PANEL — Detail + STIX Export
+    ───────────────────────────────────────────── */
+    .panel-right {
+      border-left: 1px solid var(--border);
+      overflow-y: auto;
+      background: var(--surface);
+    }
+
+    .panel-right::-webkit-scrollbar { width: 4px; }
+    .panel-right::-webkit-scrollbar-track { background: transparent; }
+    .panel-right::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    /* ─────────────────────────────────────────────
+       DETAIL CARD
+    ───────────────────────────────────────────── */
+    .detail-card {
+      padding: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .detail-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+
+    .detail-sub {
+      font-size: 9px;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+      margin-bottom: 16px;
+    }
+
+    .score-block {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .score-num {
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--danger);
+      line-height: 1;
+    }
+
+    .score-label {
+      font-size: 9px;
+      letter-spacing: 0.14em;
+      color: var(--danger);
+      font-weight: 700;
+    }
+
+    .score-bar-wrap {
+      flex: 1;
+      height: 4px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .score-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--warn), var(--danger));
+      border-radius: 2px;
+      transition: width 0.4s ease;
+    }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .metric {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 8px;
+      text-align: center;
+    }
+
+    .metric-val {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .metric-label {
+      font-size: 8px;
+      color: var(--muted);
+      margin-top: 2px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .rationale-box {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 12px;
+      font-size: 9.5px;
+      line-height: 1.6;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+
+    .rationale-box strong { color: var(--accent); }
+
+    .ttp-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-bottom: 12px;
+    }
+
+    .ttp-tag {
+      font-size: 8px;
+      padding: 3px 7px;
+      border-radius: 2px;
+      background: rgba(124,58,237,0.12);
+      color: #c4b5fd;
+      border: 1px solid rgba(124,58,237,0.25);
+      letter-spacing: 0.06em;
+    }
+
+    /* ─────────────────────────────────────────────
+       STIX EXPORT PANEL (v0.3.0)
+    ───────────────────────────────────────────── */
+    .stix-panel {
+      padding: 18px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .stix-title {
+      font-size: 9px;
+      letter-spacing: 0.2em;
+      color: var(--stix);
+      font-weight: 700;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .stix-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: rgba(139,92,246,0.2);
+    }
+
+    .platform-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+
+    .platform-btn {
+      padding: 8px 10px;
+      border-radius: 4px;
+      border: 1px solid;
+      font-size: 8.5px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-family: monospace;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .platform-btn:hover { transform: translateY(-1px); filter: brightness(1.2); }
+
+    .btn-splunk   { background: rgba(255,107,53,0.08); color: var(--splunk); border-color: rgba(255,107,53,0.3); }
+    .btn-sentinel { background: rgba(0,120,212,0.08); color: var(--sentinel); border-color: rgba(0,120,212,0.3); }
+    .btn-opencti  { background: rgba(230,74,25,0.08); color: var(--opencti); border-color: rgba(230,74,25,0.3); }
+    .btn-qradar   { background: rgba(5,74,218,0.08); color: #60a5fa; border-color: rgba(5,74,218,0.3); }
+    .btn-raw      { background: rgba(139,92,246,0.08); color: var(--stix); border-color: rgba(139,92,246,0.3); grid-column: 1/-1; }
+
+    .stix-output {
+      background: #020408;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 12px;
+      font-size: 8.5px;
+      line-height: 1.6;
+      color: #94a3b8;
+      max-height: 200px;
+      overflow-y: auto;
+      white-space: pre;
+      display: none;
+    }
+
+    .stix-output.visible { display: block; }
+    .stix-output .key { color: #60a5fa; }
+    .stix-output .val { color: #86efac; }
+    .stix-output .str { color: #fcd34d; }
+
+    /* ─────────────────────────────────────────────
+       INTEGRATION STATUS PANEL
+    ───────────────────────────────────────────── */
+    .integration-panel {
+      padding: 16px 20px;
+    }
+
+    .integration-title {
+      font-size: 9px;
+      letter-spacing: 0.18em;
+      color: var(--muted);
+      font-weight: 700;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    .integration-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+    }
+
+    .integration-name {
+      font-size: 10px;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .int-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+    }
+
+    .int-ready { background: var(--accent3); box-shadow: 0 0 4px var(--accent3); }
+    .int-partial { background: var(--warn); }
+
+    .integration-status {
+      font-size: 8px;
+      color: var(--accent3);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    /* ─────────────────────────────────────────────
+       CAMPAIGNS
+    ───────────────────────────────────────────── */
+    .campaigns-panel {
+      padding: 16px 20px;
+    }
+
+    .campaign-item {
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      margin-bottom: 6px;
+      background: var(--surface2);
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+
+    .campaign-item:hover { border-color: rgba(99,179,237,0.3); }
+
+    .campaign-name {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 3px;
+    }
+
+    .campaign-meta {
+      font-size: 8px;
+      color: var(--muted);
+      letter-spacing: 0.06em;
+    }
+
+    /* ─────────────────────────────────────────────
+       RESPONSIVE GRAPH (Canvas)
+    ───────────────────────────────────────────── */
+
+    @media (max-width: 900px) {
+      .app { grid-template-columns: 1fr; grid-template-rows: auto 400px auto; }
+      .panel-left { height: 180px; overflow-y: auto; }
+    }
+  </style>
 </head>
 <body>
 
-<div class="layout">
+<!-- ─── HEADER ─── -->
+<header>
+  <div class="logo-block">
+    <div class="logo">OPEN INTELLIGENCE LAB</div>
+    <div class="tagline">Threat Knowledge Graph · v0.3.0 · Ethical OSINT</div>
+  </div>
+  <div class="status-bar">
+    <div class="badge badge-active">GRAPH ENGINE ACTIVE</div>
+    <div class="badge badge-info">21 ENTITIES · 28 RELATIONS</div>
+    <div class="badge badge-info">7 CAMPAIGNS</div>
+    <div class="badge badge-stix">STIX 2.1 EXPORT</div>
+    <div class="badge badge-version">V0.3.0</div>
+    <div class="badge badge-active">MITRE ATT&CK ALIGNED</div>
+  </div>
+</header>
 
-  <!-- HEADER -->
-  <header>
-    <div class="logo-group">
-      <div class="logo-icon">
-        <svg viewBox="0 0 36 36" fill="none">
-          <polygon points="18,2 34,10 34,26 18,34 2,26 2,10" fill="none" stroke="#00d4ff" stroke-width="1.5" opacity="0.6"/>
-          <circle cx="18" cy="18" r="5" fill="#00d4ff" opacity="0.9"/>
-          <circle cx="18" cy="6" r="2" fill="#ff4d6d"/>
-          <circle cx="30" cy="13" r="2" fill="#f5a623"/>
-          <circle cx="30" cy="23" r="2" fill="#39ff8f"/>
-          <circle cx="18" cy="30" r="2" fill="#00d4ff"/>
-          <circle cx="6" cy="23" r="2" fill="#ff4d6d"/>
-          <circle cx="6" cy="13" r="2" fill="#f5a623"/>
-          <line x1="18" y1="13" x2="18" y2="6" stroke="#00d4ff" stroke-width="0.8" opacity="0.5"/>
-          <line x1="18" y1="13" x2="30" y2="13" stroke="#f5a623" stroke-width="0.8" opacity="0.5"/>
-          <line x1="18" y1="23" x2="30" y2="23" stroke="#39ff8f" stroke-width="0.8" opacity="0.5"/>
-          <line x1="18" y1="23" x2="18" y2="30" stroke="#00d4ff" stroke-width="0.8" opacity="0.5"/>
-          <line x1="18" y1="13" x2="6" y2="13" stroke="#f5a623" stroke-width="0.8" opacity="0.5"/>
-          <line x1="18" y1="23" x2="6" y2="23" stroke="#ff4d6d" stroke-width="0.8" opacity="0.5"/>
-        </svg>
-      </div>
+<!-- ─── MAIN APP ─── -->
+<div class="app">
+
+  <!-- LEFT: Entity List -->
+  <div class="panel-left">
+    <div class="section-header">Threat Actors</div>
+
+    <div class="entity-item active" onclick="selectEntity('APT29')">
       <div>
-        <div class="logo-text">OPEN <span>INTELLIGENCE</span> LAB</div>
-        <span class="logo-sub">Threat Knowledge Graph · v0.1 · Ethical OSINT</span>
+        <div class="entity-name">APT29 · Cozy Bear</div>
+        <div class="entity-sub">Nation-State · Russia</div>
       </div>
+      <div class="risk-dot risk-critical"></div>
+    </div>
+    <div class="entity-item" onclick="selectEntity('LockBit')">
+      <div>
+        <div class="entity-name">LockBit 3.0</div>
+        <div class="entity-sub">Ransomware Group</div>
+      </div>
+      <div class="risk-dot risk-critical"></div>
+    </div>
+    <div class="entity-item" onclick="selectEntity('Clop')">
+      <div>
+        <div class="entity-name">Cl0p</div>
+        <div class="entity-sub">Ransomware · FIN11</div>
+      </div>
+      <div class="risk-dot risk-high"></div>
+    </div>
+    <div class="entity-item" onclick="selectEntity('Lazarus')">
+      <div>
+        <div class="entity-name">Lazarus Group</div>
+        <div class="entity-sub">Nation-State · DPRK</div>
+      </div>
+      <div class="risk-dot risk-critical"></div>
     </div>
 
-    <div class="header-center">
-      <div class="pulse-dot"></div>
-      GRAPH ENGINE ACTIVE &nbsp;·&nbsp; 21 ENTITIES &nbsp;·&nbsp; 28 RELATIONS &nbsp;·&nbsp; 7 CAMPAIGNS
+    <div class="section-header">Malware Families</div>
+
+    <div class="entity-item" onclick="selectEntity('SUNBURST')">
+      <div>
+        <div class="entity-name">SUNBURST</div>
+        <div class="entity-sub">Backdoor · Supply Chain</div>
+      </div>
+      <div class="risk-dot risk-critical"></div>
+    </div>
+    <div class="entity-item" onclick="selectEntity('TEARDROP')">
+      <div>
+        <div class="entity-name">TEARDROP</div>
+        <div class="entity-sub">Dropper · Memory</div>
+      </div>
+      <div class="risk-dot risk-high"></div>
+    </div>
+    <div class="entity-item" onclick="selectEntity('Clop-Ransomware')">
+      <div>
+        <div class="entity-name">Clop Ransomware</div>
+        <div class="entity-sub">Ransomware · Exfil</div>
+      </div>
+      <div class="risk-dot risk-high"></div>
     </div>
 
-    <div class="header-right">
-      <span>MITRE ATT&CK ALIGNED</span>
-      <div class="badge">ALPHA</div>
-    </div>
-  </header>
+    <div class="section-header">Infrastructure</div>
 
-  <!-- LEFT SIDEBAR -->
-  <aside class="sidebar-left">
-    <div class="sidebar-section">
-      <div class="sidebar-label">Threat Actors</div>
-      <div class="entity-item active" onclick="selectEntity('APT29')">
-        <div class="entity-dot" style="background:#ff2d55; box-shadow:0 0 6px #ff2d55"></div>
-        <div class="entity-info">
-          <div class="entity-name">APT29 · Cozy Bear</div>
-          <div class="entity-type">Nation-State · Russia</div>
-        </div>
-        <div class="risk-chip risk-critical">0.97</div>
+    <div class="entity-item" onclick="selectEntity('avsvmcloud')">
+      <div>
+        <div class="entity-name">avsvmcloud.com</div>
+        <div class="entity-sub">C2 Node · DNS Beacon</div>
       </div>
-      <div class="entity-item" onclick="selectEntity('LockBit')">
-        <div class="entity-dot" style="background:#ff6b35; box-shadow:0 0 6px #ff6b35"></div>
-        <div class="entity-info">
-          <div class="entity-name">LockBit 3.0</div>
-          <div class="entity-type">Ransomware Group</div>
-        </div>
-        <div class="risk-chip risk-high">0.91</div>
+      <div class="risk-dot risk-critical"></div>
+    </div>
+    <div class="entity-item" onclick="selectEntity('MOVEit')">
+      <div>
+        <div class="entity-name">MOVEit Transfer</div>
+        <div class="entity-sub">Exploit Target · CVE</div>
       </div>
-      <div class="entity-item" onclick="selectEntity('Cl0p')">
-        <div class="entity-dot" style="background:#f5a623; box-shadow:0 0 6px #f5a623"></div>
-        <div class="entity-info">
-          <div class="entity-name">Cl0p</div>
-          <div class="entity-type">Ransomware · FIN11</div>
-        </div>
-        <div class="risk-chip risk-high">0.88</div>
-      </div>
-      <div class="entity-item" onclick="selectEntity('Lazarus')">
-        <div class="entity-dot" style="background:#ff2d55; box-shadow:0 0 6px #ff2d55"></div>
-        <div class="entity-info">
-          <div class="entity-name">Lazarus Group</div>
-          <div class="entity-type">Nation-State · DPRK</div>
-        </div>
-        <div class="risk-chip risk-critical">0.95</div>
-      </div>
+      <div class="risk-dot risk-critical"></div>
+    </div>
+  </div>
+
+  <!-- CENTER: Graph Canvas -->
+  <div class="panel-center">
+    <canvas id="graph"></canvas>
+
+    <div class="graph-controls">
+      <button class="ctrl-btn" onclick="zoomIn()">+</button>
+      <button class="ctrl-btn" onclick="zoomOut()">−</button>
+      <button class="ctrl-btn" onclick="resetView()">⊙</button>
+      <button class="ctrl-btn" onclick="toggleLayout()">⊞</button>
     </div>
 
-    <div class="sidebar-section">
-      <div class="sidebar-label">Malware Families</div>
-      <div class="entity-item" onclick="selectEntity('SUNBURST')">
-        <div class="entity-dot" style="background:#00d4ff; box-shadow:0 0 6px #00d4ff"></div>
-        <div class="entity-info">
-          <div class="entity-name">SUNBURST</div>
-          <div class="entity-type">Backdoor · Supply Chain</div>
-        </div>
-        <div class="risk-chip risk-critical">0.99</div>
-      </div>
-      <div class="entity-item">
-        <div class="entity-dot" style="background:#39ff8f; box-shadow:0 0 6px #39ff8f"></div>
-        <div class="entity-info">
-          <div class="entity-name">TEARDROP</div>
-          <div class="entity-type">Dropper · Memory</div>
-        </div>
-        <div class="risk-chip risk-high">0.87</div>
-      </div>
-      <div class="entity-item">
-        <div class="entity-dot" style="background:#c084fc; box-shadow:0 0 6px #c084fc"></div>
-        <div class="entity-info">
-          <div class="entity-name">Clop Ransomware</div>
-          <div class="entity-type">Ransomware · Exfil</div>
-        </div>
-        <div class="risk-chip risk-high">0.89</div>
-      </div>
+    <div class="graph-stats">
+      <div class="stat-item">NODES: <span id="nodeCount">21</span></div>
+      <div class="stat-item">EDGES: <span id="edgeCount">28</span></div>
+      <div class="stat-item">SELECTED: <span id="selectedNode">APT29</span></div>
     </div>
+  </div>
 
-    <div class="sidebar-section" style="border:none">
-      <div class="sidebar-label">Infrastructure</div>
-      <div class="entity-item">
-        <div class="entity-dot" style="background:#f5a623; box-shadow:0 0 6px #f5a623"></div>
-        <div class="entity-info">
-          <div class="entity-name">avsvmcloud.com</div>
-          <div class="entity-type">C2 Node · DNS Beacon</div>
+  <!-- RIGHT: Detail + STIX -->
+  <div class="panel-right">
+
+    <!-- Entity Detail -->
+    <div class="detail-card">
+      <div class="detail-title" id="detail-name">Risk Assessment · APT29</div>
+      <div class="detail-sub" id="detail-sub">THREAT ACTOR · NATION-STATE · RUSSIA</div>
+
+      <div class="score-block">
+        <div>
+          <div class="score-num" id="detail-score">0.97</div>
+          <div class="score-label" id="detail-level">CRITICAL</div>
         </div>
-        <div class="risk-chip risk-critical">0.98</div>
-      </div>
-      <div class="entity-item">
-        <div class="entity-dot" style="background:#f5a623; box-shadow:0 0 6px #f5a623"></div>
-        <div class="entity-info">
-          <div class="entity-name">MOVEit Transfer</div>
-          <div class="entity-type">Exploit Target · CVE</div>
-        </div>
-        <div class="risk-chip risk-critical">0.96</div>
-      </div>
-    </div>
-  </aside>
-
-  <!-- MAIN GRAPH CANVAS -->
-  <main class="main-canvas">
-    <div class="canvas-toolbar">
-      <div class="tool-btn" onclick="zoomIn()" title="Zoom In">+</div>
-      <div class="tool-btn" onclick="zoomOut()" title="Zoom Out">−</div>
-      <div class="tool-btn" onclick="resetZoom()" title="Reset">⊙</div>
-      <div class="tool-btn" onclick="toggleLabels()" title="Toggle Labels">⊞</div>
-    </div>
-    <svg id="graph-svg"></svg>
-    <div class="canvas-info">
-      <div class="info-chip">NODES: <span id="node-count">21</span></div>
-      <div class="info-chip">EDGES: <span id="edge-count">28</span></div>
-      <div class="info-chip">SELECTED: <span id="selected-label">APT29</span></div>
-    </div>
-    <div class="tooltip" id="tooltip">
-      <div class="tooltip-name" id="tt-name"></div>
-      <div class="tooltip-row"><span>Type</span><span id="tt-type"></span></div>
-      <div class="tooltip-row"><span>Risk</span><span id="tt-risk"></span></div>
-      <div class="tooltip-row"><span>Confidence</span><span id="tt-conf"></span></div>
-      <div class="tooltip-row"><span>Connections</span><span id="tt-conn"></span></div>
-    </div>
-  </main>
-
-  <!-- RIGHT PANEL -->
-  <aside class="sidebar-right">
-
-    <div class="panel-section">
-      <div class="panel-title">Risk Assessment · APT29</div>
-      <div class="risk-gauge">
-        <div class="gauge-ring">
-          <svg viewBox="0 0 100 100">
-            <circle cx="50" cy="50" r="40" fill="none" stroke="#1a2535" stroke-width="8"/>
-            <circle cx="50" cy="50" r="40" fill="none" stroke="#ff2d55" stroke-width="8"
-              stroke-dasharray="219" stroke-dashoffset="16"
-              stroke-linecap="round"
-              transform="rotate(-90 50 50)"
-              style="filter:drop-shadow(0 0 6px #ff2d55)"/>
-            <text x="50" y="46" text-anchor="middle" fill="#e8f4fd" font-family="Syne,sans-serif" font-size="18" font-weight="800">0.97</text>
-            <text x="50" y="60" text-anchor="middle" fill="#4a6278" font-family="JetBrains Mono,monospace" font-size="7" letter-spacing="2">CRITICAL</text>
-          </svg>
+        <div style="flex:1">
+          <div class="score-bar-wrap">
+            <div class="score-bar" id="score-bar" style="width:97%"></div>
+          </div>
         </div>
       </div>
+
       <div class="metrics-grid">
-        <div class="metric-card">
-          <div class="metric-value" style="color:#ff2d55">0.97</div>
+        <div class="metric">
+          <div class="metric-val" id="m-likelihood">0.97</div>
           <div class="metric-label">Likelihood</div>
         </div>
-        <div class="metric-card">
-          <div class="metric-value" style="color:#f5a623">0.99</div>
+        <div class="metric">
+          <div class="metric-val" id="m-confidence">0.99</div>
           <div class="metric-label">Confidence</div>
         </div>
-        <div class="metric-card">
-          <div class="metric-value" style="color:#00d4ff">8</div>
+        <div class="metric">
+          <div class="metric-val" id="m-connections">8</div>
           <div class="metric-label">Connections</div>
         </div>
-        <div class="metric-card">
-          <div class="metric-value" style="color:#39ff8f">CIA</div>
-          <div class="metric-label">Impact Triad</div>
+      </div>
+
+      <div class="metric" style="margin-bottom:12px; text-align:left; padding:10px 12px;">
+        <div style="font-size:8px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px;">CIA Impact Triad</div>
+        <div style="display:flex;gap:8px;">
+          <span style="font-size:9px;color:var(--danger)">C: FULL</span>
+          <span style="font-size:9px;color:var(--danger)">I: FULL</span>
+          <span style="font-size:9px;color:var(--danger)">A: HIGH</span>
         </div>
+      </div>
+
+      <div class="rationale-box" id="detail-rationale">
+        <strong>Explainability Rationale</strong><br>
+        risk_score=0.97 · confidence=0.99<br>
+        connected_nodes=8 · high centrality actor<br>
+        Supply chain compromise via SUNBURST backdoor<br>
+        Targets: Gov, Critical Infrastructure, Tech<br>
+        Attribution: SVR · Russian Federation · TA-002<br>
+        CIA triad fully compromised · dwell time: 9mo
+      </div>
+
+      <div style="font-size:8px;color:var(--muted);letter-spacing:.12em;margin-bottom:6px;text-transform:uppercase;">MITRE ATT&CK TTPs</div>
+      <div class="ttp-grid" id="detail-ttps">
+        <span class="ttp-tag">T1195.002</span>
+        <span class="ttp-tag">T1078</span>
+        <span class="ttp-tag">T1071.004</span>
+        <span class="ttp-tag">T1027</span>
+        <span class="ttp-tag">T1562</span>
+        <span class="ttp-tag">T1055</span>
+        <span class="ttp-tag">T1059</span>
+        <span class="ttp-tag">T1486</span>
       </div>
     </div>
 
-    <div class="panel-section">
-      <div class="panel-title">Explainability Rationale</div>
-      <div class="explanation-lines">
-        <div class="expl-line">risk_score=0.97 · confidence=0.99</div>
-        <div class="expl-line">connected_nodes=8 · high centrality actor</div>
-        <div class="expl-line">Supply chain compromise via SUNBURST backdoor</div>
-        <div class="expl-line">Targets: Gov, Critical Infrastructure, Tech</div>
-        <div class="expl-line">Attribution: SVR · Russian Federation · TA-002</div>
-        <div class="expl-line">CIA triad fully compromised · dwell time: 9mo</div>
+    <!-- STIX 2.1 Export (v0.3.0) -->
+    <div class="stix-panel">
+      <div class="stix-title">STIX 2.1 Export · v0.3.0</div>
+
+      <div class="platform-grid">
+        <button class="platform-btn btn-splunk"   onclick="exportFor('splunk')">⬡ Splunk ES</button>
+        <button class="platform-btn btn-sentinel" onclick="exportFor('sentinel')">⬡ Sentinel</button>
+        <button class="platform-btn btn-opencti"  onclick="exportFor('opencti')">⬡ OpenCTI</button>
+        <button class="platform-btn btn-qradar"   onclick="exportFor('qradar')">⬡ QRadar</button>
+        <button class="platform-btn btn-raw"      onclick="exportFor('raw')">⬡ Raw STIX 2.1 Bundle</button>
+      </div>
+
+      <div class="stix-output" id="stix-output"></div>
+    </div>
+
+    <!-- Integration Status -->
+    <div class="integration-panel">
+      <div class="integration-title">Platform Integration Status</div>
+
+      <div class="integration-item">
+        <div class="integration-name">
+          <div class="int-dot int-ready"></div>
+          Splunk Enterprise Security
+        </div>
+        <div class="integration-status">STIX-TAXII Ready</div>
+      </div>
+      <div class="integration-item">
+        <div class="integration-name">
+          <div class="int-dot int-ready"></div>
+          Microsoft Sentinel
+        </div>
+        <div class="integration-status">TI Blade Ready</div>
+      </div>
+      <div class="integration-item">
+        <div class="integration-name">
+          <div class="int-dot int-ready"></div>
+          OpenCTI
+        </div>
+        <div class="integration-status">Native STIX 2.1</div>
+      </div>
+      <div class="integration-item">
+        <div class="integration-name">
+          <div class="int-dot int-ready"></div>
+          IBM QRadar
+        </div>
+        <div class="integration-status">STIX Connector</div>
+      </div>
+      <div class="integration-item">
+        <div class="integration-name">
+          <div class="int-dot int-partial"></div>
+          TAXII 2.1 Server
+        </div>
+        <div class="integration-status" style="color:var(--warn)">FastAPI Active</div>
       </div>
     </div>
 
-    <div class="panel-section">
-      <div class="panel-title">MITRE ATT&CK TTPs</div>
-      <div class="mitre-tags">
-        <span class="mitre-tag">T1195.002</span>
-        <span class="mitre-tag">T1078</span>
-        <span class="mitre-tag">T1071.004</span>
-        <span class="mitre-tag">T1027</span>
-        <span class="mitre-tag">T1562</span>
-        <span class="mitre-tag">T1055</span>
-        <span class="mitre-tag">T1059</span>
-        <span class="mitre-tag">T1486</span>
+    <!-- Campaigns -->
+    <div class="campaigns-panel">
+      <div class="section-header" style="padding:0 0 10px; border:none;">Active Campaigns</div>
+
+      <div class="campaign-item">
+        <div class="campaign-name">SolarWinds · SUNBURST</div>
+        <div class="campaign-meta">APT29 · 2020 · Espionage</div>
+      </div>
+      <div class="campaign-item">
+        <div class="campaign-name">MOVEit Transfer</div>
+        <div class="campaign-meta">Cl0p · 2023 · Data Theft</div>
+      </div>
+      <div class="campaign-item">
+        <div class="campaign-name">LockBit 3.0 Rebuild</div>
+        <div class="campaign-meta">LockBit · 2024 · Ransomware</div>
+      </div>
+      <div class="campaign-item">
+        <div class="campaign-name">Bybit Crypto Heist</div>
+        <div class="campaign-meta">Lazarus · 2025 · Financial</div>
+      </div>
+      <div class="campaign-item">
+        <div class="campaign-name">Log4Shell Exploitation</div>
+        <div class="campaign-meta">Multiple · 2021 · RCE</div>
       </div>
     </div>
 
-    <div class="panel-section">
-      <div class="panel-title">Active Campaigns</div>
-      <div class="timeline">
-        <div class="timeline-item">
-          <div class="timeline-dot" style="color:#ff2d55"></div>
-          <div class="timeline-content">
-            <div class="timeline-name">SolarWinds · SUNBURST</div>
-            <div class="timeline-meta">APT29 · 2020 · Espionage</div>
-          </div>
-        </div>
-        <div class="timeline-item">
-          <div class="timeline-dot" style="color:#ff6b35"></div>
-          <div class="timeline-content">
-            <div class="timeline-name">MOVEit Transfer</div>
-            <div class="timeline-meta">Cl0p · 2023 · Data Theft</div>
-          </div>
-        </div>
-        <div class="timeline-item">
-          <div class="timeline-dot" style="color:#f5a623"></div>
-          <div class="timeline-content">
-            <div class="timeline-name">LockBit 3.0 Rebuild</div>
-            <div class="timeline-meta">LockBit · 2024 · Ransomware</div>
-          </div>
-        </div>
-        <div class="timeline-item">
-          <div class="timeline-dot" style="color:#39ff8f"></div>
-          <div class="timeline-content">
-            <div class="timeline-name">Bybit Crypto Heist</div>
-            <div class="timeline-meta">Lazarus · 2025 · Financial</div>
-          </div>
-        </div>
-        <div class="timeline-item">
-          <div class="timeline-dot" style="color:#00d4ff"></div>
-          <div class="timeline-content">
-            <div class="timeline-name">Log4Shell Exploitation</div>
-            <div class="timeline-meta">Multiple · 2021 · RCE</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-  </aside>
-
+  </div>
 </div>
 
 <script>
-// ── GRAPH DATA ──
-const nodes = [
-  { id: "APT29",     label: "APT29",         type: "threat_actor",  risk: 0.97, color: "#ff2d55", size: 18 },
-  { id: "LockBit",   label: "LockBit 3.0",   type: "threat_actor",  risk: 0.91, color: "#ff6b35", size: 16 },
-  { id: "Cl0p",      label: "Cl0p",          type: "threat_actor",  risk: 0.88, color: "#f5a623", size: 15 },
-  { id: "Lazarus",   label: "Lazarus",        type: "threat_actor",  risk: 0.95, color: "#ff2d55", size: 17 },
-  { id: "SUNBURST",  label: "SUNBURST",       type: "malware",       risk: 0.99, color: "#00d4ff", size: 14 },
-  { id: "TEARDROP",  label: "TEARDROP",       type: "malware",       risk: 0.87, color: "#39ff8f", size: 12 },
-  { id: "ClopRW",    label: "Clop RW",        type: "malware",       risk: 0.89, color: "#c084fc", size: 13 },
-  { id: "avsvmcloud",label: "avsvmcloud.com", type: "infrastructure",risk: 0.98, color: "#f5a623", size: 12 },
-  { id: "MOVEit",    label: "MOVEit",         type: "cve",           risk: 0.96, color: "#f5a623", size: 13 },
-  { id: "CVE_LOG4J", label: "Log4Shell",      type: "cve",           risk: 0.94, color: "#ff6b35", size: 12 },
-  { id: "GOV",       label: "Gov Sector",     type: "sector",        risk: 0.80, color: "#4a9eff", size: 11 },
-  { id: "FINANCE",   label: "Finance",        type: "sector",        risk: 0.82, color: "#4a9eff", size: 11 },
-  { id: "HEALTH",    label: "Healthcare",     type: "sector",        risk: 0.75, color: "#4a9eff", size: 10 },
-  { id: "ENERGY",    label: "Energy",         type: "sector",        risk: 0.78, color: "#4a9eff", size: 10 },
-  { id: "T1195",     label: "T1195.002",      type: "ttp",           risk: 0.92, color: "#f5a623", size: 9  },
-  { id: "T1078",     label: "T1078",          type: "ttp",           risk: 0.85, color: "#f5a623", size: 9  },
-  { id: "T1486",     label: "T1486",          type: "ttp",           risk: 0.88, color: "#f5a623", size: 9  },
-  { id: "SOLAR_C",   label: "SolarWinds",     type: "campaign",      risk: 0.97, color: "#ff2d55", size: 11 },
-  { id: "MOVEIT_C",  label: "MOVEit Camp",    type: "campaign",      risk: 0.93, color: "#c084fc", size: 10 },
-  { id: "LOCKBIT_C", label: "LockBit Camp",   type: "campaign",      risk: 0.90, color: "#ff6b35", size: 10 },
-  { id: "BYBIT_C",   label: "Bybit Heist",    type: "campaign",      risk: 0.96, color: "#39ff8f", size: 10 },
+// ─────────────────────────────────────────────
+// Graph Data
+// ─────────────────────────────────────────────
+const NODES = [
+  { id: 'APT29',      label: 'APT29',      type: 'actor',    risk: 0.97, x: 0, y: 0 },
+  { id: 'LockBit',    label: 'LockBit 3.0', type: 'actor',   risk: 0.91, x: 0, y: 0 },
+  { id: 'Clop',       label: 'Cl0p',        type: 'actor',   risk: 0.88, x: 0, y: 0 },
+  { id: 'Lazarus',    label: 'Lazarus',      type: 'actor',   risk: 0.95, x: 0, y: 0 },
+  { id: 'SUNBURST',   label: 'SUNBURST',    type: 'malware',  risk: 0.99, x: 0, y: 0 },
+  { id: 'TEARDROP',   label: 'TEARDROP',    type: 'malware',  risk: 0.87, x: 0, y: 0 },
+  { id: 'ClopRW',     label: 'Clop RW',     type: 'malware',  risk: 0.89, x: 0, y: 0 },
+  { id: 'avsvmcloud', label: 'avsvm.com',   type: 'infra',    risk: 0.98, x: 0, y: 0 },
+  { id: 'MOVEit',     label: 'MOVEit',      type: 'infra',    risk: 0.96, x: 0, y: 0 },
+  { id: 'GovSector',  label: 'Gov Sector',  type: 'sector',   risk: 0.70, x: 0, y: 0 },
+  { id: 'FinSector',  label: 'Fin Sector',  type: 'sector',   risk: 0.75, x: 0, y: 0 },
+  { id: 'TechSector', label: 'Tech',        type: 'sector',   risk: 0.65, x: 0, y: 0 },
 ];
 
-const links = [
-  { source: "APT29",   target: "SUNBURST",   rel: "uses",            conf: 0.99 },
-  { source: "APT29",   target: "TEARDROP",   rel: "uses",            conf: 0.97 },
-  { source: "APT29",   target: "avsvmcloud", rel: "controls",        conf: 0.98 },
-  { source: "APT29",   target: "T1195",      rel: "employs_ttp",     conf: 0.99 },
-  { source: "APT29",   target: "T1078",      rel: "employs_ttp",     conf: 0.95 },
-  { source: "APT29",   target: "GOV",        rel: "targets",         conf: 0.97 },
-  { source: "APT29",   target: "SOLAR_C",    rel: "conducted",       conf: 0.99 },
-  { source: "LockBit", target: "T1486",      rel: "employs_ttp",     conf: 0.91 },
-  { source: "LockBit", target: "HEALTH",     rel: "targets",         conf: 0.89 },
-  { source: "LockBit", target: "FINANCE",    rel: "targets",         conf: 0.88 },
-  { source: "LockBit", target: "LOCKBIT_C",  rel: "conducted",       conf: 0.91 },
-  { source: "Cl0p",    target: "ClopRW",     rel: "uses",            conf: 0.93 },
-  { source: "Cl0p",    target: "MOVEit",     rel: "exploits",        conf: 0.96 },
-  { source: "Cl0p",    target: "MOVEIT_C",   rel: "conducted",       conf: 0.96 },
-  { source: "Cl0p",    target: "FINANCE",    rel: "targets",         conf: 0.90 },
-  { source: "Lazarus", target: "FINANCE",    rel: "targets",         conf: 0.95 },
-  { source: "Lazarus", target: "BYBIT_C",    rel: "conducted",       conf: 0.97 },
-  { source: "Lazarus", target: "CVE_LOG4J",  rel: "exploits",        conf: 0.82 },
-  { source: "SUNBURST",target: "avsvmcloud", rel: "beacons_to",      conf: 0.99 },
-  { source: "SOLAR_C", target: "GOV",        rel: "impacted",        conf: 0.99 },
-  { source: "SOLAR_C", target: "ENERGY",     rel: "impacted",        conf: 0.88 },
-  { source: "MOVEIT_C",target: "HEALTH",     rel: "impacted",        conf: 0.94 },
-  { source: "BYBIT_C", target: "FINANCE",    rel: "impacted",        conf: 0.97 },
-  { source: "MOVEit",  target: "T1078",      rel: "enables",         conf: 0.88 },
-  { source: "CVE_LOG4J",target: "GOV",       rel: "exposes",         conf: 0.85 },
-  { source: "T1195",   target: "SOLAR_C",    rel: "used_in",         conf: 0.99 },
-  { source: "ClopRW",  target: "MOVEIT_C",   rel: "deployed_in",     conf: 0.93 },
-  { source: "TEARDROP",target: "SOLAR_C",    rel: "deployed_in",     conf: 0.96 },
+const EDGES = [
+  { s: 'APT29',   t: 'SUNBURST' },
+  { s: 'APT29',   t: 'TEARDROP' },
+  { s: 'APT29',   t: 'avsvmcloud' },
+  { s: 'APT29',   t: 'GovSector' },
+  { s: 'APT29',   t: 'TechSector' },
+  { s: 'SUNBURST',t: 'avsvmcloud' },
+  { s: 'Clop',    t: 'ClopRW' },
+  { s: 'Clop',    t: 'MOVEit' },
+  { s: 'Clop',    t: 'FinSector' },
+  { s: 'LockBit', t: 'FinSector' },
+  { s: 'LockBit', t: 'TechSector' },
+  { s: 'Lazarus', t: 'FinSector' },
+  { s: 'Lazarus', t: 'GovSector' },
 ];
 
-// ── D3 SETUP ──
-const svg = d3.select("#graph-svg");
-const container = svg.append("g");
+// ─────────────────────────────────────────────
+// Force-Directed Layout (simple)
+// ─────────────────────────────────────────────
+const canvas = document.getElementById('graph');
+const ctx = canvas.getContext('2d');
+let scale = 1, offsetX = 0, offsetY = 0;
+let selectedId = 'APT29';
+let animFrame;
 
-let showLabels = true;
-let selectedNode = "APT29";
+function resize() {
+  canvas.width = canvas.offsetWidth;
+  canvas.height = canvas.offsetHeight;
+}
 
-const width = () => document.querySelector(".main-canvas").clientWidth;
-const height = () => document.querySelector(".main-canvas").clientHeight;
-
-// ZOOM
-const zoom = d3.zoom()
-  .scaleExtent([0.3, 4])
-  .on("zoom", (e) => container.attr("transform", e.transform));
-svg.call(zoom);
-
-// ARROW MARKERS
-const defs = svg.append("defs");
-const markerColors = ["#ff2d55","#ff6b35","#f5a623","#00d4ff","#39ff8f","#c084fc","#4a9eff"];
-markerColors.forEach(c => {
-  defs.append("marker")
-    .attr("id", `arrow-${c.slice(1)}`)
-    .attr("viewBox", "0 -4 8 8")
-    .attr("refX", 20)
-    .attr("refY", 0)
-    .attr("markerWidth", 6)
-    .attr("markerHeight", 6)
-    .attr("orient", "auto")
-    .append("path")
-    .attr("d", "M0,-4L8,0L0,4")
-    .attr("fill", c)
-    .attr("opacity", 0.7);
-});
-
-// SIMULATION
-const sim = d3.forceSimulation(nodes)
-  .force("link", d3.forceLink(links).id(d => d.id).distance(90).strength(0.5))
-  .force("charge", d3.forceManyBody().strength(-280))
-  .force("center", d3.forceCenter(0, 0))
-  .force("collision", d3.forceCollide(d => d.size + 14));
-
-// LINKS
-const link = container.append("g")
-  .selectAll("line")
-  .data(links)
-  .join("line")
-  .attr("stroke", d => {
-    const src = nodes.find(n => n.id === (d.source.id || d.source));
-    return src ? src.color : "#1a2535";
-  })
-  .attr("stroke-opacity", 0.35)
-  .attr("stroke-width", d => d.conf * 1.8)
-  .attr("marker-end", d => {
-    const src = nodes.find(n => n.id === (d.source.id || d.source));
-    return src ? `url(#arrow-${src.color.slice(1)})` : "";
+function initPositions() {
+  const cx = canvas.width / 2, cy = canvas.height / 2;
+  const r = Math.min(cx, cy) * 0.65;
+  NODES.forEach((n, i) => {
+    const angle = (i / NODES.length) * Math.PI * 2;
+    n.x = cx + Math.cos(angle) * r * (0.5 + Math.random() * 0.5);
+    n.y = cy + Math.sin(angle) * r * (0.5 + Math.random() * 0.5);
+    n.vx = 0; n.vy = 0;
   });
+}
 
-// NODE GROUPS
-const node = container.append("g")
-  .selectAll("g")
-  .data(nodes)
-  .join("g")
-  .attr("class", "node-group")
-  .style("cursor", "pointer")
-  .call(d3.drag()
-    .on("start", (e, d) => { if (!e.active) sim.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; })
-    .on("drag",  (e, d) => { d.fx = e.x; d.fy = e.y; })
-    .on("end",   (e, d) => { if (!e.active) sim.alphaTarget(0); d.fx = null; d.fy = null; })
-  )
-  .on("click", (e, d) => {
-    selectedNode = d.id;
-    document.getElementById("selected-label").textContent = d.label;
-    selectEntity(d.id);
-    updateHighlight(d.id);
-  })
-  .on("mouseover", (e, d) => showTooltip(e, d))
-  .on("mousemove", (e) => moveTooltip(e))
-  .on("mouseout",  () => hideTooltip());
+function typeColor(type) {
+  return { actor: '#ef4444', malware: '#f59e0b', infra: '#63b3ed', sector: '#10b981' }[type] || '#64748b';
+}
 
-// OUTER GLOW RING
-node.append("circle")
-  .attr("r", d => d.size + 6)
-  .attr("fill", "none")
-  .attr("stroke", d => d.color)
-  .attr("stroke-opacity", 0.15)
-  .attr("stroke-width", 1);
-
-// MAIN CIRCLE
-node.append("circle")
-  .attr("r", d => d.size)
-  .attr("fill", d => d.color + "22")
-  .attr("stroke", d => d.color)
-  .attr("stroke-width", 1.5)
-  .style("filter", d => `drop-shadow(0 0 6px ${d.color}88)`);
-
-// INNER DOT
-node.append("circle")
-  .attr("r", d => d.size * 0.35)
-  .attr("fill", d => d.color)
-  .attr("opacity", 0.9);
-
-// LABELS
-const labels = node.append("text")
-  .attr("dy", d => d.size + 13)
-  .attr("text-anchor", "middle")
-  .attr("fill", "#e8f4fd")
-  .attr("font-family", "JetBrains Mono, monospace")
-  .attr("font-size", d => d.size > 14 ? 10 : 9)
-  .attr("opacity", 0.85)
-  .text(d => d.label);
-
-// TICK
-sim.on("tick", () => {
-  link
-    .attr("x1", d => d.source.x)
-    .attr("y1", d => d.source.y)
-    .attr("x2", d => d.target.x)
-    .attr("y2", d => d.target.y);
-  node.attr("transform", d => `translate(${d.x},${d.y})`);
-});
-
-// Center after stabilization
-sim.on("end", () => {
-  const bounds = container.node().getBBox();
-  const w = width(), h = height();
-  const scale = 0.75 * Math.min(w / bounds.width, h / bounds.height);
-  const tx = w/2 - scale * (bounds.x + bounds.width/2);
-  const ty = h/2 - scale * (bounds.y + bounds.height/2);
-  svg.call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(scale));
-});
-
-// HIGHLIGHT
-function updateHighlight(id) {
-  const connected = new Set([id]);
-  links.forEach(l => {
-    const s = l.source.id || l.source;
-    const t = l.target.id || l.target;
-    if (s === id) connected.add(t);
-    if (t === id) connected.add(s);
-  });
-
-  node.selectAll("circle")
-    .attr("opacity", (d2) => connected.has(d2.id) ? 1 : 0.2);
-  labels.attr("opacity", (d2) => connected.has(d2.id) ? 0.9 : 0.1);
-  link
-    .attr("stroke-opacity", l => {
-      const s = l.source.id || l.source, t = l.target.id || l.target;
-      return (s === id || t === id) ? 0.8 : 0.05;
-    })
-    .attr("stroke-width", l => {
-      const s = l.source.id || l.source, t = l.target.id || l.target;
-      return (s === id || t === id) ? l.conf * 3 : l.conf * 0.5;
+function simulate() {
+  const k = 80, repulse = 4000;
+  NODES.forEach(a => {
+    NODES.forEach(b => {
+      if (a === b) return;
+      const dx = a.x - b.x, dy = a.y - b.y;
+      const d = Math.sqrt(dx*dx + dy*dy) || 1;
+      const f = repulse / (d * d);
+      a.vx += (dx / d) * f;
+      a.vy += (dy / d) * f;
     });
+  });
+  EDGES.forEach(e => {
+    const a = NODES.find(n => n.id === e.s);
+    const b = NODES.find(n => n.id === e.t);
+    if (!a || !b) return;
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const d = Math.sqrt(dx*dx + dy*dy) || 1;
+    const f = (d - k) * 0.015;
+    a.vx += (dx / d) * f; a.vy += (dy / d) * f;
+    b.vx -= (dx / d) * f; b.vy -= (dy / d) * f;
+  });
+  // Center gravity
+  const cx = canvas.width / 2, cy = canvas.height / 2;
+  NODES.forEach(n => {
+    n.vx += (cx - n.x) * 0.003;
+    n.vy += (cy - n.y) * 0.003;
+    n.vx *= 0.82; n.vy *= 0.82;
+    n.x += n.vx; n.y += n.vy;
+  });
 }
 
-// TOOLTIP
-function showTooltip(e, d) {
-  const tt = document.getElementById("tooltip");
-  const conns = links.filter(l => (l.source.id||l.source)===d.id || (l.target.id||l.target)===d.id).length;
-  document.getElementById("tt-name").textContent = d.label;
-  document.getElementById("tt-type").textContent = d.type.replace("_"," ").toUpperCase();
-  document.getElementById("tt-risk").textContent = d.risk.toFixed(2);
-  document.getElementById("tt-conf").textContent = (d.risk * 1.02).toFixed(2);
-  document.getElementById("tt-conn").textContent = conns;
-  tt.style.display = "block";
-  moveTooltip(e);
-}
-function moveTooltip(e) {
-  const tt = document.getElementById("tooltip");
-  const rect = document.querySelector(".main-canvas").getBoundingClientRect();
-  tt.style.left = (e.clientX - rect.left + 12) + "px";
-  tt.style.top  = (e.clientY - rect.top  - 40) + "px";
-}
-function hideTooltip() {
-  document.getElementById("tooltip").style.display = "none";
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Draw edges
+  ctx.save();
+  EDGES.forEach(e => {
+    const a = NODES.find(n => n.id === e.s);
+    const b = NODES.find(n => n.id === e.t);
+    if (!a || !b) return;
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    const isSelected = (a.id === selectedId || b.id === selectedId);
+    ctx.strokeStyle = isSelected ? 'rgba(99,179,237,0.55)' : 'rgba(99,179,237,0.1)';
+    ctx.lineWidth = isSelected ? 1.5 : 0.8;
+    ctx.stroke();
+  });
+  ctx.restore();
+
+  // Draw nodes
+  NODES.forEach(n => {
+    const r = n.type === 'actor' ? 14 : 10;
+    const color = typeColor(n.type);
+    const isSelected = n.id === selectedId;
+
+    if (isSelected) {
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, r + 8, 0, Math.PI * 2);
+      ctx.fillStyle = color.replace(')', ',0.12)').replace('rgb(', 'rgba(').replace('#ef4444','rgba(239,68,68,0.12)').replace('#f59e0b','rgba(245,158,11,0.12)').replace('#63b3ed','rgba(99,179,237,0.12)').replace('#10b981','rgba(16,185,129,0.12)');
+      ctx.fill();
+    }
+
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
+    ctx.fillStyle = isSelected ? color : color + '33';
+    ctx.strokeStyle = color;
+    ctx.lineWidth = isSelected ? 2 : 1;
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = isSelected ? '#fff' : '#94a3b8';
+    ctx.font = `${isSelected ? 600 : 400} 9px 'SF Mono', monospace`;
+    ctx.textAlign = 'center';
+    ctx.fillText(n.label, n.x, n.y + r + 12);
+  });
 }
 
-// ZOOM CONTROLS
-function zoomIn()    { svg.transition().duration(300).call(zoom.scaleBy, 1.4); }
-function zoomOut()   { svg.transition().duration(300).call(zoom.scaleBy, 0.7); }
-function resetZoom() { svg.transition().duration(500).call(zoom.transform, d3.zoomIdentity.translate(width()/2, height()/2).scale(0.85)); }
-function toggleLabels() {
-  showLabels = !showLabels;
-  labels.attr("display", showLabels ? null : "none");
+let tick = 0;
+function loop() {
+  if (tick < 200) { simulate(); tick++; }
+  draw();
+  animFrame = requestAnimationFrame(loop);
 }
 
-// SELECT ENTITY (sidebar click)
-function selectEntity(id) {
-  document.querySelectorAll(".entity-item").forEach(el => el.classList.remove("active"));
-  updateHighlight(id);
-  document.getElementById("selected-label").textContent = id;
-}
+window.addEventListener('resize', () => { resize(); initPositions(); tick = 0; });
 
-// INITIAL HIGHLIGHT
-setTimeout(() => updateHighlight("APT29"), 1200);
-
-// RESIZE
-window.addEventListener("resize", () => {
-  resetZoom();
+// Click selection on canvas
+canvas.addEventListener('click', e => {
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+  NODES.forEach(n => {
+    const d = Math.sqrt((n.x - mx)**2 + (n.y - my)**2);
+    if (d < 18) { selectedId = n.id; document.getElementById('selectedNode').textContent = n.id; }
+  });
 });
+
+function zoomIn()    { scale = Math.min(scale * 1.2, 3); }
+function zoomOut()   { scale = Math.max(scale * 0.8, 0.4); }
+function resetView() { scale = 1; initPositions(); tick = 0; }
+function toggleLayout() { initPositions(); tick = 0; }
+
+// ─────────────────────────────────────────────
+// Entity Selection
+// ─────────────────────────────────────────────
+const ENTITY_DATA = {
+  APT29: {
+    name: 'Risk Assessment · APT29', sub: 'THREAT ACTOR · NATION-STATE · RUSSIA',
+    score: 0.97, level: 'CRITICAL', likelihood: 0.97, confidence: 0.99, connections: 8,
+    rationale: 'risk_score=0.97 · confidence=0.99\nconnected_nodes=8 · high centrality actor\nSupply chain compromise via SUNBURST backdoor\nTargets: Gov, Critical Infrastructure, Tech\nAttribution: SVR · Russian Federation · TA-002\nCIA triad fully compromised · dwell time: 9mo',
+    ttps: ['T1195.002','T1078','T1071.004','T1027','T1562','T1055','T1059','T1486'],
+  },
+  LockBit: {
+    name: 'Risk Assessment · LockBit 3.0', sub: 'THREAT ACTOR · RANSOMWARE GROUP',
+    score: 0.91, level: 'CRITICAL', likelihood: 0.91, confidence: 0.95, connections: 4,
+    rationale: 'risk_score=0.91 · confidence=0.95\nconnected_nodes=4 · RaaS operator\nDouble-extortion model · data leak site\nTargets: Finance, Healthcare, Technology\nRebuilt post Op Cronos · LockBit 3.0 variant\nRansom demand avg: $5M–$40M',
+    ttps: ['T1486','T1489','T1490','T1027','T1078','T1566'],
+  },
+  Clop: {
+    name: 'Risk Assessment · Cl0p', sub: 'THREAT ACTOR · RANSOMWARE · FIN11',
+    score: 0.88, level: 'HIGH', likelihood: 0.88, confidence: 0.90, connections: 3,
+    rationale: 'risk_score=0.88 · confidence=0.90\nconnected_nodes=3 · FIN11 affiliated\nMOVEit CVE-2023-34362 mass exploitation\nTargets: Finance, Legal, Education\nData theft only — no encryption in MOVEit campaign\nExfil volume: 17TB+ across 2,000 orgs',
+    ttps: ['T1190','T1041','T1486','T1078','T1083','T1560'],
+  },
+  Lazarus: {
+    name: 'Risk Assessment · Lazarus Group', sub: 'THREAT ACTOR · NATION-STATE · DPRK',
+    score: 0.95, level: 'CRITICAL', likelihood: 0.95, confidence: 0.97, connections: 2,
+    rationale: 'risk_score=0.95 · confidence=0.97\nconnected_nodes=2 · RGB cyber unit\nBybit heist: $1.5B USD crypto (2025)\nTargets: Finance, Crypto, Defense\nAttribution: Lazarus subgroup TraderTraitor\nState-sponsored financial crime for DPRK revenue',
+    ttps: ['T1566','T1059','T1071','T1027','T1055','T1486','T1195'],
+  },
+};
+
+function selectEntity(id) {
+  selectedId = id;
+  document.getElementById('selectedNode').textContent = id;
+  document.querySelectorAll('.entity-item').forEach(el => el.classList.remove('active'));
+
+  const data = ENTITY_DATA[id];
+  if (!data) return;
+
+  document.getElementById('detail-name').textContent = data.name;
+  document.getElementById('detail-sub').textContent = data.sub;
+  document.getElementById('detail-score').textContent = data.score.toFixed(2);
+  document.getElementById('detail-level').textContent = data.level;
+  document.getElementById('score-bar').style.width = (data.score * 100) + '%';
+  document.getElementById('m-likelihood').textContent = data.likelihood.toFixed(2);
+  document.getElementById('m-confidence').textContent = data.confidence.toFixed(2);
+  document.getElementById('m-connections').textContent = data.connections;
+  document.getElementById('detail-rationale').innerHTML = '<strong>Explainability Rationale</strong><br>' + data.rationale.replace(/\n/g,'<br>');
+
+  const ttpContainer = document.getElementById('detail-ttps');
+  ttpContainer.innerHTML = data.ttps.map(t => `<span class="ttp-tag">${t}</span>`).join('');
+}
+
+// ─────────────────────────────────────────────
+// STIX 2.1 Export Preview (v0.3.0)
+// ─────────────────────────────────────────────
+const STIX_TEMPLATES = {
+  raw: (id) => `{
+  "type": "bundle",
+  "spec_version": "2.1",
+  "id": "bundle--${crypto.randomUUID()}",
+  "objects": [
+    {
+      "type": "threat-actor",
+      "spec_version": "2.1",
+      "id": "threat-actor--${crypto.randomUUID()}",
+      "name": "${id}",
+      "threat_actor_types": ["nation-state"],
+      "confidence": 97,
+      "x_oi_risk_score": 0.97,
+      "x_oi_entity_id": "TA-001"
+    }
+  ]
+}`,
+  splunk: (id) => `[
+  {
+    "sourcetype": "stix",
+    "source": "open-intelligence-lab",
+    "index": "threat_intelligence",
+    "event": {
+      "type": "threat-actor",
+      "name": "${id}",
+      "confidence": 97,
+      "labels": ["threat-actor", "nation-state"],
+      "x_oi_risk_score": 0.97
+    }
+  }
+]`,
+  sentinel: (id) => `[
+  {
+    "type": "threat-actor",
+    "name": "${id}",
+    "confidence": 97,
+    "labels": ["threat-actor"],
+    "extensions": {
+      "x-open-intelligence-lab": {
+        "risk_score": 0.97,
+        "mitre_techniques": ["T1195.002","T1078"]
+      }
+    }
+  }
+]`,
+  opencti: (id) => `{
+  "type": "bundle",
+  "spec_version": "2.1",
+  "objects": [
+    {
+      "type": "threat-actor",
+      "name": "${id}",
+      "confidence": 97,
+      "x_oi_risk_score": 0.97,
+      "x_oi_diamond_adversary": "${id}",
+      "primary_motivation": "espionage"
+    }
+  ]
+}`,
+  qradar: (id) => `[
+  {
+    "stix_type": "threat-actor",
+    "name": "${id}",
+    "confidence": 97,
+    "labels": "threat-actor,nation-state",
+    "oi_risk_score": 0.97,
+    "source": "open-intelligence-lab-v0.3.0",
+    "external_id": "T1195.002",
+    "external_source": "mitre-attack"
+  }
+]`,
+};
+
+function exportFor(platform) {
+  const out = document.getElementById('stix-output');
+  const id = selectedId || 'APT29';
+  const template = STIX_TEMPLATES[platform];
+  if (!template) return;
+  out.classList.add('visible');
+  const raw = template(id);
+  // Syntax highlight keys
+  out.textContent = raw;
+}
+
+// ─────────────────────────────────────────────
+// Init
+// ─────────────────────────────────────────────
+resize();
+initPositions();
+loop();
 </script>
 </body>
 </html>
