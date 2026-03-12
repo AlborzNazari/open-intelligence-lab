@@ -3,6 +3,94 @@
 All notable changes to Open Intelligence Lab are documented here.
 
 ---
+## [v0.3.0] — 2026-03-12
+
+### Added
+
+**STIX 2.1 Export Engine (`backend/stix_exporter.py`)**
+- Full STIX 2.1 bundle builder from OI Lab datasets
+- Entity type mapping: threat_actor → `threat-actor`, malware → `malware`, infrastructure → `infrastructure`, CVE → `vulnerability`, sector → `identity`
+- Attack patterns map to STIX `attack-pattern` with kill chain phases and MITRE external references
+- Relations from `relations.json` become STIX `relationship` objects with confidence preserved
+- Campaigns from `campaigns.json` become STIX `campaign` objects with Diamond Model fields as `x_oi_` extensions
+- Confidence conversion: internal [0.0, 1.0] float → STIX integer [0, 100]
+- Custom extension prefix `x_oi_` for non-standard fields (risk_score, entity_id, diamond model attributes)
+
+**Platform-Specific Exporters**
+- `export_for_splunk()` — formats STIX bundle as Splunk sourcetype events (index: `threat_intelligence`)
+- `export_for_sentinel()` — Sentinel Threat Intelligence blade format with `x-open-intelligence-lab` extension block
+- `export_for_opencti()` — raw STIX 2.1 bundle (OpenCTI ingests natively)
+- `export_for_qradar()` — flat row-oriented format for IBM QRadar STIX connector app
+
+**TAXII 2.1 Server (`backend/taxii_server.py`)**
+- FastAPI-based TAXII 2.1 server with full spec compliance
+- Discovery endpoint: `GET /taxii/`
+- API root: `GET /taxii/api-root/`
+- Collections listing: `GET /taxii/api-root/collections/`
+- Object retrieval with pagination (`?limit=`), temporal filter (`?added_after=`), type filter (`?match[type]=`)
+- Manifest endpoint for lightweight ID/version listing
+- Four collections: threat-actors, attack-patterns, campaigns, full-bundle
+- Health check endpoint: `GET /taxii/health`
+- CORS configured for cross-origin dashboard access
+
+**Export Output Directory (`exports/`)**
+- `stix_bundle.json` — raw STIX 2.1 bundle (OpenCTI)
+- `splunk_events.json` — Splunk ES STIX events
+- `sentinel_indicators.json` — Microsoft Sentinel indicator objects
+- `opencti_bundle.json` — OpenCTI import bundle
+- `qradar_objects.json` — IBM QRadar flat STIX objects
+- `export_summary.json` — run metadata (timestamp, bundle ID, object count)
+
+**Visual Lab Updates (`index.html`)**
+- Added STIX 2.1 Export panel in right column with per-platform export preview buttons
+- Added Platform Integration Status panel (Splunk, Sentinel, OpenCTI, QRadar, TAXII)
+- v0.3.0 badge in header status bar
+- STIX badge alongside MITRE ATT&CK badge
+
+**README Updates**
+- Full v0.3.0 interoperability section with platform connection instructions
+- STIX 2.1 object mapping table
+- Updated architecture flowchart with STIX layer
+- TAXII collection reference table
+
+### Changed
+
+- Repository structure: added `backend/` as home for STIX/TAXII modules
+- `exports/` directory added to `.gitignore` for generated files (bundle added separately for reference)
+- Roadmap table updated: v0.3.0 marked complete, v0.4.0 (MISP + TAXII ingestion) added
+
+### Technical Notes
+
+- STIX 2.1 spec: https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html
+- TAXII 2.1 spec: https://docs.oasis-open.org/cti/taxii/v2.1/os/taxii-v2.1-os.html
+- Splunk ES STIX-TAXII connector: requires ES >= 7.x
+- Sentinel TAXII connector: preview feature, Sentinel workspace required
+- OpenCTI: tested against >= 5.x with STIX 2.1 import connector
+- IBM QRadar: STIX Threat Intelligence app >= 3.x from IBM App Exchange
+- TAXII server: `uvicorn backend.taxii_server:app --host 0.0.0.0 --port 8000`
+
+---
+
+## [v0.1.0] — 2026-02-28
+
+### Added
+
+- Core graph engine: `graph_builder.py`, `risk_analyzer.py`, `explainability.py`
+- Dataset layer: 21 entities, 15 attack patterns, 28 relations, 7 campaigns
+- FastAPI REST API: `api/intelligence/router.py`
+- Visual Lab: `index.html` with force-directed graph, entity detail panel, campaign list
+- Demo pipeline: `demo.py` end-to-end run writing to `research_docs/`
+- MITRE ATT&CK alignment across attack patterns and actor profiles
+- Diamond Model encoding in `campaigns.json`
+- GitHub Pages deployment via `.github/workflows`
+- README, CONTRIBUTING, CODE_OF_CONDUCT
+
+---
+
+*Open Intelligence Lab — MIT License*
+*github.com/AlborzNazari/open-intelligence-lab*
+
+
 
 ## [v0.2.0] — 2026-03-10 — Full Stack Connected
 
