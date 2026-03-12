@@ -1,239 +1,246 @@
-# Open Intelligence Lab
+a# Open Intelligence Lab
 
 [![Research Status](https://img.shields.io/badge/research-alpha-blue)](https://github.com/AlborzNazari/open-intelligence-lab)
-[![Dataset Version](https://img.shields.io/badge/datasets-v0.1-green)](https://github.com/AlborzNazari/open-intelligence-lab/tree/main/datasets)
-[![Model Version](https://img.shields.io/badge/intelligence_model-v0.1-orange)](https://github.com/AlborzNazari/open-intelligence-lab)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python](https://img.shields.io/badge/Python-3.10%2B-blue)](https://www.python.org/)
-[![MITRE ATT&CK](https://img.shields.io/badge/MITRE-ATT%26CK%20Aligned-red)](https://attack.mitre.org/)
+[![Dataset Version](https://img.shields.io/badge/datasets-v0.1-green)](https://github.com/AlborzNazari/open-intelligence-lab)
+[![Model Version](https://img.shields.io/badge/intelligence_model-v0.3-orange)](https://github.com/AlborzNazari/open-intelligence-lab)
+[![STIX 2.1](https://img.shields.io/badge/STIX-2.1%20Compliant-8b5cf6)](https://oasis-open.github.io/cti-documentation/stix/intro)
+[![TAXII 2.1](https://img.shields.io/badge/TAXII-2.1%20Server-7c3aed)](https://oasis-open.github.io/cti-documentation/taxii/intro)
 
-**Open Intelligence Lab** is an ethical OSINT research platform focused on public-security intelligence representation, graph-based threat modeling, and explainable risk analytics.
-
-It provides a clean, modular environment for researchers, analysts, and engineers who want to explore open-source intelligence signals **without compromising privacy or ethics** — using only public data, with every risk score backed by an interpretable rationale.
-
-**How Software Works?**
-> 📖 Read the full article: [From a Black Box to a Transparent, Modular, and Open-Source Model](https://medium.com/@alborznazari4/open-intelligence-lab-on-git-from-a-black-box-to-a-transparent-modular-and-open-source-model-ffa154962964)
-
-**Visual Doc**
-> 📖 See in samples: [Visual Lab](https://alborznazari.github.io/open-intelligence-lab/)
+Open Intelligence Lab is an ethical OSINT research platform focused on public‑security intelligence representation, graph‑based threat modeling, and explainable risk analytics. It provides a clean, modular environment for researchers, analysts, and engineers who want to explore open‑source intelligence signals **without compromising privacy or ethics**.
 
 ---
 
-## What Does This Software Do?
+## 🧠 Vision & Philosophy
 
-Open Intelligence Lab models real-world threat intelligence as a **traversable knowledge graph**:
+Security intelligence is often opaque, proprietary, and difficult to interpret. This project aims to change that by offering:
 
-- **21 entities** — threat actors (APT28, APT29, APT41, Lazarus, LockBit, Cl0p, KillNet), malware families, CVEs, infrastructure nodes, and target sectors
-- **28 documented relations** — `uses`, `exploits`, `targets`, `uses_pattern`, `related_to`
-- **7 real campaigns** — SolarWinds, MOVEit, LockBit 3.0, Bybit Heist, and more
-- **Risk scoring** — every entity gets a score from 0.0 to 1.0 computed from threat likelihood × impact × confidence, bucketed into `LOW / MEDIUM / HIGH / CRITICAL`
-- **Explainability** — every risk score produces a plain-language rationale, never a naked number
-- **MITRE ATT&CK alignment** — all actors and patterns are mapped to official technique IDs
+- **Transparent intelligence modeling**
+- **Human‑readable explanations**
+- **Graph‑based threat representation**
+- **Ethical OSINT datasets**
+- **Research‑friendly tooling**
+- **Full STIX 2.1 interoperability** *(v0.3.0)*
 
-Run `demo.py` and an **interactive browser dashboard** opens showing the full threat knowledge graph — click any node to inspect its risk score, confidence, connections, and intelligence rationale.
+### Core Principles
+
+- **Public data only** — no private or sensitive information
+- **Explainability first** — every risk score must be interpretable
+- **Modular architecture** — easy to extend or replace
+- **Research transparency** — datasets and logic are fully visible
+- **Ethical OSINT** — aligned with academic and open‑source norms
+- **Standard-first interoperability** — STIX 2.1 / TAXII 2.1 compliance means plug-and-play integration with the industry's leading platforms
 
 ---
 
-## Repository Architecture
+## 🏗️ Repository Architecture
 
 ```
 open-intelligence-lab/
-├── demo.py                    ← Entry point — runs the full pipeline
-├── index.html                 ← Project documentation site
+├── datasets/
+│   ├── threat_entities.json       # 21 entities: actors, malware, infra, CVEs, sectors
+│   ├── attack_patterns.json       # 15 OSINT-specific attack patterns + MITRE mappings
+│   ├── relations.json             # 28 directed graph edges
+│   ├── mitre_mapping.json         # Actor → TTP frequency profiles
+│   └── campaigns.json             # 7 campaigns (Diamond Model)
 │
-├── datasets/                  ← 5 JSON knowledge base files
-│   ├── threat_entities.json   ← 21 entities (actors, malware, CVEs, sectors, infra)
-│   ├── attack_patterns.json   ← 15 OSINT attack patterns with MITRE mappings
-│   ├── relations.json         ← 28 directed edges (the graph lives here)
-│   ├── campaigns.json         ← 7 real-world campaigns (Diamond Model)
-│   └── mitre_mapping.json     ← ATT&CK technique profiles per actor
-│
-├── core_engine/               ← Intelligence pipeline
-│   ├── graph_builder.py       ← Builds DiGraph from datasets (NetworkX)
-│   ├── risk_analyzer.py       ← Risk = Likelihood × Impact × Confidence
-│   ├── intelligence_explainer.py ← Plain-language rationale generator
-│   └── intelligence_entities.py  ← Entity data model
-│
-├── visualization/
-│   └── graph_renderer.py      ← Interactive browser graph (Canvas + D3-style)
+├── core_engine/
+│   ├── graph_builder.py           # JSON → NetworkX DiGraph
+│   ├── risk_analyzer.py           # Confidence-weighted risk scoring
+│   └── explainability.py          # Plain-language rationale generation
 │
 ├── api/
-│   ├── main.py                ← FastAPI app entry point
-│   └── intelligence/
-│       ├── router.py          ← GET /intelligence/risk/{entity_id}
-│       ├── service.py         ← Pipeline orchestration
-│       └── schemas.py         ← Pydantic response models
+│   └── intelligence/router.py     # FastAPI REST API
 │
-└── backend/
-    └── requirements.txt       ← API/server dependencies
-```
-<img width="928" height="916" alt="Medium_02" src="https://github.com/user-attachments/assets/769d41e7-2bca-4b4b-978b-01c58a1e095b" />
-
----
-
-## Quick Start
-
-### Prerequisites
-
-- **Python 3.10+** — [python.org/downloads](https://www.python.org/downloads/)
-- **Git** — [git-scm.com](https://git-scm.com/)
-
-Verify:
-```bash
-python --version   # must be 3.10+
-git --version
-```
-
-### 1 — Clone
-
-```bash
-git clone https://github.com/AlborzNazari/open-intelligence-lab.git
-cd open-intelligence-lab
-```
-
-### 2 — Create Virtual Environment
-
-```bash
-python -m venv venv
-```
-
-Activate:
-
-| Platform | Command |
-|----------|---------|
-| Windows (PowerShell) | `venv\Scripts\activate.bat` |
-| macOS / Linux | `source venv/bin/activate` |
-
-You should see `(venv)` at the start of your prompt.
-
-> **Windows note:** If you get a script execution error, run this first:
-> ```powershell
-> Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-> ```
-
-### 3 — Install Dependencies
-
-```bash
-pip install -r requirements.txt
-pip install -r backend/requirements.txt
-```
-
-> **Windows note:** If any package fails to build from source, use:
-> ```bash
-> pip install -r requirements.txt --only-binary=:all:
-> ```
-
-### 4 — Run the Software
-
-```bash
-python demo.py
-```
-
-Your browser opens automatically with the **interactive threat knowledge graph**. In the terminal you'll see the full risk analysis report printed for all entities.
-
----
-
-## Interactive Dashboard
-
-When `demo.py` runs, it opens a browser dashboard with:
-
-| Feature | How |
-|---------|-----|
-| Zoom | Scroll wheel |
-| Pan | Click and drag |
-| Inspect entity | Click any node |
-| Toggle labels | Click ⊞ button |
-| Reset view | Click ⊙ button |
-
-**Left panel** — full entity registry sorted by risk score  
-**Graph** — force-directed knowledge graph with all real threat actors, malware, CVEs, and sectors  
-**Right panel** — click any node to see its risk gauge, confidence, connection count, and plain-language explainability rationale  
-**Campaign panel** — all 7 documented campaigns with adversary and objective
-
----
-
-## Running the API
-
-```bash
-uvicorn api.main:app --reload --port 8000
-```
-If not working:
-```bash
-python -m uvicorn api.main:app --reload --port 8000
-```
-If still not working:
-```bash
-pip install uvicorn fastapi
-```
-
-Then repeat the first line:
-```bash
-uvicorn api.main:app --reload --port 8000
-```
-- **Interactive docs:** [http://localhost:8000/docs](http://localhost:8000/docs)
-- **Risk endpoint:** `http://localhost:8000/intelligence/risk/{entity_id}`
-
-Example:
-```bash
-curl http://localhost:8000/intelligence/risk/TA-001
+├── backend/
+│   ├── stix_exporter.py           # ★ v0.3.0 — STIX 2.1 bundle builder
+│   └── taxii_server.py            # ★ v0.3.0 — TAXII 2.1 FastAPI server
+│
+├── visualization/
+│   └── graph_visualizer.py        # NetworkX + Matplotlib graph rendering
+│
+├── exports/                       # ★ v0.3.0 — Generated STIX export files
+│   ├── stix_bundle.json           # Raw STIX 2.1 bundle
+│   ├── splunk_events.json         # Splunk ES format
+│   ├── sentinel_indicators.json   # Microsoft Sentinel TI format
+│   ├── opencti_bundle.json        # OpenCTI STIX 2.1 import
+│   └── qradar_objects.json        # IBM QRadar STIX connector format
+│
+├── demo.py                        # End-to-end pipeline demo
+├── index.html                     # Visual Lab (GitHub Pages)
+└── README.md
 ```
 
 ---
 
-## Risk Model
+## 🔌 v0.3.0 — STIX 2.1 Interoperability
+
+### What's New
+
+v0.3.0 migrates the internal dataset model to full **STIX 2.1** compliance and introduces a **TAXII 2.1** server layer. The platform is now natively interoperable with four of the industry's leading threat intelligence platforms.
+
+| Platform | Integration Method | Format | Status |
+|---|---|---|---|
+| **Splunk Enterprise Security** | STIX-TAXII connector | STIX 2.1 events → Splunk index | ✅ Ready |
+| **Microsoft Sentinel** | Threat Intelligence blade (TAXII) | STIX 2.1 indicator objects | ✅ Ready |
+| **OpenCTI** | Native STIX 2.1 import | Raw STIX 2.1 bundle | ✅ Ready |
+| **IBM QRadar SIEM** | STIX connector app | Flat STIX object list | ✅ Ready |
+
+### STIX 2.1 Object Mapping
+
+| OI Lab Entity Type | STIX 2.1 Object Type | Notes |
+|---|---|---|
+| `threat_actor` | `threat-actor` | Includes x_oi_risk_score extension |
+| `malware` | `malware` | Capabilities, is_family fields populated |
+| `infrastructure` | `infrastructure` | C2 and exploit targets |
+| `vulnerability` (CVE) | `vulnerability` | NVD external reference auto-linked |
+| `sector` | `identity` (class: sector) | STIX identity pattern for victim sectors |
+| `attack_pattern` | `attack-pattern` | Kill chain + MITRE external reference |
+| `campaign` | `campaign` | Diamond Model fields as x_ extensions |
+| `relations.json` edges | `relationship` | Directed, confidence-weighted |
+
+### Running the STIX Export
+
+```bash
+# Export all formats
+python backend/stix_exporter.py
+
+# Outputs written to exports/:
+#   stix_bundle.json         — Raw STIX 2.1 (OpenCTI)
+#   splunk_events.json       — Splunk ES sourcetype=stix
+#   sentinel_indicators.json — Microsoft Sentinel TI blade
+#   qradar_objects.json      — IBM QRadar flat objects
+
+# Start TAXII 2.1 server
+uvicorn backend.taxii_server:app --host 0.0.0.0 --port 8000
+
+# TAXII endpoints:
+#   GET /taxii/                                    — Discovery
+#   GET /taxii/api-root/collections/               — List collections
+#   GET /taxii/api-root/collections/{id}/objects/  — Get STIX objects
+```
+
+### TAXII 2.1 Collections
+
+| Collection ID | Contents |
+|---|---|
+| `oi-lab-threat-actors-001` | Threat actor + identity objects |
+| `oi-lab-attack-patterns-002` | MITRE-mapped attack patterns |
+| `oi-lab-campaigns-003` | Diamond Model campaigns |
+| `oi-lab-full-bundle-004` | Complete STIX 2.1 bundle |
+
+### Connecting Splunk ES
+
+1. In Splunk ES, navigate to **Configure → Threat Intelligence → Intelligence Downloads**
+2. Add a new TAXII source: `http://your-server:8000/taxii/`
+3. Select collection `oi-lab-full-bundle-004`
+4. Set polling interval (recommended: 1 hour for a research feed)
+
+### Connecting Microsoft Sentinel
+
+1. In Sentinel, open **Threat Intelligence → TAXII (Preview)**
+2. Add connector: `http://your-server:8000/taxii/api-root/`
+3. Collection: `oi-lab-threat-actors-001` or `oi-lab-full-bundle-004`
+4. Indicators appear in the **ThreatIntelligenceIndicator** table
+
+### Connecting OpenCTI
+
+1. Navigate to **Data → Import**
+2. Select **STIX 2.1** import connector
+3. Upload `exports/opencti_bundle.json` directly, or point the TAXII connector at the server
+
+### Connecting IBM QRadar
+
+1. Install the **STIX Threat Intelligence** app from IBM App Exchange
+2. Configure the TAXII feed: `http://your-server:8000/taxii/api-root/`
+3. Map `oi_risk_score` to QRadar's offense magnitude field
+
+---
+
+## 🧩 System Architecture
 
 ```
-Risk Score = (Threat Likelihood × Impact) × Confidence Weight
+flowchart TD
+    subgraph Datasets
+        TE[threat_entities.json]
+        AP[attack_patterns.json]
+        RL[relations.json]
+        MM[mitre_mapping.json]
+        CA[campaigns.json]
+    end
+
+    subgraph CoreEngine
+        GB[graph_builder.py]
+        RA[risk_analyzer.py]
+        EX[explainability.py]
+    end
+
+    subgraph STIXLayer ["STIX 2.1 Layer (v0.3.0)"]
+        SE[stix_exporter.py]
+        TX[taxii_server.py]
+    end
+
+    subgraph Platforms
+        SP[Splunk ES]
+        SN[Microsoft Sentinel]
+        OC[OpenCTI]
+        QR[IBM QRadar]
+    end
+
+    subgraph API
+        IA[intelligence/router.py]
+    end
+
+    TE & AP & RL & MM & CA --> GB
+    GB --> RA --> EX
+    GB & RA --> SE
+    SE --> TX
+    TX --> SP & SN & OC & QR
+    GB & RA & EX --> IA
 ```
 
-Clamped to `[0.0, 1.0]` and bucketed:
+---
 
-| Band | Score Range | Color |
-|------|------------|-------|
-| CRITICAL | ≥ 0.90 | 🔴 |
-| HIGH | ≥ 0.70 | 🟠 |
-| MEDIUM | ≥ 0.40 | 🟡 |
-| LOW | < 0.40 | 🟢 |
+## 📊 Dataset Overview
 
-Every score is accompanied by a plain-language rationale. No risk score is ever a naked number.
+| File | Count | Description |
+|---|---|---|
+| `threat_entities.json` | 21 entities | Actors, malware, infra, CVEs, sectors |
+| `attack_patterns.json` | 15 patterns | OSINT ATT&CK-mapped techniques |
+| `relations.json` | 28 edges | Directed confidence-weighted relationships |
+| `mitre_mapping.json` | 21 mappings | Actor → TTP frequency |
+| `campaigns.json` | 7 campaigns | Diamond Model intrusion records |
 
 ---
 
-## Datasets
+## 🔬 Risk Scoring Model
 
-All data is sourced from **public, ethical sources only**:
+```
+Risk Score = (Threat Likelihood × CIA Impact) × Confidence Weight
+             clamped to [0.0, 1.0] → LOW / MEDIUM / HIGH / CRITICAL
+```
 
-| File | Contents | Source |
-|------|----------|--------|
-| `threat_entities.json` | 21 entities across 5 types | MITRE ATT&CK, CISA Advisories |
-| `attack_patterns.json` | 15 OSINT attack patterns | MITRE ATT&CK, public research |
-| `relations.json` | 28 directed edges | MITRE ATT&CK, CISA, Mandiant |
-| `campaigns.json` | 7 campaigns (Diamond Model) | Public threat reports |
-| `mitre_mapping.json` | TTP profiles per actor | MITRE ATT&CK |
+Every score triggers `explainability.py`, which generates a plain-language rationale string at computation time. No score is ever a naked number.
 
 ---
 
-## Core Principles
+## 🗺️ Roadmap
 
-- **Public data only** — no private, scraped, or sensitive information
-- **Explainability first** — every risk score must be traceable and expressible in plain language
-- **Modular architecture** — each layer can be replaced or extended independently
-- **Research transparency** — datasets, scoring logic, and relationships are fully visible
-- **Ethical OSINT** — aligned with academic norms and MITRE ATT&CK attribution standards
-
----
-
-## Roadmap
-
-- **v0.2** — STIX 2.1 schema compliance, TAXII feed integration
-- **v0.3** — Neo4j backend for multi-hop actor pivoting at scale
-- **v1.0** — ML-based risk scoring with SHAP explainability, OpenCTI/MISP integration
+| Version | Focus |
+|---|---|
+| v0.1.0 ✅ | Core graph engine, datasets, API, visual lab |
+| v0.2.0 | FastAPI backend live; demo.py → service.py wiring |
+| **v0.3.0 ✅** | **STIX 2.1 export, TAXII 2.1 server, Splunk/Sentinel/OpenCTI/QRadar interop** |
+| v0.4.0 | MISP integration, TAXII feed ingestion with provenance |
+| v1.0.0 | Neo4j backend, ML-assisted scoring with SHAP explainability |
 
 ---
 
-## Contributing
+## 📎 Links
 
-Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) before submitting a pull request.
+- **Visual Lab**: [alborznazari.github.io/open-intelligence-lab](https://alborznazari.github.io/open-intelligence-lab/)
+- **Medium Article**: [Open Intelligence Lab on git](https://medium.com/@alborznazari4/open-intelligence-lab-on-git-from-a-black-box-to-a-transparent-modular-and-open-source-model-ffa154962964)
+- **STIX 2.1 Spec**: [oasis-open.github.io/cti-documentation](https://oasis-open.github.io/cti-documentation/stix/intro)
+- **TAXII 2.1 Spec**: [docs.oasis-open.org/cti/taxii](https://docs.oasis-open.org/cti/taxii/v2.1/os/taxii-v2.1-os.html)
 
 ---
 
@@ -241,6 +248,4 @@ Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) and [C
 
 MIT License — see [LICENSE](LICENSE) for details.
 
----
-
-*Open Intelligence Lab · Alborz Nazari · 2026 · [medium.com/@alborznazari4](https://medium.com/@alborznazari4)*
+*Open Intelligence Lab — public data, open reasoning, interpretable results.*
