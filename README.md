@@ -376,7 +376,7 @@ TAXII collections:
 | Version | Focus | Status |
 |---|---|---|
 | **v0.1.0** | Core graph engine, datasets, API, Visual Lab | ✅ Complete |
-| **v0.2.0** | FastAPI backend live; `demo.py` → `service.py` wiring | 🔄 In Progress |
+| **v0.2.0** | FastAPI backend live; `demo.py` → `service.py` wiring | ✅ Complete |
 | **v0.3.0** | STIX 2.1 export, TAXII 2.1 server, Splunk / Sentinel / OpenCTI / QRadar interop | ✅ Complete |
 | **v0.4.0** | MISP integration, TAXII feed ingestion with provenance validation | 🗓 Planned |
 | **v1.0.0** | Neo4j backend, multi-hop actor pivoting, ML scoring with SHAP explainability | 🗓 Planned |
