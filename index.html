@@ -885,19 +885,38 @@ CIA triad fully compromised · dwell time: 9mo
 
 <script>
 // ══════════════════════════════════════════════════
-// PARTICLE FIELD
+// 3D STARFIELD TUNNEL — depth-sorted, color-reactive
 // ══════════════════════════════════════════════════
 const field = document.getElementById('field');
 const fc = field.getContext('2d');
-let fieldColor = [232, 160, 32]; // amber default
 
-const PARTICLES = Array.from({length:80}, () => ({
-  x: Math.random() * window.innerWidth,
-  y: Math.random() * window.innerHeight,
-  vx: (Math.random()-0.5)*0.3,
-  vy: (Math.random()-0.5)*0.3,
-  r: Math.random()*1.5+0.3,
-  alpha: Math.random()*0.25+0.05
+let fieldColorTarget = [232, 160, 32];
+let fieldColorCurrent = [232, 160, 32];
+let mouseX = 0, mouseY = 0;
+
+const STAR_COUNT = 320;
+const DEPTH = 1200;
+const FOCAL = 500;
+
+function mkStar(){
+  return {
+    x: (Math.random()-0.5)*2,
+    y: (Math.random()-0.5)*2,
+    z: Math.random()*DEPTH,
+    pz: 0,
+    size: Math.random()*1.4+0.3,
+    layer: Math.random() // 0=fast/close, 1=slow/far
+  };
+}
+
+const STARS = Array.from({length:STAR_COUNT}, mkStar);
+
+// Nebula blobs — large soft glows
+const NEBULAE = Array.from({length:6}, (_,i) => ({
+  x: Math.random(), y: Math.random(),
+  r: 180+Math.random()*220,
+  phase: (i/6)*Math.PI*2,
+  speed: 0.0003+Math.random()*0.0003
 }));
 
 function resizeField(){
@@ -905,39 +924,92 @@ function resizeField(){
   field.height = window.innerHeight;
 }
 
+function lerpC(a,b,t){ return a.map((v,i)=>v+(b[i]-v)*t); }
+
+let nebulaT = 0;
 function drawField(){
-  fc.clearRect(0,0,field.width,field.height);
-  const [r,g,b] = fieldColor;
-  PARTICLES.forEach(p => {
-    p.x += p.vx; p.y += p.vy;
-    if(p.x<0)p.x=field.width; if(p.x>field.width)p.x=0;
-    if(p.y<0)p.y=field.height; if(p.y>field.height)p.y=0;
+  const W=field.width, H=field.height;
+  const cx=W/2 + (mouseX-W/2)*0.04;
+  const cy=H/2 + (mouseY-H/2)*0.04;
+
+  // Lerp color
+  fieldColorCurrent = lerpC(fieldColorCurrent, fieldColorTarget, 0.025);
+  const [R,G,B] = fieldColorCurrent.map(Math.round);
+
+  // Clear with deep dark fade (motion blur effect)
+  fc.fillStyle = 'rgba(10,11,13,0.35)';
+  fc.fillRect(0,0,W,H);
+
+  nebulaT += 0.001;
+
+  // Draw nebulae — large atmospheric color blobs
+  NEBULAE.forEach((nb,i) => {
+    const nx = (nb.x + Math.sin(nebulaT*0.7+nb.phase)*0.08) * W;
+    const ny = (nb.y + Math.cos(nebulaT*0.5+nb.phase)*0.06) * H;
+    const grd = fc.createRadialGradient(nx,ny,0,nx,ny,nb.r);
+    grd.addColorStop(0, `rgba(${R},${G},${B},${i<2?0.03:0.015})`);
+    grd.addColorStop(0.5, `rgba(${R},${G},${B},0.008)`);
+    grd.addColorStop(1, 'transparent');
     fc.beginPath();
-    fc.arc(p.x,p.y,p.r,0,Math.PI*2);
-    fc.fillStyle=`rgba(${r},${g},${b},${p.alpha})`;
+    fc.arc(nx,ny,nb.r,0,Math.PI*2);
+    fc.fillStyle=grd;
     fc.fill();
   });
-  // Connect nearby particles
-  for(let i=0;i<PARTICLES.length;i++){
-    for(let j=i+1;j<PARTICLES.length;j++){
-      const dx=PARTICLES[i].x-PARTICLES[j].x;
-      const dy=PARTICLES[i].y-PARTICLES[j].y;
-      const dist=Math.sqrt(dx*dx+dy*dy);
-      if(dist<90){
-        const a=(1-dist/90)*0.07;
-        fc.beginPath();
-        fc.moveTo(PARTICLES[i].x,PARTICLES[i].y);
-        fc.lineTo(PARTICLES[j].x,PARTICLES[j].y);
-        fc.strokeStyle=`rgba(${r},${g},${b},${a})`;
-        fc.lineWidth=0.5;
-        fc.stroke();
-      }
+
+  // Move & draw stars with 3D projection
+  STARS.forEach(s => {
+    s.pz = s.z; // save previous z for streak
+    s.z -= 1.8 - s.layer*0.8; // depth-based speed
+    if(s.z<=0){ s.z=DEPTH; s.x=(Math.random()-0.5)*2; s.y=(Math.random()-0.5)*2; s.pz=s.z; }
+
+    const sx = (s.x * FOCAL / s.z) * (W*0.5) + cx;
+    const sy = (s.y * FOCAL / s.z) * (H*0.5) + cy;
+    const psx= (s.x * FOCAL / s.pz) * (W*0.5) + cx;
+    const psy= (s.y * FOCAL / s.pz) * (H*0.5) + cy;
+
+    const depth = 1 - s.z/DEPTH; // 0=far, 1=close
+    const alpha = Math.pow(depth, 1.8) * 0.9;
+    const r = s.size * depth * 2.5;
+
+    // Streak (motion trail)
+    if(depth > 0.3){
+      fc.beginPath();
+      fc.moveTo(psx,psy);
+      fc.lineTo(sx,sy);
+      fc.strokeStyle = `rgba(${R},${G},${B},${alpha*0.5})`;
+      fc.lineWidth = r*0.6;
+      fc.stroke();
     }
-  }
+
+    // Star dot
+    fc.beginPath();
+    fc.arc(sx,sy,Math.max(0.3,r),0,Math.PI*2);
+    fc.fillStyle = depth > 0.7
+      ? `rgba(255,255,255,${alpha})`
+      : `rgba(${R},${G},${B},${alpha})`;
+    fc.fill();
+  });
+
+  // Radial vignette
+  const vgrd = fc.createRadialGradient(W/2,H/2,H*0.2,W/2,H/2,H*0.85);
+  vgrd.addColorStop(0,'transparent');
+  vgrd.addColorStop(1,'rgba(0,0,0,0.7)');
+  fc.fillStyle=vgrd;
+  fc.fillRect(0,0,W,H);
+
+  // Center glow pulse
+  const pulse = 0.5+Math.sin(nebulaT*3)*0.3;
+  const cgrd = fc.createRadialGradient(W/2,H/2,0,W/2,H/2,180);
+  cgrd.addColorStop(0,`rgba(${R},${G},${B},${0.04*pulse})`);
+  cgrd.addColorStop(1,'transparent');
+  fc.fillStyle=cgrd;
+  fc.fillRect(0,0,W,H);
+
   requestAnimationFrame(drawField);
 }
 
 window.addEventListener('resize', resizeField);
+window.addEventListener('mousemove', e=>{ mouseX=e.clientX; mouseY=e.clientY; });
 resizeField();
 drawField();
 
@@ -958,10 +1030,10 @@ updateClock();
 const canvas = document.getElementById('graph');
 const ctx = canvas.getContext('2d');
 
-let scale=1, panX=0, panY=0;
+let scale=1, panOffX=0, panOffY=0;
 let selectedId='APT29';
 let simTick=0;
-let isDragging=false, dragNode=null, dragStart={x:0,y:0}, panStart={x:0,y:0};
+let isDragging=false, dragNode=null, dragStart={x:0,y:0}, panStart={x:0,y:0}, panBase={x:0,y:0};
 
 const NODE_TYPES = {
   actor:  {color:'#d64033', icon:'TA', radius:16},
@@ -1060,6 +1132,15 @@ function simulate(){
   });
 }
 
+// Helper: convert screen coords to graph coords (accounts for scale+pan)
+function screenToGraph(sx,sy){
+  const cx=canvas.width/2, cy=canvas.height/2;
+  return {
+    x: (sx - cx - panOffX) / scale + cx,
+    y: (sy - cy - panOffY) / scale + cy
+  };
+}
+
 function drawArrow(ax,ay,bx,by,color){
   const angle=Math.atan2(by-ay,bx-ax);
   const len=Math.sqrt((bx-ax)**2+(by-ay)**2);
@@ -1086,6 +1167,13 @@ let pulseT=0;
 function drawGraph(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
   pulseT+=0.04;
+
+  // Apply zoom + pan transform from canvas center
+  const cx=canvas.width/2, cy=canvas.height/2;
+  ctx.save();
+  ctx.translate(cx + panOffX, cy + panOffY);
+  ctx.scale(scale, scale);
+  ctx.translate(-cx, -cy);
 
   // Draw edges
   EDGES.forEach(e=>{
@@ -1135,6 +1223,8 @@ function drawGraph(){
     ctx.textAlign='center';
     ctx.fillText(n.label,n.x,n.y+r+11);
   });
+
+  ctx.restore(); // end transform
 }
 
 let loopRunning=false;
@@ -1151,10 +1241,10 @@ function resizeAll(){
 
 window.addEventListener('resize',()=>{resizeGraph();simTick=0;});
 
-// Canvas interaction
+// Canvas interaction — all mouse coords converted to graph space
 canvas.addEventListener('mousedown',e=>{
   const rect=canvas.getBoundingClientRect();
-  const mx=e.clientX-rect.left, my=e.clientY-rect.top;
+  const {x:mx,y:my}=screenToGraph(e.clientX-rect.left, e.clientY-rect.top);
   let hit=null;
   NODES.forEach(n=>{
     const d=Math.sqrt((n.x-mx)**2+(n.y-my)**2);
@@ -1162,33 +1252,65 @@ canvas.addEventListener('mousedown',e=>{
   });
   if(hit){
     dragNode=hit;
-    dragStart={x:mx-hit.x,y:my-hit.y};
+    dragStart={x:mx-hit.x, y:my-hit.y};
     selectedId=hit.id;
     document.getElementById('sc').textContent=hit.id;
     selectEntityById(hit.id);
   } else {
     isDragging=true;
-    panStart={x:mx,y:my};
+    panStart={x:e.clientX-canvas.getBoundingClientRect().left, y:e.clientY-canvas.getBoundingClientRect().top};
+    panBase={x:panOffX, y:panOffY};
   }
 });
 
 canvas.addEventListener('mousemove',e=>{
+  const rect=canvas.getBoundingClientRect();
+  const sx=e.clientX-rect.left, sy=e.clientY-rect.top;
   if(dragNode){
-    const rect=canvas.getBoundingClientRect();
-    dragNode.x=e.clientX-rect.left-dragStart.x;
-    dragNode.y=e.clientY-rect.top-dragStart.y;
+    const {x:mx,y:my}=screenToGraph(sx,sy);
+    dragNode.x=mx-dragStart.x;
+    dragNode.y=my-dragStart.y;
     dragNode.vx=0;dragNode.vy=0;
+  } else if(isDragging){
+    panOffX=panBase.x+(sx-panStart.x);
+    panOffY=panBase.y+(sy-panStart.y);
   }
 });
 
-canvas.addEventListener('mouseup',()=>{
-  dragNode=null; isDragging=false;
-});
+canvas.addEventListener('mouseup',()=>{ dragNode=null; isDragging=false; });
+canvas.addEventListener('mouseleave',()=>{ dragNode=null; isDragging=false; });
 
-function zoomIn(){scale=Math.min(scale*1.15,3)}
-function zoomOut(){scale=Math.max(scale*0.87,0.4)}
-function resetGraph(){initPositions();simTick=0;}
-function reshuffleGraph(){initPositions();simTick=0;}
+// Scroll wheel zoom — zooms toward cursor
+canvas.addEventListener('wheel',e=>{
+  e.preventDefault();
+  const rect=canvas.getBoundingClientRect();
+  const mx=e.clientX-rect.left, my=e.clientY-rect.top;
+  const zoomFactor = e.deltaY < 0 ? 1.12 : 0.89;
+  const newScale = Math.min(Math.max(scale*zoomFactor, 0.25), 5);
+
+  // Adjust pan so zoom is centered on cursor
+  const cx=canvas.width/2, cy=canvas.height/2;
+  const wx=mx-cx-panOffX, wy=my-cy-panOffY;
+  panOffX -= wx*(newScale/scale-1);
+  panOffY -= wy*(newScale/scale-1);
+  scale=newScale;
+},{passive:false});
+
+function zoomIn(){
+  const cx=canvas.width/2, cy=canvas.height/2;
+  const newScale=Math.min(scale*1.2,5);
+  panOffX *= newScale/scale;
+  panOffY *= newScale/scale;
+  scale=newScale;
+}
+function zoomOut(){
+  const newScale=Math.max(scale*0.83,0.25);
+  panOffX *= newScale/scale;
+  panOffY *= newScale/scale;
+  scale=newScale;
+}
+function resetGraph(){ scale=1; panOffX=0; panOffY=0; initPositions(); simTick=0; }
+function reshuffleGraph(){ initPositions(); simTick=0; }
 
 // ══════════════════════════════════════════════════
 // ENTITY DATA
@@ -1331,29 +1453,17 @@ const ENTITY_DATA = {
   }
 };
 
+
 // ══════════════════════════════════════════════════
 // SELECT ENTITY
 // ══════════════════════════════════════════════════
-let currentFieldColorTarget=[232,160,32];
-let currentFieldColorCurrent=[232,160,32];
-
-function lerpColor(a,b,t){
-  return a.map((v,i)=>Math.round(v+(b[i]-v)*t));
-}
-
-function animateFieldColor(){
-  currentFieldColorCurrent=lerpColor(currentFieldColorCurrent,currentFieldColorTarget,0.04);
-  fieldColor=currentFieldColorCurrent;
-  requestAnimationFrame(animateFieldColor);
-}
-animateFieldColor();
 
 function selectEntityById(id){
   const data=ENTITY_DATA[id];
   if(!data)return;
 
-  // Update field color
-  currentFieldColorTarget=data.fieldColor||[232,160,32];
+  // Update 3D starfield color
+  fieldColorTarget=data.fieldColor||[232,160,32];
 
   // Update HUD
   document.getElementById('sc').textContent=id;
