@@ -391,7 +391,8 @@ Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) and [C
 
 ## License
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/AlborzNazari/open-intelligence-lab/blob/main/LICENSE)
+
 
 ---
 
