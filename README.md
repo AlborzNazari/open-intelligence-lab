@@ -391,7 +391,7 @@ Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) and [C
 
 ## License
 
-MIT License — see [LICENSE](LICENSE) for details.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ---
 
