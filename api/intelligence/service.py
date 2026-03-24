@@ -1,5 +1,5 @@
 """
-api/intelligence/service.py  —  v0.2.0
+api/intelligence/service.py  —  v0.4.0
 """
 from __future__ import annotations
 from functools import lru_cache
