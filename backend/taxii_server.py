@@ -1,10 +1,10 @@
 """
-taxii_server.py — Open Intelligence Lab v0.3.0
-TAXII 2.1 Server (FastAPI-based)
+taxii_server.py — Open Intelligence Lab v0.4.0
+TAXII 2.1 Server + Feed Ingestion API (FastAPI-based)
 
-Exposes Open Intelligence Lab's STIX 2.1 bundles via a TAXII 2.1-compliant REST API.
-Platforms like Splunk, Sentinel, OpenCTI, and QRadar can poll this server
-as a native TAXII feed — no custom integration needed on their end.
+v0.3.0: TAXII 2.1 publisher — serves OI Lab STIX bundles to Splunk, Sentinel, OpenCTI, QRadar.
+v0.4.0: Bidirectional — adds MISP ingestion, TAXII feed ingestion, provenance validation,
+        and a live ingested-objects store accessible via new /ingest/ endpoints.
 
 TAXII 2.1 spec: https://docs.oasis-open.org/cti/taxii/v2.1/os/taxii-v2.1-os.html
 
@@ -12,12 +12,13 @@ Author: Alborz Nazari
 License: MIT
 """
 
-from fastapi import FastAPI, Response, HTTPException, Query
+from fastapi import FastAPI, Response, HTTPException, Query, Body
 from fastapi.middleware.cors import CORSMiddleware
 import json
 import os
 from datetime import datetime, timezone
 from stix_exporter import load_datasets, build_stix_bundle, _now
+from feed_scheduler import get_scheduler, MISPFeedConfig, TAXIIFeedConfig
 
 # ─────────────────────────────────────────────
 # App Setup
@@ -25,8 +26,8 @@ from stix_exporter import load_datasets, build_stix_bundle, _now
 
 app = FastAPI(
     title="Open Intelligence Lab — TAXII 2.1 Server",
-    description="TAXII 2.1 endpoint serving STIX 2.1 threat intelligence from Open Intelligence Lab.",
-    version="0.3.0",
+    description="TAXII 2.1 bidirectional server: serves OI Lab intelligence and ingests from MISP/TAXII feeds with provenance validation.",
+    version="0.4.0",
     docs_url="/taxii/docs",
     redoc_url=None,
 )
@@ -254,10 +255,178 @@ def get_manifest(collection_id: str):
 @app.get("/taxii/health", summary="Health Check", tags=["system"])
 def health():
     bundle = get_bundle()
+    scheduler = get_scheduler()
+    store_summary = scheduler.get_store_summary()
     return {
         "status": "ok",
-        "version": "v0.3.0",
+        "version": "v0.4.0",
         "stix_objects": len(bundle.get("objects", [])),
         "server_time": _now(),
         "collections": len(COLLECTIONS),
+        "live_ingested_objects": store_summary["total_objects"],
+        "feeds_configured": store_summary["feeds_configured"],
     }
+
+
+# ─────────────────────────────────────────────
+# v0.4.0 — Feed Ingestion Endpoints
+# ─────────────────────────────────────────────
+
+@app.post("/ingest/misp", summary="Register and run a MISP feed", tags=["ingestion"])
+def ingest_misp(
+    base_url: str = Body(..., description="MISP instance base URL"),
+    api_key: str = Body(..., description="MISP REST API key"),
+    label: str = Body(default="MISP", description="Human-readable source label"),
+    pull_days: int = Body(default=7, description="How many days back to fetch"),
+    verify_ssl: bool = Body(default=True),
+):
+    """
+    Register a MISP instance as a live intelligence feed and run an immediate
+    ingestion cycle. Fetched events are normalized to STIX 2.1, validated via
+    the provenance engine, and stored in the live object store.
+
+    The provenance engine stamps each object with:
+    - source, reported_by, original_timestamp, ingested_at
+    - trust_level (adjusted for MISP threat level + source prior + staleness)
+    - chain-of-custody rejection reason if trust falls below threshold
+    """
+    scheduler = get_scheduler()
+    config = MISPFeedConfig(
+        label=label,
+        base_url=base_url,
+        api_key=api_key,
+        pull_days=pull_days,
+        verify_ssl=verify_ssl,
+    )
+    scheduler.add_misp_feed(config)
+    result = scheduler.run_once()
+    return {
+        "status": "ok",
+        "message": f"MISP feed '{label}' ingested",
+        "run_summary": result,
+        "store_summary": scheduler.get_store_summary(),
+    }
+
+
+@app.post("/ingest/taxii", summary="Register and run a TAXII feed", tags=["ingestion"])
+def ingest_taxii(
+    server_url: str = Body(..., description="TAXII 2.1 server base URL"),
+    label: str = Body(..., description="Human-readable source label"),
+    api_key: str = Body(default=None),
+    bearer_token: str = Body(default=None),
+    username: str = Body(default=None),
+    password: str = Body(default=None),
+    pull_days: int = Body(default=7),
+    verify_ssl: bool = Body(default=True),
+):
+    """
+    Register an external TAXII 2.1 server as an intelligence feed source
+    and run an immediate ingestion cycle across all readable collections.
+
+    Supports API key, Bearer token, and HTTP Basic authentication.
+    All traffic runs over HTTPS — TAXII 2.1 mandates TLS.
+    """
+    scheduler = get_scheduler()
+    config = TAXIIFeedConfig(
+        label=label,
+        server_url=server_url,
+        api_key=api_key,
+        bearer_token=bearer_token,
+        username=username,
+        password=password,
+        pull_days=pull_days,
+        verify_ssl=verify_ssl,
+    )
+    scheduler.add_taxii_feed(config)
+    result = scheduler.run_once()
+    return {
+        "status": "ok",
+        "message": f"TAXII feed '{label}' ingested",
+        "run_summary": result,
+        "store_summary": scheduler.get_store_summary(),
+    }
+
+
+@app.post("/ingest/run", summary="Trigger manual ingestion cycle", tags=["ingestion"])
+def trigger_run():
+    """
+    Manually trigger one ingestion cycle across all configured feeds.
+    Returns a full run summary including per-feed validated/rejected/stale counts.
+    """
+    scheduler = get_scheduler()
+    result = scheduler.run_once()
+    return result
+
+
+@app.get("/ingest/objects", summary="Query live ingested objects", tags=["ingestion"])
+def get_ingested_objects(
+    stix_type: str = Query(default=None, description="Filter by STIX type"),
+    source: str = Query(default=None, description="Filter by source label"),
+    min_trust: float = Query(default=None, ge=0.0, le=1.0, description="Minimum trust level"),
+    exclude_stale: bool = Query(default=False, description="Exclude stale objects"),
+    limit: int = Query(default=100, ge=1, le=1000),
+):
+    """
+    Query the live ingested object store — the dynamic knowledge graph layer.
+    These are the objects pulled from MISP and TAXII feeds, validated by the
+    provenance engine, and stamped with full chain-of-custody metadata.
+    """
+    scheduler = get_scheduler()
+    objects = scheduler.get_ingested_objects(
+        stix_type=stix_type,
+        source=source,
+        min_trust=min_trust,
+        exclude_stale=exclude_stale,
+    )
+    return Response(
+        content=json.dumps({
+            "type": "bundle",
+            "spec_version": "2.1",
+            "total": len(objects),
+            "objects": objects[:limit],
+        }),
+        media_type=STIX_CONTENT_TYPE,
+    )
+
+
+@app.get("/ingest/store/summary", summary="Live object store summary", tags=["ingestion"])
+def store_summary():
+    """
+    Return a summary of the live ingested object store:
+    total objects, breakdown by type and source, average trust level,
+    stale count, and number of feeds configured.
+    """
+    scheduler = get_scheduler()
+    return scheduler.get_store_summary()
+
+
+@app.get("/ingest/run-log", summary="Ingestion run history", tags=["ingestion"])
+def run_log(limit: int = Query(default=20, ge=1, le=200)):
+    """
+    Return the ingestion run history — per-feed audit log of every
+    ingestion cycle: start/end time, objects fetched/validated/rejected,
+    stale count, and error messages if any.
+    """
+    scheduler = get_scheduler()
+    return {"run_log": scheduler.get_run_log(limit=limit)}
+
+
+@app.get("/ingest/bundle", summary="Export ingested objects as STIX bundle", tags=["ingestion"])
+def ingested_bundle(
+    exclude_stale: bool = Query(default=False),
+    min_trust: float = Query(default=0.0, ge=0.0, le=1.0),
+):
+    """
+    Export all validated live ingested objects as a single STIX 2.1 bundle.
+    This is the bidirectional feedback loop: consume from MISP/TAXII,
+    enrich the graph, re-export as unified intelligence.
+    """
+    scheduler = get_scheduler()
+    bundle = scheduler.export_as_stix_bundle(
+        exclude_stale=exclude_stale,
+        min_trust=min_trust if min_trust > 0 else None,
+    )
+    return Response(
+        content=json.dumps(bundle),
+        media_type=STIX_CONTENT_TYPE,
+    )
