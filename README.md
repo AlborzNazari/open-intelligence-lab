@@ -2,18 +2,19 @@
 
 [![Research Status](https://img.shields.io/badge/research-alpha-blue)](https://github.com/AlborzNazari/open-intelligence-lab)
 [![Dataset Version](https://img.shields.io/badge/datasets-v0.1-green)](https://github.com/AlborzNazari/open-intelligence-lab/tree/main/datasets)
-[![Model Version](https://img.shields.io/badge/intelligence_model-v0.3-orange)](https://github.com/AlborzNazari/open-intelligence-lab)
+[![Model Version](https://img.shields.io/badge/intelligence_model-v0.4-orange)](https://github.com/AlborzNazari/open-intelligence-lab)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue)](https://www.python.org/)
 [![MITRE ATT&CK](https://img.shields.io/badge/MITRE-ATT%26CK%20Aligned-red)](https://attack.mitre.org/)
 [![STIX 2.1](https://img.shields.io/badge/STIX-2.1%20Compliant-8b5cf6)](https://oasis-open.github.io/cti-documentation/stix/intro)
 [![TAXII 2.1](https://img.shields.io/badge/TAXII-2.1%20Server-7c3aed)](https://docs.oasis-open.org/cti/taxii/v2.1/os/taxii-v2.1-os.html)
+[![MISP](https://img.shields.io/badge/MISP-Integrated-6d28d9)](https://www.misp-project.org/)
 
 **Open Intelligence Lab** is an ethical OSINT research platform focused on public-security intelligence representation, graph-based threat modeling, and explainable risk analytics.
 
 It provides a clean, modular environment for researchers, analysts, and engineers who want to explore open-source intelligence signals **without compromising privacy or ethics** — using only public data, with every risk score backed by an interpretable rationale.
 
-As of **v0.3.0**, the platform is fully interoperable with Splunk Enterprise Security, Microsoft Sentinel, OpenCTI, and IBM QRadar via STIX 2.1 exports and a built-in TAXII 2.1 server.
+As of **v0.4.0**, the platform is fully interoperable with Splunk Enterprise Security, Microsoft Sentinel, OpenCTI, and IBM QRadar via STIX 2.1 exports and a built-in TAXII 2.1 server — and now includes live MISP feed ingestion, a TAXII 2.1 client, and provenance-validated chain-of-custody for every ingested intelligence object.
 
 **How the Software Works**
 > 📖 Read the full article: [From a Black Box to a Transparent, Modular, and Open-Source Model](https://medium.com/@alborznazari4/open-intelligence-lab-on-git-from-a-black-box-to-a-transparent-modular-and-open-source-model-ffa154962964)
@@ -63,13 +64,17 @@ open-intelligence-lab/
 ├── api/
 │   ├── main.py                    ← FastAPI app entry point
 │   └── intelligence/
-│       ├── router.py              ← GET /intelligence/risk/{entity_id}
+│       ├── router.py              ← GET /intelligence/analyze/{entity_id}
 │       ├── service.py             ← Pipeline orchestration
 │       └── schemas.py            ← Pydantic response models
 │
 ├── backend/
 │   ├── stix_exporter.py           ← ★ v0.3.0 — STIX 2.1 bundle builder + platform exporters
-│   ├── taxii_server.py            ← ★ v0.3.0 — TAXII 2.1 FastAPI server
+│   ├── taxii_server.py            ← ★ v0.4.0 — TAXII 2.1 bidirectional server (publish + ingest)
+│   ├── misp_client.py             ← ★ v0.4.0 — MISP REST API client + STIX normalization
+│   ├── taxii_ingestor.py          ← ★ v0.4.0 — TAXII 2.1 feed subscriber (external feeds)
+│   ├── feed_scheduler.py          ← ★ v0.4.0 — Ingestion orchestrator + live object store
+│   ├── provenance.py              ← ★ v0.4.0 — Chain-of-custody engine + trust scoring
 │   └── requirements.txt          ← API/server dependencies
 │
 └── exports/                       ← ★ v0.3.0 — Generated STIX export files (git-ignored)
@@ -129,8 +134,9 @@ You should see `(venv)` at the start of your prompt.
 
 ```bash
 pip install -r requirements.txt
-pip install -r backend/requirements.txt
 ```
+
+> **Important:** Only install from the root `requirements.txt`. Do not run `pip install -r backend/requirements.txt` — that file pins older versions for reference only and will conflict on Python 3.12+.
 
 > **Windows note:** If any package fails to build from source, use:
 > ```bash
@@ -185,11 +191,11 @@ uvicorn api.main:app --reload --port 8000
 ```
 
 - **Interactive docs:** [http://localhost:8000/docs](http://localhost:8000/docs)
-- **Risk endpoint:** `http://localhost:8000/intelligence/risk/{entity_id}`
+- **Analyze endpoint:** `http://localhost:8000/intelligence/analyze/{entity_id}`
 
 Example:
 ```bash
-curl http://localhost:8000/intelligence/risk/TA-001
+curl http://localhost:8000/intelligence/analyze/TA-001
 ```
 
 
@@ -351,6 +357,61 @@ TAXII collections:
 5. Alternatively, use `exports/qradar_objects.json` for a one-time flat import
 
 
+## v0.4.0 — Live Feed Ingestion + Provenance Validation
+
+v0.4.0 makes the platform **bidirectional**. Where v0.3.0 made OI Lab a publisher — exporting STIX bundles and serving a TAXII feed — v0.4.0 adds the subscriber side: pulling live intelligence from external MISP instances and TAXII feeds, validating it through a provenance engine, and merging it into the knowledge graph.
+
+### New Backend Modules
+
+| File | Role |
+|---|---|
+| `backend/misp_client.py` | Connects to any MISP instance via its REST API. Pulls events and attributes, normalizes each to the correct STIX 2.1 type, and passes them to the provenance engine. |
+| `backend/taxii_ingestor.py` | TAXII 2.1 client — performs discovery, enumerates collections, and fetches paginated STIX objects from any external TAXII server with `added_after` temporal filtering. |
+| `backend/provenance.py` | Chain-of-custody engine. Every ingested object receives a `ProvenanceRecord` carrying `source`, `reported_by`, `original_timestamp`, `ingested_at`, `trust_level`, `staleness_days`, and a rejection reason if validation fails. |
+| `backend/feed_scheduler.py` | Orchestrates ingestion cycles across all configured feeds. Maintains a live in-memory object store keyed by STIX ID. Can run as a background thread (hourly by default) or triggered manually via the API. |
+
+### Provenance Validation
+
+Every object ingested from a MISP or TAXII feed passes through the provenance engine before entering the graph:
+
+```
+Source trust prior  ×  feed-level confidence  —  staleness penalty  =  adjusted trust level
+```
+
+| Signal | Effect |
+|---|---|
+| Source (e.g. MISP-CISA) | Applies a named trust prior (CISA = 1.0, unknown TAXII = 0.60) |
+| MISP threat level | Converts threat level 1–4 to a confidence band (0.95 → 0.25) |
+| Object age | Objects older than 90 days receive a −0.20 staleness penalty |
+| Trust floor | Objects below 0.10 after all adjustments are rejected entirely |
+
+Objects that pass validation are stamped with `x_oi_` chain-of-custody fields: `x_oi_source`, `x_oi_reported_by`, `x_oi_trust_level`, `x_oi_ingested_at`, `x_oi_staleness_days`, `x_oi_is_stale`.
+
+### New TAXII Server Endpoints (v0.4.0)
+
+Six new endpoints added to `backend/taxii_server.py`:
+
+| Endpoint | Description |
+|---|---|
+| `POST /ingest/misp` | Register a MISP instance and run an immediate ingestion cycle |
+| `POST /ingest/taxii` | Register an external TAXII feed and ingest all readable collections |
+| `POST /ingest/run` | Manually trigger one ingestion cycle across all configured feeds |
+| `GET /ingest/objects` | Query the live ingested object store with type, source, and trust filters |
+| `GET /ingest/store/summary` | Live store stats: object count, by type, by source, average trust level |
+| `GET /ingest/run-log` | Per-feed audit log of every ingestion cycle |
+
+### The Feedback Loop
+
+```
+MISP (CERTs / ISACs)  ──┐
+External TAXII feeds  ──┤──► Provenance engine ──► Live object store ──► STIX export
+OpenCTI               ──┘                                                     ↓
+                                                                   Splunk / Sentinel / QRadar
+```
+
+The platform now consumes community intelligence, validates its chain of custody, enriches the knowledge graph, and re-exports the unified result — closing the loop that v0.3.0 left open.
+
+
 ## Core Principles
 
 - **Public data only** — no private, scraped, or sensitive information
@@ -368,7 +429,7 @@ TAXII collections:
 | **v0.1.0** | Core graph engine, datasets, API, Visual Lab | ✅ Complete |
 | **v0.2.0** | FastAPI backend live; `demo.py` → `service.py` wiring | ✅ Complete |
 | **v0.3.0** | STIX 2.1 export, TAXII 2.1 server, Splunk / Sentinel / OpenCTI / QRadar interop | ✅ Complete |
-| **v0.4.0** | MISP integration, TAXII feed ingestion with provenance validation | 🗓 Planned |
+| **v0.4.0** | MISP integration, TAXII feed ingestion with provenance validation | ✅ Complete |
 | **v1.0.0** | Neo4j backend, multi-hop actor pivoting, ML scoring with SHAP explainability | 🗓 Planned |
 
 
