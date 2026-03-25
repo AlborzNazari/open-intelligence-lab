@@ -26,17 +26,39 @@ app = FastAPI(
 )
 
 # ─── CORS ─────────────────────────────────────────────────────────────────────
-# Allows the dashboard (opened via file:// or any localhost port) to fetch
-# from this API without browser CORS errors.
+# Three scenarios that need CORS access:
+#
+#   1. Local dev  — index.html opened from file:// or a local dev server
+#   2. GitHub Pages — https://alborznazari.github.io fetching localhost API
+#      NOTE: browsers block https→http (mixed-content) by default.
+#      Users must either:
+#        a) run the API behind a local HTTPS proxy (see README), OR
+#        b) open the GitHub Pages URL in Firefox and set
+#           security.mixed_content.block_active_content = false in about:config
+#        c) use the local index.html (file://) which talks to http:// fine
+#   3. Any localhost port (e.g. Vite dev server on :5173)
+#
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+        # ── Local file:// and localhost origins ───────────────────────────
+        "null",                          # file:// pages send Origin: null
         "http://localhost",
         "http://localhost:8000",
         "http://localhost:3000",
+        "http://localhost:5173",         # Vite
         "http://127.0.0.1",
         "http://127.0.0.1:8000",
-        "null",          # file:// origin that browsers send for local HTML files
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:5173",
+        # ── GitHub Pages (static dashboard) ──────────────────────────────
+        # Requests from GitHub Pages arrive as https:// origins.
+        # The browser will still enforce mixed-content rules on the CLIENT
+        # side (blocking https page → http API). This CORS entry ensures
+        # that IF the browser allows the request (e.g. Firefox with mixed-
+        # content unlocked, or API served over HTTPS), the server won't
+        # additionally reject it with a CORS 403.
+        "https://alborznazari.github.io",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -50,4 +72,13 @@ app.include_router(intelligence_router)
 # ─── Root health check ────────────────────────────────────────────────────────
 @app.get("/", tags=["Health"])
 def root():
-    return {"status": "ok", "version": "0.4.0", "docs": "/docs"}
+    return {
+        "status": "ok",
+        "version": "0.4.0",
+        "docs": "/docs",
+        "note": (
+            "If calling from GitHub Pages (https), the browser enforces "
+            "mixed-content rules. Run the API over HTTPS or use the local "
+            "index.html to connect without restrictions."
+        ),
+    }
