@@ -394,10 +394,25 @@ tbody td{padding:8px 12px;vertical-align:middle}
       <!-- API STATUS -->
       <div class="rp-section">
         <div class="rp-title">API Connection</div>
+        <div id="mixed-content-warn" style="display:none;background:rgba(245,166,35,.1);border:1px solid rgba(245,166,35,.35);border-radius:4px;padding:8px;margin-bottom:8px">
+          <div style="font-family:var(--mono);font-size:10px;color:var(--amber);font-weight:600;margin-bottom:4px">⚠ MIXED CONTENT BLOCKED</div>
+          <div style="font-family:var(--mono);font-size:9px;color:var(--text2);line-height:1.7">
+            This page is <strong>https://</strong> — browsers block calls to <strong>http://localhost</strong>.<br/>
+            <strong>Fix options:</strong><br/>
+            <span style="color:var(--green)">① Firefox:</span> about:config →<br/>
+            &nbsp;&nbsp;<em>security.mixed_content<br/>
+            &nbsp;&nbsp;.block_active_content</em> → <strong>false</strong><br/>
+            <span style="color:var(--green)">② Any browser:</span> open<br/>
+            &nbsp;&nbsp;<em>http://localhost:8000/docs</em><br/>
+            &nbsp;&nbsp;first (unlocks mixed content)<br/>
+            <span style="color:var(--green)">③ Best fix:</span> run API behind<br/>
+            &nbsp;&nbsp;a local HTTPS proxy
+          </div>
+        </div>
         <div class="api-row"><span class="api-ep">/intelligence/entities</span><span class="api-badge api-pend" id="ep-entities">—</span></div>
         <div class="api-row"><span class="api-ep">/graph/summary</span><span class="api-badge api-pend" id="ep-summary">—</span></div>
         <div class="api-row"><span class="api-ep">/graph/edges</span><span class="api-badge api-pend" id="ep-edges">—</span></div>
-        <input id="api-url-input" type="text" value="http://localhost:8000" placeholder="API base URL…"/>
+        <input id="api-url-input" type="text" placeholder="API base URL…"/>
         <button id="probe-btn" onclick="probeAPI()">⟳ Probe Backend</button>
       </div>
 
@@ -446,8 +461,21 @@ let selectedEntityId = null;
 let typeFilter = 'all';
 let sortKey = 'risk_score';
 let sortAsc = false;
-let API_BASE = 'http://localhost:8000';
 let apiLive = false;
+
+// ── Detect context and set smart API URL default ──────
+// When served from https:// (GitHub Pages), browsers block
+// calls to http://localhost (mixed content). Detect this
+// and warn the user; still try so the probe shows the real
+// error rather than silently pretending backend is offline.
+const IS_HTTPS_PAGE = location.protocol === 'https:';
+let API_BASE = 'http://localhost:8000';
+document.getElementById('api-url-input').value = API_BASE;
+
+// Show/hide the mixed-content warning banner
+if (IS_HTTPS_PAGE) {
+  document.getElementById('mixed-content-warn').style.display = 'block';
+}
 
 // ═══════════════════════════════════════════════════════
 // INIT
@@ -492,6 +520,10 @@ async function probeAPI(){
   const endpoints = ['ep-entities','ep-summary','ep-edges'];
   const paths = ['/intelligence/entities?limit=5','/intelligence/graph/summary','/intelligence/graph/edges'];
 
+  // Mixed content: https page → http API = browser blocks request before it even leaves
+  const isMixed = IS_HTTPS_PAGE && API_BASE.startsWith('http://');
+  document.getElementById('mixed-content-warn').style.display = isMixed ? 'block' : 'none';
+
   let allOk = true;
   for(let i=0;i<paths.length;i++){
     const el = document.getElementById(endpoints[i]);
@@ -500,7 +532,6 @@ async function probeAPI(){
       const r = await fetch(API_BASE+paths[i],{signal:AbortSignal.timeout(3000)});
       if(r.ok){
         el.textContent='200 OK'; el.className='api-badge api-ok';
-        // If summary endpoint, update stats from live data
         if(i===1){
           const data = await r.json();
           document.getElementById('stat-nodes').textContent = data.node_count||entities.length;
@@ -513,13 +544,21 @@ async function probeAPI(){
         el.textContent=r.status; el.className='api-badge api-fail'; allOk=false;
       }
     }catch(e){
-      el.textContent='OFFLINE'; el.className='api-badge api-fail'; allOk=false;
+      // TypeError with no message = mixed-content block (browser never sent request)
+      // TypeError with message = network error (server really offline)
+      const isBlock = isMixed || e.message === '' || e.message === 'Failed to fetch';
+      el.textContent = isBlock ? 'BLOCKED' : 'OFFLINE';
+      el.className='api-badge api-fail'; allOk=false;
     }
   }
   if(allOk){
     pill.className='status-pill sp-live';
     pill.innerHTML='<div class="dot dot-g"></div><span>API Live</span>';
     document.getElementById('stat-source').textContent='API LIVE';
+  } else if(isMixed){
+    pill.className='status-pill sp-warn';
+    pill.innerHTML='<div class="dot dot-a"></div><span>Mixed Content Blocked</span>';
+    updateStats();
   } else {
     pill.className='status-pill sp-warn';
     pill.innerHTML='<div class="dot dot-a"></div><span>API Offline · Local Data</span>';
