@@ -1,9 +1,15 @@
 """
 api/main.py  —  v0.4.0
 CORS + router registration for Open Intelligence Lab API.
+
+On startup, reads MISP_URL and MISP_KEY from environment variables.
+If both are set, the MISP live feed scheduler starts automatically
+and begins pulling threat intelligence in the background.
+If not set, the app runs normally on static curated datasets.
 """
 
 import os
+import sys
 import logging
 from contextlib import asynccontextmanager
 
@@ -23,8 +29,11 @@ async def lifespan(app: FastAPI):
 
     if misp_url and misp_key:
         try:
-            import sys
-            sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
+            # Add backend/ to path so feed_scheduler can import misp_client etc.
+            backend_path = os.path.join(os.path.dirname(__file__), "..", "backend")
+            if backend_path not in sys.path:
+                sys.path.insert(0, backend_path)
+
             from feed_scheduler import get_scheduler, MISPFeedConfig
 
             scheduler = get_scheduler()
@@ -39,18 +48,28 @@ async def lifespan(app: FastAPI):
 
             interval = int(os.getenv("MISP_INTERVAL_SECONDS", "3600"))
             scheduler.start_background(interval_seconds=interval)
-            logger.info(f"[Startup] MISP live feed started — {misp_url} — interval: {interval}s")
+            logger.info(
+                f"[Startup] MISP live feed active — {misp_url} "
+                f"— pulling every {interval}s"
+            )
         except Exception as e:
             logger.error(f"[Startup] MISP feed failed to start: {e}")
     else:
-        logger.info("[Startup] MISP_URL/MISP_KEY not set — running on static datasets only")
+        logger.info(
+            "[Startup] MISP_URL / MISP_KEY not set — "
+            "running on static datasets. Set env vars to activate live feed."
+        )
 
     yield  # server runs here
 
-    # ── On shutdown ────────────────────────────────────────────────────────────
+    # ── On shutdown: stop background scheduler cleanly ────────────────────────
     try:
+        backend_path = os.path.join(os.path.dirname(__file__), "..", "backend")
+        if backend_path not in sys.path:
+            sys.path.insert(0, backend_path)
         from feed_scheduler import get_scheduler
         get_scheduler().stop_background()
+        logger.info("[Shutdown] MISP scheduler stopped")
     except Exception:
         pass
 
@@ -64,7 +83,9 @@ app = FastAPI(
         "explainable risk analytics, STIX 2.1 export, TAXII 2.1 feed ingestion, "
         "MISP integration, and provenance-validated live intelligence.\n\n"
         "**v0.4.0** adds bidirectional TAXII: MISP feed ingestion, TAXII client, "
-        "provenance chain-of-custody, confidence scoring, and staleness detection."
+        "provenance chain-of-custody, confidence scoring, and staleness detection.\n\n"
+        "**MISP live feed:** set `MISP_URL` and `MISP_KEY` environment variables "
+        "before starting the server to activate live threat intelligence ingestion."
     ),
     contact={
         "name": "Alborz Nazari",
@@ -74,10 +95,22 @@ app = FastAPI(
 )
 
 # ─── CORS ─────────────────────────────────────────────────────────────────────
+# Three scenarios that need CORS access:
+#
+#   1. Local dev  — index.html opened from file:// or a local dev server
+#   2. GitHub Pages — https://alborznazari.github.io fetching localhost API
+#      NOTE: browsers block https→http (mixed-content) by default.
+#      Users must either:
+#        a) run the API behind a local HTTPS proxy (see README), OR
+#        b) open the GitHub Pages URL in Firefox and set
+#           security.mixed_content.block_active_content = false in about:config
+#        c) use the local index.html (file://) which talks to http:// fine
+#   3. Any localhost port (e.g. Vite dev server on :5173)
+#
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "null",
+        "null",                          # file:// pages send Origin: null
         "http://localhost",
         "http://localhost:8000",
         "http://localhost:3000",
@@ -105,5 +138,9 @@ def root():
         "status": "ok",
         "version": "0.4.0",
         "docs": "/docs",
-        "misp_live_feed": "active" if misp_active else "inactive — set MISP_URL and MISP_KEY",
+        "misp_live_feed": (
+            "active — pulling from " + os.getenv("MISP_URL", "")
+            if misp_active
+            else "inactive — set MISP_URL and MISP_KEY environment variables to activate"
+        ),
     }
