@@ -1,43 +1,18 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# Open Intelligence Lab — Docker Compose
-# v0.4.0
-#
-# Services:
-#   db          — MariaDB (required by MISP)
-#   redis       — Redis (required by MISP)
-#   misp        — MISP core (threat intel platform)
-#   oilab       — Open Intelligence Lab API
-#   caddy       — HTTPS reverse proxy (fixes mixed-content block)
-#
-# QUICK START:
-#   docker compose up
-#
-# URLs once running:
-#   Visual Lab (open in browser): index.html — set API to https://localhost:8443
-#   OI Lab API (HTTP direct):     http://localhost:8000
-#   OI Lab API (HTTPS via Caddy): https://localhost:8443
-#   OI Lab Docs:                  https://localhost:8443/docs
-#   MISP UI:                      https://localhost (admin@admin.test / admin)
-#
-# FIRST TIME — accept Caddy cert:
-#   Open https://localhost:8443 in Chrome → Advanced → Proceed to localhost
-#   Do this once. After that index.html connects automatically with no errors.
-#
-# ACTIVATE LIVE MISP FEED:
-#   1. Open https://localhost → My Profile → Auth key → copy it
-#   2. Add to .env:  MISP_KEY=your-copied-key
-#   3. docker compose up
-#
-# Author: Alborz Nazari
-# License: MIT
+# Open Intelligence Lab — Docker Compose v0.4.0
 # ─────────────────────────────────────────────────────────────────────────────
+
+networks:
+  oilab-net:
+    driver: bridge
 
 services:
 
-  # ── MariaDB — MISP database ───────────────────────────────────────────────
   db:
     image: mariadb:10.11
     container_name: oilab-db
+    networks:
+      - oilab-net
     environment:
       - MYSQL_ROOT_PASSWORD=misproot
       - MYSQL_DATABASE=misp
@@ -53,10 +28,11 @@ services:
       start_period: 30s
     restart: unless-stopped
 
-  # ── Redis — MISP session/queue ────────────────────────────────────────────
   redis:
     image: valkey/valkey:7.2
     container_name: oilab-redis
+    networks:
+      - oilab-net
     healthcheck:
       test: ["CMD", "valkey-cli", "ping"]
       interval: 5s
@@ -64,10 +40,11 @@ services:
       retries: 10
     restart: unless-stopped
 
-  # ── MISP core ─────────────────────────────────────────────────────────────
   misp:
     image: ghcr.io/misp/misp-docker/misp-core:latest
     container_name: oilab-misp
+    networks:
+      - oilab-net
     ports:
       - "80:80"
       - "443:443"
@@ -98,10 +75,11 @@ services:
       start_period: 120s
     restart: unless-stopped
 
-  # ── Open Intelligence Lab API ─────────────────────────────────────────────
   oilab:
     build: .
     container_name: oilab-api
+    networks:
+      - oilab-net
     ports:
       - "8000:8000"
     environment:
@@ -117,13 +95,11 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
-  # ── Caddy HTTPS proxy ─────────────────────────────────────────────────────
-  # Wraps the OI Lab API in HTTPS so GitHub Pages (https://) can call it
-  # without triggering the browser mixed-content block.
-  # Use https://localhost:8443 as the API URL in index.html.
   caddy:
     image: caddy:2-alpine
     container_name: oilab-caddy
+    networks:
+      - oilab-net
     ports:
       - "8443:8443"
     volumes:
