@@ -1,0 +1,87 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Open Intelligence Lab — Docker Compose
+# v0.4.0
+#
+# Spins up two services:
+#   1. misp        — A full MISP instance (threat intel platform)
+#   2. oilab       — Open Intelligence Lab API (connects to MISP automatically)
+#
+# QUICK START:
+#   docker compose up
+#
+# Then:
+#   - MISP UI:    https://localhost  (login: admin@admin.test / admin)
+#   - OI Lab API: http://localhost:8000
+#   - OI Lab Docs: http://localhost:8000/docs
+#   - Open index.html in your browser for the Visual Lab
+#
+# FIRST TIME SETUP (get your MISP API key):
+#   1. Open https://localhost in your browser (accept the self-signed cert warning)
+#   2. Login with admin@admin.test / admin
+#   3. Top right corner → click your username → My Profile
+#   4. Scroll down to "Auth key" → copy the key
+#   5. Stop compose (Ctrl+C), set the key below, then restart:
+#
+#      MISP_KEY=your-copied-key docker compose up
+#
+#   Or create a .env file in this folder:
+#      MISP_KEY=your-copied-key
+#
+# Author: Alborz Nazari
+# License: MIT
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  # ── MISP ────────────────────────────────────────────────────────────────────
+  # Official MISP Docker image maintained by the MISP project.
+  # First boot takes ~2 minutes while it initializes the database.
+  misp:
+    image: ghcr.io/misp/misp-docker/misp-core:latest
+    container_name: oilab-misp
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - MISP_BASEURL=https://localhost
+      - MISP_ADMIN_EMAIL=admin@admin.test
+      - MISP_ADMIN_PASSPHRASE=admin
+      - MISP_ORG=Open Intelligence Lab
+    volumes:
+      - misp_data:/var/www/MISP/app/files
+      - misp_db:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "curl", "-fk", "https://localhost/users/login"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 120s
+    restart: unless-stopped
+
+  # ── Open Intelligence Lab API ────────────────────────────────────────────────
+  oilab:
+    build: .
+    container_name: oilab-api
+    ports:
+      - "8000:8000"
+    environment:
+      # ── MISP connection ──────────────────────────────────────────────────────
+      # MISP_URL points to the misp service inside Docker (use http, not https,
+      # for container-to-container traffic to avoid cert issues)
+      - MISP_URL=https://misp
+      # MISP_KEY: set via .env file or environment variable
+      # Create a .env file with: MISP_KEY=your-misp-api-key
+      - MISP_KEY=${MISP_KEY:-}
+      - MISP_LABEL=MISP-Local
+      - MISP_VERIFY_SSL=false        # self-signed cert in local MISP is fine
+      - MISP_PULL_DAYS=7
+      - MISP_LIMIT=200
+      - MISP_INTERVAL_SECONDS=3600   # pull fresh intel every hour
+    depends_on:
+      misp:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  misp_data:
+  misp_db:
