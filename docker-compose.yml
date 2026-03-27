@@ -2,30 +2,40 @@
 # Open Intelligence Lab — Docker Compose
 # v0.4.0
 #
-# Spins up two services:
-#   1. misp        — A full MISP instance (threat intel platform)
-#   2. oilab       — Open Intelligence Lab API (connects to MISP automatically)
+# Spins up three services:
+#   1. misp        — Full MISP instance (threat intel platform)
+#   2. oilab       — Open Intelligence Lab API
+#   3. caddy       — HTTPS reverse proxy (fixes mixed-content block)
 #
 # QUICK START:
 #   docker compose up
 #
 # Then:
-#   - MISP UI:    https://localhost  (login: admin@admin.test / admin)
-#   - OI Lab API: http://localhost:8000
-#   - OI Lab Docs: http://localhost:8000/docs
-#   - Open index.html in your browser for the Visual Lab
+#   - Visual Lab:     open index.html in your browser
+#                     set API URL to https://localhost:8443
+#   - OI Lab API:     http://localhost:8000  (direct, HTTP)
+#   - OI Lab HTTPS:   https://localhost:8443 (via Caddy — use this for GitHub Pages)
+#   - OI Lab Docs:    https://localhost:8443/docs
+#   - MISP UI:        https://localhost  (login: admin@admin.test / admin)
 #
-# FIRST TIME SETUP (get your MISP API key):
-#   1. Open https://localhost in your browser (accept the self-signed cert warning)
-#   2. Login with admin@admin.test / admin
-#   3. Top right corner → click your username → My Profile
-#   4. Scroll down to "Auth key" → copy the key
-#   5. Stop compose (Ctrl+C), set the key below, then restart:
+# WHY CADDY?
+#   GitHub Pages serves index.html over https://
+#   Your local API runs over http://
+#   Browsers block https → http requests (mixed content)
+#   Caddy wraps the API in HTTPS so both sides match — block gone.
 #
-#      MISP_KEY=your-copied-key docker compose up
+# FIRST TIME SETUP:
+#   1. Run: docker compose up
+#   2. Open https://localhost:8443 in your browser
+#   3. Accept the self-signed cert warning (click Advanced → Proceed)
+#      This unlocks the cert for all subsequent requests from index.html
+#   4. Open index.html, set API URL to https://localhost:8443
+#   5. Done — graph loads, no mixed content errors
 #
-#   Or create a .env file in this folder:
-#      MISP_KEY=your-copied-key
+# TO ACTIVATE LIVE MISP FEED:
+#   1. Open https://localhost → login → My Profile → Auth key → copy it
+#   2. Add to .env file: MISP_KEY=your-copied-key
+#   3. Restart: docker compose up
 #
 # Author: Alborz Nazari
 # License: MIT
@@ -34,8 +44,6 @@
 services:
 
   # ── MISP ────────────────────────────────────────────────────────────────────
-  # Official MISP Docker image maintained by the MISP project.
-  # First boot takes ~2 minutes while it initializes the database.
   misp:
     image: ghcr.io/misp/misp-docker/misp-core:latest
     container_name: oilab-misp
@@ -65,23 +73,34 @@ services:
     ports:
       - "8000:8000"
     environment:
-      # ── MISP connection ──────────────────────────────────────────────────────
-      # MISP_URL points to the misp service inside Docker (use http, not https,
-      # for container-to-container traffic to avoid cert issues)
       - MISP_URL=https://misp
-      # MISP_KEY: set via .env file or environment variable
-      # Create a .env file with: MISP_KEY=your-misp-api-key
       - MISP_KEY=${MISP_KEY:-}
       - MISP_LABEL=MISP-Local
-      - MISP_VERIFY_SSL=false        # self-signed cert in local MISP is fine
+      - MISP_VERIFY_SSL=false
       - MISP_PULL_DAYS=7
       - MISP_LIMIT=200
-      - MISP_INTERVAL_SECONDS=3600   # pull fresh intel every hour
+      - MISP_INTERVAL_SECONDS=3600
     depends_on:
       misp:
         condition: service_healthy
     restart: unless-stopped
 
+  # ── Caddy HTTPS Proxy ────────────────────────────────────────────────────────
+  caddy:
+    image: caddy:2-alpine
+    container_name: oilab-caddy
+    ports:
+      - "8443:8443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - oilab
+    restart: unless-stopped
+
 volumes:
   misp_data:
   misp_db:
+  caddy_data:
+  caddy_config:
