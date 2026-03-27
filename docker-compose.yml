@@ -2,40 +2,31 @@
 # Open Intelligence Lab — Docker Compose
 # v0.4.0
 #
-# Spins up three services:
-#   1. misp        — Full MISP instance (threat intel platform)
-#   2. oilab       — Open Intelligence Lab API
-#   3. caddy       — HTTPS reverse proxy (fixes mixed-content block)
+# Services:
+#   db          — MariaDB (required by MISP)
+#   redis       — Redis (required by MISP)
+#   misp        — MISP core (threat intel platform)
+#   oilab       — Open Intelligence Lab API
+#   caddy       — HTTPS reverse proxy (fixes mixed-content block)
 #
 # QUICK START:
 #   docker compose up
 #
-# Then:
-#   - Visual Lab:     open index.html in your browser
-#                     set API URL to https://localhost:8443
-#   - OI Lab API:     http://localhost:8000  (direct, HTTP)
-#   - OI Lab HTTPS:   https://localhost:8443 (via Caddy — use this for GitHub Pages)
-#   - OI Lab Docs:    https://localhost:8443/docs
-#   - MISP UI:        https://localhost  (login: admin@admin.test / admin)
+# URLs once running:
+#   Visual Lab (open in browser): index.html — set API to https://localhost:8443
+#   OI Lab API (HTTP direct):     http://localhost:8000
+#   OI Lab API (HTTPS via Caddy): https://localhost:8443
+#   OI Lab Docs:                  https://localhost:8443/docs
+#   MISP UI:                      https://localhost (admin@admin.test / admin)
 #
-# WHY CADDY?
-#   GitHub Pages serves index.html over https://
-#   Your local API runs over http://
-#   Browsers block https → http requests (mixed content)
-#   Caddy wraps the API in HTTPS so both sides match — block gone.
+# FIRST TIME — accept Caddy cert:
+#   Open https://localhost:8443 in Chrome → Advanced → Proceed to localhost
+#   Do this once. After that index.html connects automatically with no errors.
 #
-# FIRST TIME SETUP:
-#   1. Run: docker compose up
-#   2. Open https://localhost:8443 in your browser
-#   3. Accept the self-signed cert warning (click Advanced → Proceed)
-#      This unlocks the cert for all subsequent requests from index.html
-#   4. Open index.html, set API URL to https://localhost:8443
-#   5. Done — graph loads, no mixed content errors
-#
-# TO ACTIVATE LIVE MISP FEED:
-#   1. Open https://localhost → login → My Profile → Auth key → copy it
-#   2. Add to .env file: MISP_KEY=your-copied-key
-#   3. Restart: docker compose up
+# ACTIVATE LIVE MISP FEED:
+#   1. Open https://localhost → My Profile → Auth key → copy it
+#   2. Add to .env:  MISP_KEY=your-copied-key
+#   3. docker compose up
 #
 # Author: Alborz Nazari
 # License: MIT
@@ -43,7 +34,37 @@
 
 services:
 
-  # ── MISP ────────────────────────────────────────────────────────────────────
+  # ── MariaDB — MISP database ───────────────────────────────────────────────
+  db:
+    image: mariadb:10.11
+    container_name: oilab-db
+    environment:
+      - MYSQL_ROOT_PASSWORD=misproot
+      - MYSQL_DATABASE=misp
+      - MYSQL_USER=misp
+      - MYSQL_PASSWORD=misp
+    volumes:
+      - misp_db:/var/lib/mysql
+    healthcheck:
+      test: mysqladmin --user=misp --password=misp status
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+  # ── Redis — MISP session/queue ────────────────────────────────────────────
+  redis:
+    image: valkey/valkey:7.2
+    container_name: oilab-redis
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  # ── MISP core ─────────────────────────────────────────────────────────────
   misp:
     image: ghcr.io/misp/misp-docker/misp-core:latest
     container_name: oilab-misp
@@ -51,22 +72,33 @@ services:
       - "80:80"
       - "443:443"
     environment:
+      - MYSQL_HOST=db
+      - MYSQL_PORT=3306
+      - MYSQL_DATABASE=misp
+      - MYSQL_USER=misp
+      - MYSQL_PASSWORD=misp
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
       - MISP_BASEURL=https://localhost
       - MISP_ADMIN_EMAIL=admin@admin.test
       - MISP_ADMIN_PASSPHRASE=admin
       - MISP_ORG=Open Intelligence Lab
     volumes:
       - misp_data:/var/www/MISP/app/files
-      - misp_db:/var/lib/mysql
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-fk", "https://localhost/users/login"]
-      interval: 30s
+      test: ["CMD", "curl", "-fk", "https://localhost/users/heartbeat"]
+      interval: 15s
       timeout: 10s
-      retries: 10
+      retries: 20
       start_period: 120s
     restart: unless-stopped
 
-  # ── Open Intelligence Lab API ────────────────────────────────────────────────
+  # ── Open Intelligence Lab API ─────────────────────────────────────────────
   oilab:
     build: .
     container_name: oilab-api
@@ -85,7 +117,10 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
-  # ── Caddy HTTPS Proxy ────────────────────────────────────────────────────────
+  # ── Caddy HTTPS proxy ─────────────────────────────────────────────────────
+  # Wraps the OI Lab API in HTTPS so GitHub Pages (https://) can call it
+  # without triggering the browser mixed-content block.
+  # Use https://localhost:8443 as the API URL in index.html.
   caddy:
     image: caddy:2-alpine
     container_name: oilab-caddy
@@ -100,7 +135,7 @@ services:
     restart: unless-stopped
 
 volumes:
-  misp_data:
   misp_db:
+  misp_data:
   caddy_data:
   caddy_config:
