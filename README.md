@@ -27,14 +27,16 @@ As of **v0.4.0**, the platform is fully interoperable with Splunk Enterprise Sec
 
 Open Intelligence Lab models real-world threat intelligence as a **traversable knowledge graph**:
 
-- **21 entities** — threat actors (APT28, APT29, APT41, Lazarus, LockBit, Cl0p, KillNet), malware families, CVEs, infrastructure nodes, and target sectors
+- **22 entities** — threat actors (APT28, APT29, APT41, Lazarus, LockBit, Cl0p, KillNet), 8 malware families, 2 CVEs, 2 infrastructure nodes, and 3 target sectors
 - **28 documented relations** — `uses`, `exploits`, `targets`, `uses_pattern`, `related_to`
-- **7 real campaigns** — SolarWinds, MOVEit, LockBit 3.0, Bybit Heist, and more
-- **Risk scoring** — every entity gets a score from 0.0 to 1.0 computed from threat likelihood × impact × confidence, bucketed into `LOW / MEDIUM / HIGH / CRITICAL`
+- **7 real campaigns** — Operation Fancy Bear, Operation SolarWinds (SUNBURST), Operation Double Dragon, Operation AppleJeus, LockBit Global Ransomware, Operation MOVEit Mass Exploitation, KillNet NATO DDoS
+- **Risk scoring** — every entity gets a score from 0.0 to 1.0 derived from its base risk, graph degree (structural connectivity), and incident neighbor weighting, bucketed into `LOW / MEDIUM / HIGH / CRITICAL`
 - **Explainability** — every risk score produces a plain-language rationale, never a naked number
 - **MITRE ATT&CK alignment** — all actors and patterns are mapped to official technique IDs
 - **STIX 2.1 export** *(v0.3.0)* — full bundle export for Splunk, Sentinel, OpenCTI, and QRadar
 - **TAXII 2.1 server** *(v0.3.0)* — live feed endpoint that threat platforms can poll directly
+- **MISP live feed + TAXII ingestion** *(v0.4.0)* — pull intelligence from external sources with provenance validation
+- **Docker support** *(v0.4.0)* — single `docker compose up` spins up the full stack including a local MISP instance
 
 Run `demo.py` and an **interactive browser dashboard** opens showing the full threat knowledge graph — click any node to inspect its risk score, confidence, connections, and intelligence rationale.
 
@@ -44,9 +46,11 @@ Run `demo.py` and an **interactive browser dashboard** opens showing the full th
 open-intelligence-lab/
 ├── demo.py                        ← Entry point — runs the full pipeline
 ├── index.html                     ← Visual Lab (GitHub Pages)
+├── Dockerfile                     ← ★ v0.4.0 — Container build for OI Lab API
+├── docker-compose.yml             ← ★ v0.4.0 — Full stack: OI Lab + MISP instance
 │
 ├── datasets/                      ← 5 JSON knowledge base files
-│   ├── threat_entities.json       ← 21 entities (actors, malware, CVEs, sectors, infra)
+│   ├── threat_entities.json       ← 22 entities (actors, malware, CVEs, sectors, infra)
 │   ├── attack_patterns.json       ← 15 OSINT attack patterns with MITRE mappings
 │   ├── relations.json             ← 28 directed edges (the graph lives here)
 │   ├── campaigns.json             ← 7 real-world campaigns (Diamond Model)
@@ -54,7 +58,7 @@ open-intelligence-lab/
 │
 ├── core_engine/                   ← Intelligence pipeline
 │   ├── graph_builder.py           ← Builds DiGraph from datasets (NetworkX)
-│   ├── risk_analyzer.py           ← Risk = Likelihood × Impact × Confidence
+│   ├── risk_analyzer.py           ← Risk = base + degree_factor + incident_factor
 │   ├── intelligence_explainer.py  ← Plain-language rationale generator
 │   └── intelligence_entities.py  ← Entity data model
 │
@@ -62,7 +66,7 @@ open-intelligence-lab/
 │   └── graph_renderer.py          ← Interactive browser graph (Canvas + D3-style)
 │
 ├── api/
-│   ├── main.py                    ← FastAPI app entry point
+│   ├── main.py                    ← FastAPI app entry point + MISP lifespan wiring
 │   └── intelligence/
 │       ├── router.py              ← GET /intelligence/analyze/{entity_id}
 │       ├── service.py             ← Pipeline orchestration
@@ -70,12 +74,12 @@ open-intelligence-lab/
 │
 ├── backend/
 │   ├── stix_exporter.py           ← ★ v0.3.0 — STIX 2.1 bundle builder + platform exporters
-│   ├── taxii_server.py            ← ★ v0.4.0 — TAXII 2.1 bidirectional server (publish + ingest)
+│   ├── taxii_server.py            ← ★ v0.3.0 / v0.4.0 — TAXII 2.1 server (publish + ingest endpoints)
 │   ├── misp_client.py             ← ★ v0.4.0 — MISP REST API client + STIX normalization
 │   ├── taxii_ingestor.py          ← ★ v0.4.0 — TAXII 2.1 feed subscriber (external feeds)
 │   ├── feed_scheduler.py          ← ★ v0.4.0 — Ingestion orchestrator + live object store
 │   ├── provenance.py              ← ★ v0.4.0 — Chain-of-custody engine + trust scoring
-│   └── requirements.txt          ← API/server dependencies
+│   └── requirements.txt          ← Backend/server reference dependencies
 │
 └── exports/                       ← ★ v0.3.0 — Generated STIX export files (git-ignored)
     ├── stix_bundle.json           ← Raw STIX 2.1 bundle (OpenCTI)
@@ -92,7 +96,13 @@ open-intelligence-lab/
 
 ## Quick Start
 
-### Prerequisites
+Two ways to run the project. Choose based on what you need.
+
+---
+
+### Option A — Python (static data, no Docker required)
+
+#### Prerequisites
 
 - **Python 3.10+** — [python.org/downloads](https://www.python.org/downloads/)
 - **Git** — [git-scm.com](https://git-scm.com/)
@@ -103,14 +113,14 @@ python --version   # must be 3.10+
 git --version
 ```
 
-### 1 — Clone
+#### 1 — Clone
 
 ```bash
 git clone https://github.com/AlborzNazari/open-intelligence-lab.git
 cd open-intelligence-lab
 ```
 
-### 2 — Create Virtual Environment
+#### 2 — Create Virtual Environment
 
 ```bash
 python -m venv venv
@@ -120,7 +130,8 @@ Activate:
 
 | Platform | Command |
 |----------|---------|
-| Windows (PowerShell) | `venv\Scripts\activate.bat` |
+| Windows (PowerShell) | `venv\Scripts\Activate.ps1` |
+| Windows (CMD) | `venv\Scripts\activate.bat` |
 | macOS / Linux | `source venv/bin/activate` |
 
 You should see `(venv)` at the start of your prompt.
@@ -130,7 +141,7 @@ You should see `(venv)` at the start of your prompt.
 > Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 > ```
 
-### 3 — Install Dependencies
+#### 3 — Install Dependencies
 
 ```bash
 pip install -r requirements.txt
@@ -143,18 +154,88 @@ pip install -r requirements.txt
 > pip install -r requirements.txt --only-binary=:all:
 > ```
 
-### 4 — Run the Software
+#### 4 — Run the Visual Lab
+
+Open `index.html` directly in your browser for the full interactive graph.
+
+#### 5 — Run the API
+
+```bash
+python -m uvicorn api.main:app --reload --port 8000
+```
+
+- **Interactive docs:** [http://localhost:8000/docs](http://localhost:8000/docs)
+- **Health check:** [http://localhost:8000/](http://localhost:8000/)
+
+#### 6 — Run the Demo Pipeline
 
 ```bash
 python demo.py
 ```
 
-Your browser opens automatically with the **interactive threat knowledge graph**. In the terminal you'll see the full risk analysis report printed for all entities.
+Your browser opens automatically with the interactive threat knowledge graph. In the terminal you'll see the full risk analysis report printed for all entities.
 
+---
+
+### Option B — Docker (full stack with live MISP)
+
+#### Prerequisites
+
+- **Docker Desktop** — [docker.com/products/docker-desktop](https://www.docker.com/products/docker-desktop/)
+- **Git** — [git-scm.com](https://git-scm.com/)
+
+#### 1 — Clone
+
+```bash
+git clone https://github.com/AlborzNazari/open-intelligence-lab.git
+cd open-intelligence-lab
+```
+
+#### 2 — Start the Full Stack
+
+```bash
+docker compose up
+```
+
+This spins up two services:
+- **OI Lab API** at `http://localhost:8000` — the FastAPI backend
+- **MISP** at `https://localhost` — a full local MISP instance
+
+MISP takes ~2 minutes to initialize on first boot.
+
+#### 3 — Get Your MISP API Key
+
+1. Open `https://localhost` in your browser (accept the self-signed cert warning)
+2. Login: `admin@admin.test` / `admin`
+3. Top-right corner → click your username → **My Profile**
+4. Scroll down to **Auth key** → copy it
+
+#### 4 — Connect OI Lab to MISP
+
+Stop compose (`Ctrl+C`), then restart with your key:
+
+```bash
+MISP_KEY=your-copied-key docker compose up
+```
+
+Or create a `.env` file in the project root:
+```
+MISP_KEY=your-copied-key
+```
+
+Then just run `docker compose up`. The OI Lab API will connect to MISP automatically on startup and begin pulling live threat intelligence every hour.
+
+#### 5 — Open the Visual Lab
+
+Open `index.html` in your browser and point the API URL to `http://localhost:8000`.
+
+> **No MISP needed:** If you only want the containerized API without live feeds, skip steps 3–4. The app runs fully on static datasets without a MISP connection.
+
+---
 
 ## Interactive Dashboard
 
-When `demo.py` runs, it opens a browser dashboard with:
+When the API is running, open `index.html` in your browser:
 
 | Feature | How |
 |---------|-----|
@@ -169,26 +250,22 @@ When `demo.py` runs, it opens a browser dashboard with:
 **Right panel** — click any node to see its risk gauge, confidence, connection count, and plain-language explainability rationale  
 **Campaign panel** — all 7 documented campaigns with adversary and objective  
 **STIX Export panel** *(v0.3.0)* — per-platform export preview for Splunk, Sentinel, OpenCTI, and QRadar
+**MISP Status panel** *(v0.4.0)* — live feed status, provenance chain state, TAXII ingestor readiness
 
 
 ## Running the API
 
 ```bash
-uvicorn api.main:app --reload --port 8000
-```
-If not working:
-```bash
 python -m uvicorn api.main:app --reload --port 8000
 ```
-If still not working:
+
+If `uvicorn` is not found as a command:
 ```bash
 pip install uvicorn fastapi
+python -m uvicorn api.main:app --reload --port 8000
 ```
 
-Then repeat:
-```bash
-uvicorn api.main:app --reload --port 8000
-```
+> **Always run from the project root** (`open-intelligence-lab/`), never from inside `api/`. The module path `api.main:app` requires the root as the working directory.
 
 - **Interactive docs:** [http://localhost:8000/docs](http://localhost:8000/docs)
 - **Analyze endpoint:** `http://localhost:8000/intelligence/analyze/{entity_id}`
@@ -202,8 +279,12 @@ curl http://localhost:8000/intelligence/analyze/TA-001
 ## Risk Model
 
 ```
-Risk Score = (Threat Likelihood × Impact) × Confidence Weight
+Risk Score = base_risk + degree_factor + incident_factor
 ```
+
+- `base_risk` — entity's baseline score from the dataset
+- `degree_factor` — node's total connection count ÷ 10 (structural position in graph)
+- `incident_factor` — count of connected `incident_category` nodes × 0.1
 
 Clamped to `[0.0, 1.0]` and bucketed:
 
@@ -223,7 +304,7 @@ All data is sourced from **public, ethical sources only**:
 
 | File | Contents | Source |
 |------|----------|--------|
-| `threat_entities.json` | 21 entities across 5 types | MITRE ATT&CK, CISA Advisories |
+| `threat_entities.json` | 22 entities across 5 types | MITRE ATT&CK, CISA Advisories |
 | `attack_patterns.json` | 15 OSINT attack patterns | MITRE ATT&CK, public research |
 | `relations.json` | 28 directed edges | MITRE ATT&CK, CISA, Mandiant |
 | `campaigns.json` | 7 campaigns (Diamond Model) | Public threat reports |
@@ -263,7 +344,6 @@ Custom fields use the `x_oi_` prefix convention — transparent and separable fr
 ### Running the STIX Export
 
 ```bash
-# Generate all platform-specific export files
 python backend/stix_exporter.py
 ```
 
@@ -281,11 +361,6 @@ exports/
 
 ### Running the TAXII 2.1 Server
 
-```bash
-uvicorn backend.taxii_server:app --host 0.0.0.0 --port 8000
-```
-
-If not working:
 ```bash
 python -m uvicorn backend.taxii_server:app --host 0.0.0.0 --port 8000
 ```
@@ -368,7 +443,37 @@ v0.4.0 makes the platform **bidirectional**. Where v0.3.0 made OI Lab a publishe
 | `backend/misp_client.py` | Connects to any MISP instance via its REST API. Pulls events and attributes, normalizes each to the correct STIX 2.1 type, and passes them to the provenance engine. |
 | `backend/taxii_ingestor.py` | TAXII 2.1 client — performs discovery, enumerates collections, and fetches paginated STIX objects from any external TAXII server with `added_after` temporal filtering. |
 | `backend/provenance.py` | Chain-of-custody engine. Every ingested object receives a `ProvenanceRecord` carrying `source`, `reported_by`, `original_timestamp`, `ingested_at`, `trust_level`, `staleness_days`, and a rejection reason if validation fails. |
-| `backend/feed_scheduler.py` | Orchestrates ingestion cycles across all configured feeds. Maintains a live in-memory object store keyed by STIX ID. Can run as a background thread (hourly by default) or triggered manually via the API. |
+| `backend/feed_scheduler.py` | Orchestrates ingestion cycles across all configured feeds. Maintains a live in-memory object store keyed by STIX ID. Runs as a background thread (hourly by default) or triggered manually via the API. |
+
+### Activating the Live Feed
+
+Set two environment variables before starting the API server:
+
+```bash
+# Linux / macOS
+export MISP_URL=https://your-misp-instance.org
+export MISP_KEY=your-api-key
+python -m uvicorn api.main:app --reload --port 8000
+```
+
+```powershell
+# Windows PowerShell
+$env:MISP_URL = "https://your-misp-instance.org"
+$env:MISP_KEY  = "your-api-key"
+python -m uvicorn api.main:app --reload --port 8000
+```
+
+Without these variables the server starts normally on static datasets. With them, the scheduler activates automatically and the graph begins updating every hour.
+
+**Additional optional variables:**
+
+| Variable | Default | Description |
+|---|---|---|
+| `MISP_LABEL` | `MISP-Live` | Human-readable feed label in audit logs |
+| `MISP_PULL_DAYS` | `7` | How many days back to fetch on each run |
+| `MISP_LIMIT` | `200` | Max events per ingestion cycle |
+| `MISP_VERIFY_SSL` | `true` | Set to `false` for self-signed certs (local Docker MISP) |
+| `MISP_INTERVAL_SECONDS` | `3600` | Ingestion interval in seconds |
 
 ### Provenance Validation
 
@@ -389,7 +494,7 @@ Objects that pass validation are stamped with `x_oi_` chain-of-custody fields: `
 
 ### New TAXII Server Endpoints (v0.4.0)
 
-Six new endpoints added to `backend/taxii_server.py`:
+Seven new endpoints added to `backend/taxii_server.py`:
 
 | Endpoint | Description |
 |---|---|
@@ -399,6 +504,36 @@ Six new endpoints added to `backend/taxii_server.py`:
 | `GET /ingest/objects` | Query the live ingested object store with type, source, and trust filters |
 | `GET /ingest/store/summary` | Live store stats: object count, by type, by source, average trust level |
 | `GET /ingest/run-log` | Per-feed audit log of every ingestion cycle |
+| `GET /ingest/bundle` | Export all ingested objects as a STIX 2.1 bundle |
+
+### Docker — Running the Full Stack
+
+v0.4.0 ships a `Dockerfile` and `docker-compose.yml` that spin up the OI Lab API and a full local MISP instance together.
+
+```bash
+docker compose up
+```
+
+Services started:
+
+| Service | URL | Credentials |
+|---|---|---|
+| OI Lab API | `http://localhost:8000` | — |
+| OI Lab Docs | `http://localhost:8000/docs` | — |
+| MISP UI | `https://localhost` | `admin@admin.test` / `admin` |
+
+After MISP initializes (~2 minutes), get your API key from **My Profile → Auth key** in the MISP UI, then:
+
+```bash
+MISP_KEY=your-key docker compose up
+```
+
+Or add it to a `.env` file:
+```
+MISP_KEY=your-key
+```
+
+> **SSL note:** The local Docker MISP uses a self-signed certificate. `docker-compose.yml` sets `MISP_VERIFY_SSL=false` for container-to-container communication automatically. Do not disable SSL verification when connecting to a production MISP instance.
 
 ### The Feedback Loop
 
@@ -427,9 +562,9 @@ The platform now consumes community intelligence, validates its chain of custody
 | Version | Focus | Status |
 |---|---|---|
 | **v0.1.0** | Core graph engine, datasets, API, Visual Lab | ✅ Complete |
-| **v0.2.0** | FastAPI backend live; `demo.py` → `service.py` wiring | ✅ Complete |
+| **v0.2.0** | FastAPI backend live; full-stack connected | ✅ Complete |
 | **v0.3.0** | STIX 2.1 export, TAXII 2.1 server, Splunk / Sentinel / OpenCTI / QRadar interop | ✅ Complete |
-| **v0.4.0** | MISP integration, TAXII feed ingestion with provenance validation | ✅ Complete |
+| **v0.4.0** | MISP integration, TAXII feed ingestion, provenance validation, Docker support | ✅ Complete |
 | **v1.0.0** | Neo4j backend, multi-hop actor pivoting, ML scoring with SHAP explainability | 🗓 Planned |
 
 
@@ -438,12 +573,9 @@ The platform now consumes community intelligence, validates its chain of custody
 Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) before submitting a pull request.
 
 
-
 ## License
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/AlborzNazari/open-intelligence-lab/blob/main/LICENSE)
-
-
 
 
 *Open Intelligence Lab · Alborz Nazari · 2026 · [medium.com/@alborznazari4](https://medium.com/@alborznazari4)*
