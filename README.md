@@ -10,8 +10,8 @@
 [![TAXII 2.1](https://img.shields.io/badge/TAXII-2.1%20Server-7c3aed)](https://docs.oasis-open.org/cti/taxii/v2.1/os/taxii-v2.1-os.html)
 [![MISP](https://img.shields.io/badge/MISP-Integrated-6d28d9)](https://www.misp-project.org/)
 
+<img width="1237" height="596" alt="Sleeze_Slither" src="https://github.com/user-attachments/assets/3bccc202-5d1f-4965-b030-eef23b8b308f" />
 
-<img width="1217" height="590" alt="seelz" src="https://github.com/user-attachments/assets/5e7112a1-72d9-4387-8a72-e6769e8ab2a4" />
 
 **Open Intelligence Lab** is an ethical OSINT research platform focused on public-security intelligence representation, graph-based threat modeling, and explainable risk analytics.
 
