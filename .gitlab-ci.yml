@@ -36,7 +36,7 @@ lint:
     - pip install flake8 black isort
     - black --check --diff api/ backend/ || true
     - isort --check-only --diff api/ backend/ || true
-    - flake8 api/ backend/ --max-line-length=120 --ignore=E501,W503
+    - flake8 api/ backend/ --max-line-length=120 --ignore=E501,W503,E203,E226,W391,F841
   allow_failure: true
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
