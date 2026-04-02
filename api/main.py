@@ -135,6 +135,9 @@ app.include_router(intelligence_router)
 
 # ─── Root health check ────────────────────────────────────────────────────────
 @app.get("/", tags=["Health"])
+@app.get("/health", tags=["Health"])
+def health():
+    return {"status": "ok", "version": "0.5.0"}
 def root():
     misp_active = bool(os.getenv("MISP_URL") and os.getenv("MISP_KEY"))
     return {
