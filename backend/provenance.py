@@ -24,8 +24,8 @@ License: MIT
 
 import uuid
 import logging
-from dataclasses import dataclass, field, asdict
-from datetime import datetime, timezone, timedelta
+from dataclasses import dataclass, asdict
+from datetime import datetime, timezone
 from typing import Optional
 
 logger = logging.getLogger(__name__)

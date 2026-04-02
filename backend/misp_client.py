@@ -38,27 +38,27 @@ logger = logging.getLogger(__name__)
 # Maps MISP attribute categories/types to STIX 2.1 object types.
 # MISP uses a flat attribute model; we lift these into structured STIX objects.
 MISP_TYPE_TO_STIX: dict[str, str] = {
-    "ip-src":           "indicator",
-    "ip-dst":           "indicator",
-    "domain":           "indicator",
-    "hostname":         "indicator",
-    "url":              "indicator",
-    "md5":              "indicator",
-    "sha1":             "indicator",
-    "sha256":           "indicator",
-    "filename":         "indicator",
-    "threat-actor":     "threat-actor",
-    "malware-type":     "malware",
-    "vulnerability":    "vulnerability",
-    "campaign-name":    "campaign",
+    "ip-src": "indicator",
+    "ip-dst": "indicator",
+    "domain": "indicator",
+    "hostname": "indicator",
+    "url": "indicator",
+    "md5": "indicator",
+    "sha1": "indicator",
+    "sha256": "indicator",
+    "filename": "indicator",
+    "threat-actor": "threat-actor",
+    "malware-type": "malware",
+    "vulnerability": "vulnerability",
+    "campaign-name": "campaign",
 }
 
 # MISP threat levels map to STIX confidence bands
 MISP_THREAT_LEVEL_TO_CONFIDENCE: dict[str, float] = {
-    "1": 0.95,   # High
-    "2": 0.75,   # Medium
-    "3": 0.50,   # Low
-    "4": 0.25,   # Undefined
+    "1": 0.95,  # High
+    "2": 0.75,  # Medium
+    "3": 0.50,  # Low
+    "4": 0.25,  # Undefined
 }
 
 # MISP analysis states
@@ -80,6 +80,7 @@ def _stix_id(object_type: str) -> str:
 # ─────────────────────────────────────────────
 # MISP Client
 # ─────────────────────────────────────────────
+
 
 class MISPClient:
     """
@@ -136,7 +137,9 @@ class MISPClient:
             ssl_ctx.verify_mode = ssl.CERT_NONE
 
         try:
-            with urllib.request.urlopen(req, context=ssl_ctx, timeout=self.timeout) as resp:
+            with urllib.request.urlopen(
+                req, context=ssl_ctx, timeout=self.timeout
+            ) as resp:
                 return json.loads(resp.read().decode("utf-8"))
         except urllib.error.HTTPError as e:
             body_text = e.read().decode("utf-8", errors="replace")
@@ -144,11 +147,15 @@ class MISPClient:
                 f"MISP API error {e.code} at {url}: {body_text[:200]}"
             ) from e
         except urllib.error.URLError as e:
-            raise ConnectionError(f"Cannot reach MISP at {self.base_url}: {e.reason}") from e
+            raise ConnectionError(
+                f"Cannot reach MISP at {self.base_url}: {e.reason}"
+            ) from e
 
     # ── Event fetching ─────────────────────────
 
-    def fetch_recent_events(self, days: int = 7, limit: int = 100) -> tuple[list[dict], list[ProvenanceRecord]]:
+    def fetch_recent_events(
+        self, days: int = 7, limit: int = 100
+    ) -> tuple[list[dict], list[ProvenanceRecord]]:
         """
         Fetch MISP events from the last N days.
         Returns (stix_objects, provenance_records).
@@ -160,7 +167,9 @@ class MISPClient:
         - trust_level: derived from MISP threat level
         - analysis_state: initial / ongoing / complete
         """
-        logger.info(f"[MISP] Fetching events from last {days} days — source: {self.source_label}")
+        logger.info(
+            f"[MISP] Fetching events from last {days} days — source: {self.source_label}"
+        )
 
         payload = {
             "returnFormat": "json",
@@ -196,7 +205,9 @@ class MISPClient:
         )
         return all_stix, all_provenance
 
-    def fetch_event_by_id(self, event_id: str) -> tuple[list[dict], list[ProvenanceRecord]]:
+    def fetch_event_by_id(
+        self, event_id: str
+    ) -> tuple[list[dict], list[ProvenanceRecord]]:
         """Fetch a single MISP event by ID."""
         try:
             response = self._request(f"/events/view/{event_id}")
@@ -230,7 +241,10 @@ class MISPClient:
         # Distribution level also affects trust:
         # 0=org-only, 1=community, 2=connected communities, 3=all, 4=sharing-group, 5=inherit
         distribution_modifier = {0: -0.15, 1: 0.0, 2: 0.05, 3: 0.05, 4: 0.0, 5: 0.0}
-        adjusted_confidence = max(0.05, min(1.0, base_confidence + distribution_modifier.get(distribution, 0.0)))
+        adjusted_confidence = max(
+            0.05,
+            min(1.0, base_confidence + distribution_modifier.get(distribution, 0.0)),
+        )
 
         # Build a STIX note to represent the MISP event context
         event_note = {
@@ -242,7 +256,10 @@ class MISPClient:
             "abstract": f"MISP Event {event_id}: {event_info}",
             "content": event_info,
             "authors": [org_name],
-            "labels": ["misp-event", MISP_ANALYSIS_TO_LABEL.get(analysis_state, "initial")],
+            "labels": [
+                "misp-event",
+                MISP_ANALYSIS_TO_LABEL.get(analysis_state, "initial"),
+            ],
             "confidence": int(adjusted_confidence * 100),
             # Chain-of-custody extension fields
             "x_oi_source": self.source_label,
@@ -251,7 +268,9 @@ class MISPClient:
             "x_oi_reported_by": org_name,
             "x_oi_ingested_at": _now(),
             "x_oi_threat_level": threat_level,
-            "x_oi_analysis_state": MISP_ANALYSIS_TO_LABEL.get(analysis_state, "initial"),
+            "x_oi_analysis_state": MISP_ANALYSIS_TO_LABEL.get(
+                analysis_state, "initial"
+            ),
         }
         stix_objects.append(event_note)
 
@@ -270,7 +289,9 @@ class MISPClient:
         # Process each MISP attribute
         attributes = event.get("Attribute", [])
         for attr in attributes:
-            stix_obj = self._attribute_to_stix(attr, event_note["id"], adjusted_confidence, org_name, event_date)
+            stix_obj = self._attribute_to_stix(
+                attr, event_note["id"], adjusted_confidence, org_name, event_date
+            )
             if stix_obj:
                 stix_objects.append(stix_obj)
                 attr_prov = self.provenance_engine.create_record(
@@ -281,7 +302,9 @@ class MISPClient:
                     trust_level=adjusted_confidence,
                     feed_type="misp",
                     misp_event_id=event_id,
-                    analysis_state=MISP_ANALYSIS_TO_LABEL.get(analysis_state, "initial"),
+                    analysis_state=MISP_ANALYSIS_TO_LABEL.get(
+                        analysis_state, "initial"
+                    ),
                     misp_attribute_uuid=attr.get("uuid", ""),
                     misp_category=attr.get("category", ""),
                 )
@@ -353,7 +376,8 @@ class MISPClient:
                 "created": created_ts,
                 "modified": _now(),
                 "name": attr_value,
-                "description": attr_comment or f"Threat actor from MISP — {self.source_label}",
+                "description": attr_comment
+                or f"Threat actor from MISP — {self.source_label}",
                 "threat_actor_types": ["unknown"],
                 "confidence": int(confidence * 100),
                 "labels": ["misp-attribute", "threat-actor"],
@@ -371,7 +395,8 @@ class MISPClient:
                 "created": created_ts,
                 "modified": _now(),
                 "name": attr_value,
-                "description": attr_comment or f"Malware from MISP — {self.source_label}",
+                "description": attr_comment
+                or f"Malware from MISP — {self.source_label}",
                 "malware_types": ["unknown"],
                 "is_family": False,
                 "confidence": int(confidence * 100),
@@ -390,7 +415,8 @@ class MISPClient:
                 "created": created_ts,
                 "modified": _now(),
                 "name": attr_value,
-                "description": attr_comment or f"Vulnerability from MISP — {self.source_label}",
+                "description": attr_comment
+                or f"Vulnerability from MISP — {self.source_label}",
                 "confidence": int(confidence * 100),
                 "labels": ["misp-attribute", "vulnerability"],
                 "x_oi_source": self.source_label,
@@ -407,7 +433,8 @@ class MISPClient:
                 "created": created_ts,
                 "modified": _now(),
                 "name": attr_value,
-                "description": attr_comment or f"Campaign from MISP — {self.source_label}",
+                "description": attr_comment
+                or f"Campaign from MISP — {self.source_label}",
                 "confidence": int(confidence * 100),
                 "labels": ["misp-attribute", "campaign"],
                 "x_oi_source": self.source_label,
@@ -422,14 +449,14 @@ class MISPClient:
     def _build_indicator_pattern(attr_type: str, value: str) -> Optional[str]:
         """Build a STIX 2.1 patterning expression from a MISP attribute type/value."""
         patterns = {
-            "ip-src":   f"[network-traffic:src_ref.type = 'ipv4-addr' AND network-traffic:src_ref.value = '{value}']",
-            "ip-dst":   f"[network-traffic:dst_ref.type = 'ipv4-addr' AND network-traffic:dst_ref.value = '{value}']",
-            "domain":   f"[domain-name:value = '{value}']",
+            "ip-src": f"[network-traffic:src_ref.type = 'ipv4-addr' AND network-traffic:src_ref.value = '{value}']",
+            "ip-dst": f"[network-traffic:dst_ref.type = 'ipv4-addr' AND network-traffic:dst_ref.value = '{value}']",
+            "domain": f"[domain-name:value = '{value}']",
             "hostname": f"[domain-name:value = '{value}']",
-            "url":      f"[url:value = '{value}']",
-            "md5":      f"[file:hashes.MD5 = '{value}']",
-            "sha1":     f"[file:hashes.SHA-1 = '{value}']",
-            "sha256":   f"[file:hashes.SHA-256 = '{value}']",
+            "url": f"[url:value = '{value}']",
+            "md5": f"[file:hashes.MD5 = '{value}']",
+            "sha1": f"[file:hashes.SHA-1 = '{value}']",
+            "sha256": f"[file:hashes.SHA-256 = '{value}']",
             "filename": f"[file:name = '{value}']",
         }
         return patterns.get(attr_type)
@@ -458,6 +485,10 @@ class MISPClient:
         """
         try:
             response = self._request("/servers/getPyMISPVersion")
-            return {"status": "ok", "source": self.source_label, "misp_response": response}
+            return {
+                "status": "ok",
+                "source": self.source_label,
+                "misp_response": response,
+            }
         except ConnectionError as e:
             return {"status": "error", "source": self.source_label, "error": str(e)}

@@ -20,12 +20,10 @@ Author: Alborz Nazari
 License: MIT
 """
 
-import json
 import logging
 import threading
-import time
 import uuid
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -44,14 +42,16 @@ def _now() -> str:
 # Feed Configuration
 # ─────────────────────────────────────────────
 
+
 @dataclass
 class MISPFeedConfig:
     """Configuration for a single MISP source."""
-    label: str                     # Human-readable label, e.g. "MISP-CERT-EU"
-    base_url: str                  # https://misp.example.org
-    api_key: str                   # MISP auth key
-    pull_days: int = 7             # How many days back to fetch on each run
-    limit: int = 200               # Max events per run
+
+    label: str  # Human-readable label, e.g. "MISP-CERT-EU"
+    base_url: str  # https://misp.example.org
+    api_key: str  # MISP auth key
+    pull_days: int = 7  # How many days back to fetch on each run
+    limit: int = 200  # Max events per run
     verify_ssl: bool = True
     enabled: bool = True
 
@@ -59,15 +59,16 @@ class MISPFeedConfig:
 @dataclass
 class TAXIIFeedConfig:
     """Configuration for a single TAXII 2.1 feed source."""
-    label: str                     # Human-readable label, e.g. "TAXII-OpenCTI"
-    server_url: str                # https://opencti.example.org/taxii/
+
+    label: str  # Human-readable label, e.g. "TAXII-OpenCTI"
+    server_url: str  # https://opencti.example.org/taxii/
     api_key: Optional[str] = None
     username: Optional[str] = None
     password: Optional[str] = None
     bearer_token: Optional[str] = None
     pull_days: int = 7
     max_per_collection: int = 500
-    collection_ids: Optional[list] = None   # None = ingest all readable collections
+    collection_ids: Optional[list] = None  # None = ingest all readable collections
     verify_ssl: bool = True
     enabled: bool = True
 
@@ -76,15 +77,17 @@ class TAXIIFeedConfig:
 # Run Record
 # ─────────────────────────────────────────────
 
+
 @dataclass
 class FeedRunRecord:
     """Audit log entry for a single feed ingestion run."""
+
     run_id: str
     feed_label: str
-    feed_type: str                  # "misp" | "taxii"
+    feed_type: str  # "misp" | "taxii"
     started_at: str
     completed_at: Optional[str]
-    status: str                     # "running" | "success" | "error"
+    status: str  # "running" | "success" | "error"
     objects_fetched: int = 0
     objects_validated: int = 0
     objects_rejected: int = 0
@@ -98,6 +101,7 @@ class FeedRunRecord:
 # ─────────────────────────────────────────────
 # Feed Scheduler
 # ─────────────────────────────────────────────
+
 
 class FeedScheduler:
     """
@@ -114,8 +118,8 @@ class FeedScheduler:
     def __init__(self):
         self._misp_feeds: list[MISPFeedConfig] = []
         self._taxii_feeds: list[TAXIIFeedConfig] = []
-        self._object_store: dict[str, dict] = {}         # stix_id → stamped STIX object
-        self._provenance_store: dict[str, dict] = {}     # stix_id → provenance record dict
+        self._object_store: dict[str, dict] = {}  # stix_id → stamped STIX object
+        self._provenance_store: dict[str, dict] = {}  # stix_id → provenance record dict
         self._run_log: list[FeedRunRecord] = []
         self._lock = threading.Lock()
         self._scheduler_thread: Optional[threading.Thread] = None
@@ -241,11 +245,13 @@ class FeedScheduler:
             )
             self._merge_results(stix_objects, provenance_records)
 
-            run.objects_fetched = len(stix_objects) + len([
-                p for p in provenance_records if not p.passed_validation
-            ])
+            run.objects_fetched = len(stix_objects) + len(
+                [p for p in provenance_records if not p.passed_validation]
+            )
             run.objects_validated = len(stix_objects)
-            run.objects_rejected = len([p for p in provenance_records if not p.passed_validation])
+            run.objects_rejected = len(
+                [p for p in provenance_records if not p.passed_validation]
+            )
             run.stale_objects = len([p for p in provenance_records if p.is_stale])
             run.status = "success"
 
@@ -358,7 +364,9 @@ class FeedScheduler:
         if source:
             objects = [o for o in objects if o.get("x_oi_source", "") == source]
         if min_trust is not None:
-            objects = [o for o in objects if o.get("x_oi_trust_level", 0.0) >= min_trust]
+            objects = [
+                o for o in objects if o.get("x_oi_trust_level", 0.0) >= min_trust
+            ]
         if exclude_stale:
             objects = [o for o in objects if not o.get("x_oi_is_stale", False)]
 
@@ -387,7 +395,9 @@ class FeedScheduler:
         return {
             "total_objects": len(objects),
             "stale_objects": stale_count,
-            "average_trust_level": round(trust_sum / len(objects), 4) if objects else 0.0,
+            "average_trust_level": (
+                round(trust_sum / len(objects), 4) if objects else 0.0
+            ),
             "by_type": by_type,
             "by_source": by_source,
             "total_provenance_records": len(prov_records),
