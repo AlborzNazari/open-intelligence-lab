@@ -10,6 +10,8 @@
 [![TAXII 2.1](https://img.shields.io/badge/TAXII-2.1%20Server-7c3aed)](https://docs.oasis-open.org/cti/taxii/v2.1/os/taxii-v2.1-os.html)
 [![MISP](https://img.shields.io/badge/MISP-Integrated-6d28d9)](https://www.misp-project.org/)
 
+<img width="1237" height="596" alt="Sleeze_Slither" src="https://github.com/user-attachments/assets/8fde77d8-9d33-4365-9453-c35cbda7eb96" />
+
 **Open Intelligence Lab** is an ethical OSINT research platform focused on public-security intelligence representation, graph-based threat modeling, and explainable risk analytics.
 
 It provides a clean, modular environment for researchers, analysts, and engineers who want to explore open-source intelligence signals **without compromising privacy or ethics** — using only public data, with every risk score backed by an interpretable rationale.
@@ -576,6 +578,81 @@ Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) and [C
 ## License
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/AlborzNazari/open-intelligence-lab/blob/main/LICENSE)
+
+## How to Use MISP Data in the Visual Lab
+
+Once MISP is connected and the live feed is active, the knowledge graph updates automatically every hour. Here is what happens and how to read it.
+
+### What MISP Sends
+
+Every hour the scheduler pulls recent events from your MISP instance. Each event contains attributes — structured threat observations: IP addresses, file hashes, domains, malware names, threat actor profiles. Each attribute is converted to a STIX 2.1 object and enters the graph as a new node, connected to existing entities where attribution is confident enough.
+
+### Reading Live Nodes in the Graph
+
+Click any node in the Visual Lab. The detail panel shows:
+
+- **Source** — which MISP instance reported it (`MISP-Local`, `MISP-CIRCL`, etc.)
+- **Trust level** — score from 0.0 to 1.0 based on MISP threat level and source trust prior
+- **Ingested at** — when OI Lab pulled it from the feed
+- **Staleness** — flagged if the intelligence is older than 90 days
+
+### Querying Ingested Data via the API
+
+| Endpoint | What it returns |
+|---|---|
+| `GET /ingest/objects?source=MISP-Local` | All objects ingested from your local MISP |
+| `GET /ingest/objects?min_trust=0.8` | Only high-confidence objects |
+| `GET /ingest/run-log` | History of every ingestion cycle |
+| `GET /ingest/store/summary` | Object count by type and source |
+| `GET /ingest/bundle` | Full STIX 2.1 export of all ingested objects |
+
+### What the MISP Status Panel Means
+
+| Status | Meaning |
+|---|---|
+| **Live Feed — Active** | `MISP_URL` and `MISP_KEY` are set, scheduler running |
+| **Live Feed — Requires MISP Instance** | Env vars not set — static data only |
+| **Provenance — Chain-of-Custody Active** | Every ingested object is stamped and validated |
+
+### Trust Prior Reference
+
+| Source | Trust Prior |
+|---|---|
+| MISP-CISA | 1.00 |
+| MISP-CERT-EU / MISP-CIRCL / MISP-NATO | 0.95 |
+| MISP-Community | 0.75 |
+| TAXII-OpenCTI | 0.85 |
+| TAXII-Unknown | 0.60 |
+
+Objects older than 90 days receive a −0.20 staleness penalty. Objects below 0.10 trust after all adjustments are rejected entirely.
+
+### Adding More Feeds
+
+Register a second MISP instance or any TAXII 2.1 feed via the API:
+
+```bash
+# Add another MISP instance
+curl -X POST http://localhost:8000/ingest/misp \
+  -H "Content-Type: application/json" \
+  -d '{"label":"MISP-CIRCL","base_url":"https://misp.circl.lu","api_key":"your-key","pull_days":7}'
+
+# Add a TAXII feed
+curl -X POST http://localhost:8000/ingest/taxii \
+  -H "Content-Type: application/json" \
+  -d '{"label":"TAXII-OpenCTI","server_url":"https://your-opencti.org/taxii/","api_key":"your-key"}'
+```
+
+
+## Troubleshooting
+
+See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for the full guide covering:
+
+- Windows two-Python problem and module not found errors
+- Mixed content block (GitHub Pages HTTPS vs local HTTP API)
+- Docker network issues and port conflicts
+- MISP initialization and API key setup
+- Caddy 502 errors
+
 
 
 *Open Intelligence Lab · Alborz Nazari · 2026 · [medium.com/@alborznazari4](https://medium.com/@alborznazari4)*
