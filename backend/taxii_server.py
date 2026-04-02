@@ -15,8 +15,6 @@ License: MIT
 from fastapi import FastAPI, Response, HTTPException, Query, Body
 from fastapi.middleware.cors import CORSMiddleware
 import json
-import os
-from datetime import datetime, timezone
 from stix_exporter import load_datasets, build_stix_bundle, _now
 from feed_scheduler import get_scheduler, MISPFeedConfig, TAXIIFeedConfig
 
