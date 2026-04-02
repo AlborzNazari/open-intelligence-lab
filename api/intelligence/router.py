@@ -8,11 +8,15 @@ Enriched Swagger UI:
 - /graph/edges          — all edges for visualization
 - /entities/ids         — bare ID list for programmatic use
 """
+
 from __future__ import annotations
 from typing import Optional, Literal
 from fastapi import APIRouter, HTTPException, Query, Path
 from api.intelligence.service import (
-    analyze_entity, list_entities, get_graph_summary, get_graph_edges
+    analyze_entity,
+    list_entities,
+    get_graph_summary,
+    get_graph_edges,
 )
 
 router = APIRouter(prefix="/intelligence", tags=["Intelligence"])
@@ -150,13 +154,15 @@ def search_entities(
             "Search LockBit": {"value": "LockBit"},
         },
     ),
-    entity_type: Optional[Literal[
-        "threat_actor",
-        "malware",
-        "infrastructure",
-        "vulnerability",
-        "target_sector",
-    ]] = Query(
+    entity_type: Optional[
+        Literal[
+            "threat_actor",
+            "malware",
+            "infrastructure",
+            "vulnerability",
+            "target_sector",
+        ]
+    ] = Query(
         default=None,
         title="Entity type",
         description="Filter by entity type. Leave blank to return all types.",

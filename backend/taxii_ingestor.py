@@ -54,6 +54,7 @@ def _days_ago(days: int) -> str:
 # Auth helpers
 # ─────────────────────────────────────────────
 
+
 def _build_auth_header(
     api_key: Optional[str] = None,
     username: Optional[str] = None,
@@ -64,7 +65,7 @@ def _build_auth_header(
     if bearer_token:
         return f"Bearer {bearer_token}"
     if api_key:
-        return api_key   # Many TAXII servers accept bare API key
+        return api_key  # Many TAXII servers accept bare API key
     if username and password:
         creds = base64.b64encode(f"{username}:{password}".encode()).decode()
         return f"Basic {creds}"
@@ -74,6 +75,7 @@ def _build_auth_header(
 # ─────────────────────────────────────────────
 # TAXII Ingestor
 # ─────────────────────────────────────────────
+
 
 class TAXIIIngestor:
     """
@@ -138,14 +140,14 @@ class TAXIIIngestor:
             ssl_ctx.verify_mode = ssl.CERT_NONE
 
         try:
-            with urllib.request.urlopen(req, context=ssl_ctx, timeout=self.timeout) as resp:
+            with urllib.request.urlopen(
+                req, context=ssl_ctx, timeout=self.timeout
+            ) as resp:
                 raw = resp.read().decode("utf-8")
                 return json.loads(raw)
         except urllib.error.HTTPError as e:
             body = e.read().decode("utf-8", errors="replace")
-            raise ConnectionError(
-                f"TAXII HTTP {e.code} at {url}: {body[:200]}"
-            ) from e
+            raise ConnectionError(f"TAXII HTTP {e.code} at {url}: {body[:200]}") from e
         except urllib.error.URLError as e:
             raise ConnectionError(
                 f"Cannot reach TAXII server {self.server_url}: {e.reason}"
@@ -265,7 +267,11 @@ class TAXIIIngestor:
             has_more = envelope.get("more", False)
             next_url = envelope.get("next")
             if has_more and next_url:
-                url = next_url if next_url.startswith("http") else f"{self._api_root}{next_url}"
+                url = (
+                    next_url
+                    if next_url.startswith("http")
+                    else f"{self._api_root}{next_url}"
+                )
             else:
                 break
 

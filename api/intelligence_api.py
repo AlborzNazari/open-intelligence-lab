@@ -1,19 +1,19 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
-import networkx as nx
 
 from core_engine.graph_builder import ThreatKnowledgeGraph
 from core_engine.risk_analyzer import RiskAnalyzer
 from core_engine.intelligence_explainer import IntelligenceExplainer
 from core_engine.intelligence_entities import IntelligenceEntity
 
-
 app = FastAPI(title="Open Intelligence Lab API")
 
 # Demo in-memory graph
 kg = ThreatKnowledgeGraph()
 org = IntelligenceEntity(id="org:1", entity_type="organization", name="Example Corp")
-incident = IntelligenceEntity(id="inc:1", entity_type="incident_category", name="Public Metadata Exposure")
+incident = IntelligenceEntity(
+    id="inc:1", entity_type="incident_category", name="Public Metadata Exposure"
+)
 kg.add_entity(org)
 kg.add_entity(incident)
 kg.add_relationship("org:1", "inc:1", "associated_with")

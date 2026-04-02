@@ -1,6 +1,7 @@
 """
 api/intelligence/service.py  —  v0.4.0
 """
+
 from __future__ import annotations
 from functools import lru_cache
 from typing import Any
@@ -48,7 +49,10 @@ def list_entities(
         risk_score = attrs.get("risk_score", 0.0)
         if query:
             label = attrs.get("label", node_id)
-            if query.lower() not in node_id.lower() and query.lower() not in label.lower():
+            if (
+                query.lower() not in node_id.lower()
+                and query.lower() not in label.lower()
+            ):
                 continue
         if min_risk is not None and risk_score < min_risk:
             continue
@@ -57,15 +61,22 @@ def list_entities(
         if entity_type is not None:
             if attrs.get("type", "").lower() != entity_type.lower():
                 continue
-        results.append({
-            "entity_id": node_id,
-            "label": attrs.get("label", node_id),
-            "type": attrs.get("type", "unknown"),
-            "risk_score": risk_score,
-        })
+        results.append(
+            {
+                "entity_id": node_id,
+                "label": attrs.get("label", node_id),
+                "type": attrs.get("type", "unknown"),
+                "risk_score": risk_score,
+            }
+        )
     results.sort(key=lambda x: x["risk_score"], reverse=True)
     total = len(results)
-    return {"total": total, "offset": offset, "limit": limit, "entities": results[offset:offset+limit]}
+    return {
+        "total": total,
+        "offset": offset,
+        "limit": limit,
+        "entities": results[offset : offset + limit],
+    }
 
 
 def get_graph_summary() -> dict[str, Any]:
@@ -75,7 +86,9 @@ def get_graph_summary() -> dict[str, Any]:
     return {
         "node_count": graph.number_of_nodes(),
         "edge_count": graph.number_of_edges(),
-        "avg_risk_score": round(sum(risk_scores)/len(risk_scores), 4) if risk_scores else 0.0,
+        "avg_risk_score": (
+            round(sum(risk_scores) / len(risk_scores), 4) if risk_scores else 0.0
+        ),
         "max_risk_score": round(max(risk_scores), 4) if risk_scores else 0.0,
         "min_risk_score": round(min(risk_scores), 4) if risk_scores else 0.0,
     }
@@ -86,10 +99,12 @@ def get_graph_edges() -> dict[str, Any]:
     graph = _get_graph()
     edges = []
     for src, dst, data in graph.edges(data=True):
-        edges.append({
-            "source": src,
-            "target": dst,
-            "relation_type": data.get("relation_type", "related_to"),
-            "confidence": data.get("confidence", 0.0),
-        })
+        edges.append(
+            {
+                "source": src,
+                "target": dst,
+                "relation_type": data.get("relation_type", "related_to"),
+                "confidence": data.get("confidence", 0.0),
+            }
+        )
     return {"edge_count": len(edges), "edges": edges}

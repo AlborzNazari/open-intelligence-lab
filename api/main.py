@@ -37,14 +37,16 @@ async def lifespan(app: FastAPI):
             from feed_scheduler import get_scheduler, MISPFeedConfig
 
             scheduler = get_scheduler()
-            scheduler.add_misp_feed(MISPFeedConfig(
-                label=os.getenv("MISP_LABEL", "MISP-Live"),
-                base_url=misp_url,
-                api_key=misp_key,
-                pull_days=int(os.getenv("MISP_PULL_DAYS", "7")),
-                limit=int(os.getenv("MISP_LIMIT", "200")),
-                verify_ssl=os.getenv("MISP_VERIFY_SSL", "true").lower() == "true",
-            ))
+            scheduler.add_misp_feed(
+                MISPFeedConfig(
+                    label=os.getenv("MISP_LABEL", "MISP-Live"),
+                    base_url=misp_url,
+                    api_key=misp_key,
+                    pull_days=int(os.getenv("MISP_PULL_DAYS", "7")),
+                    limit=int(os.getenv("MISP_LIMIT", "200")),
+                    verify_ssl=os.getenv("MISP_VERIFY_SSL", "true").lower() == "true",
+                )
+            )
 
             interval = int(os.getenv("MISP_INTERVAL_SECONDS", "3600"))
             scheduler.start_background(interval_seconds=interval)
@@ -68,6 +70,7 @@ async def lifespan(app: FastAPI):
         if backend_path not in sys.path:
             sys.path.insert(0, backend_path)
         from feed_scheduler import get_scheduler
+
         get_scheduler().stop_background()
         logger.info("[Shutdown] MISP scheduler stopped")
     except Exception:
@@ -110,7 +113,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "null",                          # file:// pages send Origin: null
+        "null",  # file:// pages send Origin: null
         "http://localhost",
         "http://localhost:8000",
         "http://localhost:3000",
