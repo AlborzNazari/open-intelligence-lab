@@ -13,11 +13,11 @@ for method, path, expected in tests:
     try:
         r = httpx.get(base + path, timeout=5)
         status = 'PASS' if r.status_code == expected else 'FAIL'
-        print(f"  {status}: {method} {path} -> {r.status_code}")
+        print(f'  {status}: {method} {path} -> {r.status_code}')
         if status == 'FAIL':
             failed.append(path)
     except Exception as e:
-        print(f"  ERROR: {path} - {e}")
+        print(f'  ERROR: {path} - {e}')
         failed.append(path)
 
 sys.exit(1 if failed else 0)
