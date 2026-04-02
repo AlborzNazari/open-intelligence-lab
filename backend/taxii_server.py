@@ -87,11 +87,14 @@ COLLECTIONS = [
 
 _bundle_cache: dict | None = None
 
+
 def get_bundle() -> dict:
     global _bundle_cache
     if _bundle_cache is None:
         entities, attack_patterns, relations, campaigns = load_datasets()
-        _bundle_cache = build_stix_bundle(entities, attack_patterns, relations, campaigns)
+        _bundle_cache = build_stix_bundle(
+            entities, attack_patterns, relations, campaigns
+        )
     return _bundle_cache
 
 
@@ -103,6 +106,7 @@ def filter_by_type(bundle: dict, stix_types: list[str]) -> list[dict]:
 # TAXII 2.1 Endpoints
 # ─────────────────────────────────────────────
 
+
 @app.get("/taxii/", summary="TAXII Server Discovery")
 def taxii_discovery():
     """
@@ -110,13 +114,15 @@ def taxii_discovery():
     Returns server metadata — required by all TAXII 2.1 clients.
     """
     return Response(
-        content=json.dumps({
-            "title": "Open Intelligence Lab TAXII 2.1 Server",
-            "description": "Serving STIX 2.1 threat intelligence from Open Intelligence Lab.",
-            "contact": "github.com/AlborzNazari/open-intelligence-lab",
-            "default": "/taxii/api-root/",
-            "api_roots": ["/taxii/api-root/"],
-        }),
+        content=json.dumps(
+            {
+                "title": "Open Intelligence Lab TAXII 2.1 Server",
+                "description": "Serving STIX 2.1 threat intelligence from Open Intelligence Lab.",
+                "contact": "github.com/AlborzNazari/open-intelligence-lab",
+                "default": "/taxii/api-root/",
+                "api_roots": ["/taxii/api-root/"],
+            }
+        ),
         media_type=TAXII_CONTENT_TYPE,
     )
 
@@ -125,11 +131,13 @@ def taxii_discovery():
 def api_root():
     """TAXII 2.1 API Root — lists collections and server version."""
     return Response(
-        content=json.dumps({
-            "title": "OI Lab API Root",
-            "versions": ["application/taxii+json;version=2.1"],
-            "max_content_length": 104857600,  # 100MB
-        }),
+        content=json.dumps(
+            {
+                "title": "OI Lab API Root",
+                "versions": ["application/taxii+json;version=2.1"],
+                "max_content_length": 104857600,  # 100MB
+            }
+        ),
         media_type=TAXII_CONTENT_TYPE,
     )
 
@@ -148,25 +156,31 @@ def get_collection(collection_id: str):
     """TAXII 2.1 Collection metadata by ID."""
     collection = next((c for c in COLLECTIONS if c["id"] == collection_id), None)
     if not collection:
-        raise HTTPException(status_code=404, detail=f"Collection '{collection_id}' not found.")
+        raise HTTPException(
+            status_code=404, detail=f"Collection '{collection_id}' not found."
+        )
     return Response(content=json.dumps(collection), media_type=TAXII_CONTENT_TYPE)
 
 
-@app.get("/taxii/api-root/collections/{collection_id}/objects/", summary="Get STIX Objects")
+@app.get(
+    "/taxii/api-root/collections/{collection_id}/objects/", summary="Get STIX Objects"
+)
 def get_objects(
     collection_id: str,
     limit: int = Query(default=100, ge=1, le=1000, description="Max objects to return"),
     added_after: str = Query(default=None, description="ISO 8601 timestamp filter"),
-    match_type: list[str] = Query(default=None, alias="match[type]", description="Filter by STIX type"),
+    match_type: list[str] = Query(
+        default=None, alias="match[type]", description="Filter by STIX type"
+    ),
 ):
     """
     TAXII 2.1 Objects endpoint — returns STIX 2.1 objects for the given collection.
-    
+
     Supports:
     - Pagination via ?limit=
     - Temporal filtering via ?added_after=
     - Type filtering via ?match[type]=
-    
+
     Tested compatible with:
     - Splunk ES TAXII connector
     - Microsoft Sentinel TAXII (Preview)
@@ -183,7 +197,9 @@ def get_objects(
     }
 
     if collection_id not in type_map:
-        raise HTTPException(status_code=404, detail=f"Collection '{collection_id}' not found.")
+        raise HTTPException(
+            status_code=404, detail=f"Collection '{collection_id}' not found."
+        )
 
     allowed_types = type_map[collection_id]
     objects = bundle.get("objects", [])
@@ -216,7 +232,10 @@ def get_objects(
     )
 
 
-@app.get("/taxii/api-root/collections/{collection_id}/manifest/", summary="Collection Manifest")
+@app.get(
+    "/taxii/api-root/collections/{collection_id}/manifest/",
+    summary="Collection Manifest",
+)
 def get_manifest(collection_id: str):
     """TAXII 2.1 Manifest — lightweight listing of object IDs and versions."""
     bundle = get_bundle()
@@ -252,6 +271,7 @@ def get_manifest(collection_id: str):
 # Health Check
 # ─────────────────────────────────────────────
 
+
 @app.get("/taxii/health", summary="Health Check", tags=["system"])
 def health():
     bundle = get_bundle()
@@ -271,6 +291,7 @@ def health():
 # ─────────────────────────────────────────────
 # v0.4.0 — Feed Ingestion Endpoints
 # ─────────────────────────────────────────────
+
 
 @app.post("/ingest/misp", summary="Register and run a MISP feed", tags=["ingestion"])
 def ingest_misp(
@@ -362,7 +383,9 @@ def trigger_run():
 def get_ingested_objects(
     stix_type: str = Query(default=None, description="Filter by STIX type"),
     source: str = Query(default=None, description="Filter by source label"),
-    min_trust: float = Query(default=None, ge=0.0, le=1.0, description="Minimum trust level"),
+    min_trust: float = Query(
+        default=None, ge=0.0, le=1.0, description="Minimum trust level"
+    ),
     exclude_stale: bool = Query(default=False, description="Exclude stale objects"),
     limit: int = Query(default=100, ge=1, le=1000),
 ):
@@ -379,17 +402,21 @@ def get_ingested_objects(
         exclude_stale=exclude_stale,
     )
     return Response(
-        content=json.dumps({
-            "type": "bundle",
-            "spec_version": "2.1",
-            "total": len(objects),
-            "objects": objects[:limit],
-        }),
+        content=json.dumps(
+            {
+                "type": "bundle",
+                "spec_version": "2.1",
+                "total": len(objects),
+                "objects": objects[:limit],
+            }
+        ),
         media_type=STIX_CONTENT_TYPE,
     )
 
 
-@app.get("/ingest/store/summary", summary="Live object store summary", tags=["ingestion"])
+@app.get(
+    "/ingest/store/summary", summary="Live object store summary", tags=["ingestion"]
+)
 def store_summary():
     """
     Return a summary of the live ingested object store:
@@ -411,7 +438,11 @@ def run_log(limit: int = Query(default=20, ge=1, le=200)):
     return {"run_log": scheduler.get_run_log(limit=limit)}
 
 
-@app.get("/ingest/bundle", summary="Export ingested objects as STIX bundle", tags=["ingestion"])
+@app.get(
+    "/ingest/bundle",
+    summary="Export ingested objects as STIX bundle",
+    tags=["ingestion"],
+)
 def ingested_bundle(
     exclude_stale: bool = Query(default=False),
     min_trust: float = Query(default=0.0, ge=0.0, le=1.0),
