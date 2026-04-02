@@ -1,25 +1,18 @@
-# ============================================================
-# Open Intelligence Lab — GitLab CI/CD Pipeline
-# v0.5.0 | FastAPI + Docker + Fly.io
-# ============================================================
- 
-stages:
+﻿stages:
   - validate
   - test
   - build
   - security
   - deploy
- 
+
 variables:
-  PYTHON_VERSION: "3.12"
   IMAGE_NAME: open-intelligence-lab
   IMAGE_TAG: $CI_COMMIT_SHA
   FLY_APP_NAME: open-intelligence-lab
   DOCKER_DRIVER: overlay2
   DOCKER_TLS_CERTDIR: "/certs"
   PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
- 
-# ── Cache pip across jobs ───────────────────────────────────
+
 .python_cache: &python_cache
   cache:
     key:
@@ -28,8 +21,7 @@ variables:
     paths:
       - .cache/pip
       - venv/
- 
-# ── Base Python setup ───────────────────────────────────────
+
 .python_base: &python_base
   image: python:3.12-slim
   before_script:
@@ -38,92 +30,43 @@ variables:
     - pip install --upgrade pip
     - pip install -r requirements.txt
   <<: *python_cache
- 
-# ============================================================
-# STAGE 1 — VALIDATE
-# ============================================================
- 
+
 lint:
   stage: validate
   <<: *python_base
   script:
     - pip install flake8 black isort
-    - echo "--- Formatting check (black) ---"
     - black --check --diff api/ backend/ || true
-    - echo "--- Import order check (isort) ---"
     - isort --check-only --diff api/ backend/ || true
-    - echo "--- Lint (flake8) ---"
     - flake8 api/ backend/ --max-line-length=120 --ignore=E501,W503
   allow_failure: true
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$CI_COMMIT_BRANCH == "main"'
     - if: '$CI_COMMIT_BRANCH == "develop"'
- 
+
 schema_validate:
   stage: validate
   <<: *python_base
   script:
     - pip install stix2 jsonschema
-    - echo "--- Validating STIX bundle schema ---"
-    - python -c "
-      import json, sys, pathlib;
-      from stix2 import parse;
-      export_files = list(pathlib.Path('exports').glob('*.json')) if pathlib.Path('exports').exists() else [];
-      print(f'Found {len(export_files)} export file(s) to validate');
-      errors = [];
-      for f in export_files:
-          try:
-              data = json.loads(f.read_text());
-              print(f'  OK: {f.name}');
-          except Exception as e:
-              errors.append(str(e));
-              print(f'  FAIL: {f.name} — {e}');
-      sys.exit(1 if errors else 0)
-      "
-    - echo "--- Validating datasets ---"
-    - python -c "
-      import json, pathlib, sys;
-      datasets = ['data/entities.json','data/attack_patterns.json','data/relations.json','data/campaigns.json'];
-      errors = [];
-      for d in datasets:
-          p = pathlib.Path(d);
-          if p.exists():
-              try: json.loads(p.read_text()); print(f'  OK: {d}')
-              except Exception as e: errors.append(f'{d}: {e}'); print(f'  FAIL: {d}')
-          else: print(f'  SKIP: {d} (not found)');
-      sys.exit(1 if errors else 0)
-      "
+    - python scripts/validate_schemas.py
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
     - if: '$CI_COMMIT_BRANCH == "develop"'
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
- 
-# ============================================================
-# STAGE 2 — TEST
-# ============================================================
- 
+
 unit_tests:
   stage: test
   <<: *python_base
   script:
     - pip install pytest pytest-cov pytest-asyncio httpx
-    - echo "--- Running pytest suite ---"
-    - pytest tests/
-      --cov=api
-      --cov=backend
-      --cov-report=term-missing
-      --cov-report=xml:coverage.xml
-      --junitxml=junit.xml
-      -v
+    - pytest tests/ --cov=api --cov=backend --cov-report=term-missing --cov-report=xml:coverage.xml --junitxml=junit.xml -v
   coverage: '/TOTAL.*\s+(\d+%)$/'
   artifacts:
     when: always
     reports:
       junit: junit.xml
-      coverage_report:
-        coverage_format: cobertura
-        path: coverage.xml
     paths:
       - coverage.xml
       - junit.xml
@@ -132,77 +75,37 @@ unit_tests:
     - if: '$CI_COMMIT_BRANCH == "main"'
     - if: '$CI_COMMIT_BRANCH == "develop"'
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
- 
+
 api_smoke_test:
   stage: test
   <<: *python_base
-  services:
-    - name: docker:24.0-dind
-      alias: docker
   script:
     - pip install httpx
-    - echo "--- Starting FastAPI server in background ---"
     - export PYTHONPATH=$PWD
     - python -m uvicorn api.main:app --host 0.0.0.0 --port 8000 &
     - sleep 5
-    - echo "--- Smoke tests ---"
-    - python -c "
-      import httpx, sys;
-      base = 'http://localhost:8000';
-      tests = [
-          ('GET', '/health',                        200),
-          ('GET', '/intelligence/graph/summary',    200),
-          ('GET', '/intelligence/entities',         200),
-          ('GET', '/taxii/',                        200),
-      ];
-      failed = [];
-      for method, path, expected in tests:
-          try:
-              r = httpx.get(base + path, timeout=5);
-              status = 'PASS' if r.status_code == expected else 'FAIL';
-              print(f'  {status}: {method} {path} → {r.status_code}');
-              if status == 'FAIL': failed.append(path);
-          except Exception as e:
-              print(f'  ERROR: {path} — {e}');
-              failed.append(path);
-      sys.exit(1 if failed else 0)
-      "
+    - python scripts/smoke_test.py
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
     - if: '$CI_COMMIT_BRANCH == "develop"'
- 
-# ============================================================
-# STAGE 3 — BUILD
-# ============================================================
- 
+
 build_docker:
   stage: build
   image: docker:24.0
   services:
     - docker:24.0-dind
   variables:
-    REGISTRY: $CI_REGISTRY
     FULL_IMAGE: $CI_REGISTRY_IMAGE/$IMAGE_NAME
   before_script:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
   script:
-    - echo "--- Building Docker image ---"
-    - docker build
-        --build-arg BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
-        --build-arg VERSION=v0.5.0
-        --build-arg GIT_SHA=$CI_COMMIT_SHA
-        -t $FULL_IMAGE:$IMAGE_TAG
-        -t $FULL_IMAGE:latest
-        .
-    - echo "--- Pushing to GitLab Container Registry ---"
+    - docker build --build-arg VERSION=v0.5.0 --build-arg GIT_SHA=$CI_COMMIT_SHA -t $FULL_IMAGE:$IMAGE_TAG -t $FULL_IMAGE:latest .
     - docker push $FULL_IMAGE:$IMAGE_TAG
     - docker push $FULL_IMAGE:latest
-    - echo "--- Image digest ---"
-    - docker inspect --format='{{index .RepoDigests 0}}' $FULL_IMAGE:$IMAGE_TAG
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
     - if: '$CI_COMMIT_BRANCH == "develop"'
- 
+
 tag_release:
   stage: build
   image: alpine:latest
@@ -211,7 +114,6 @@ tag_release:
   script:
     - echo "IMAGE_TAG=$IMAGE_TAG" >> build.env
     - echo "VERSION=v0.5.0" >> build.env
-    - echo "BUILT_AT=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> build.env
     - cat build.env
   artifacts:
     reports:
@@ -221,31 +123,19 @@ tag_release:
     expire_in: 7 days
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
- 
-# ============================================================
-# STAGE 4 — SECURITY
-# ============================================================
- 
+
 dependency_scan:
   stage: security
   <<: *python_base
   script:
     - pip install safety pip-audit
-    - echo "--- pip-audit (vulnerability scan) ---"
-    - pip-audit --requirement requirements.txt --format json -o audit-report.json || true
     - pip-audit --requirement requirements.txt || true
-    - echo "--- safety check ---"
-    - safety check --file requirements.txt --output text || true
-  artifacts:
-    paths:
-      - audit-report.json
-    expire_in: 30 days
-    when: always
+    - safety check --file requirements.txt || true
   allow_failure: true
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
     - if: '$CI_COMMIT_BRANCH == "develop"'
- 
+
 container_scan:
   stage: security
   image: docker:24.0
@@ -258,63 +148,13 @@ container_scan:
     - apk add --no-cache curl
     - curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
   script:
-    - echo "--- Trivy container scan ---"
-    - trivy image
-        --exit-code 0
-        --severity HIGH,CRITICAL
-        --format table
-        $FULL_IMAGE:$IMAGE_TAG
-    - trivy image
-        --exit-code 0
-        --format json
-        --output trivy-report.json
-        $FULL_IMAGE:$IMAGE_TAG
-  artifacts:
-    paths:
-      - trivy-report.json
-    expire_in: 30 days
-    when: always
+    - trivy image --exit-code 0 --severity HIGH,CRITICAL --format table $FULL_IMAGE:$IMAGE_TAG
   allow_failure: true
   needs:
     - build_docker
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
- 
-# ============================================================
-# STAGE 5 — DEPLOY
-# ============================================================
- 
-# ── Deploy to staging (develop branch) ─────────────────────
-deploy_staging:
-  stage: deploy
-  image: alpine:latest
-  environment:
-    name: staging
-    url: https://$FLY_APP_NAME-staging.fly.dev
-  before_script:
-    - apk add --no-cache curl
-    - curl -L https://fly.io/install.sh | sh
-    - export PATH="$HOME/.fly/bin:$PATH"
-    - flyctl auth token $FLY_API_TOKEN
-  script:
-    - echo "--- Deploying to Fly.io staging ---"
-    - export PATH="$HOME/.fly/bin:$PATH"
-    - flyctl deploy
-        --app $FLY_APP_NAME-staging
-        --image $CI_REGISTRY_IMAGE/$IMAGE_NAME:$IMAGE_TAG
-        --strategy rolling
-        --wait-timeout 120
-    - echo "--- Verify staging health ---"
-    - sleep 10
-    - curl -sf https://$FLY_APP_NAME-staging.fly.dev/health || exit 1
-    - echo "Staging deploy OK"
-  needs:
-    - build_docker
-    - unit_tests
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "develop"'
- 
-# ── Deploy to production (main branch, manual gate) ────────
+
 deploy_production:
   stage: deploy
   image: alpine:latest
@@ -328,25 +168,17 @@ deploy_production:
     - export PATH="$HOME/.fly/bin:$PATH"
     - flyctl auth token $FLY_API_TOKEN
   script:
-    - echo "--- Deploying v0.5.0 to Fly.io production ---"
     - export PATH="$HOME/.fly/bin:$PATH"
-    - flyctl deploy
-        --app $FLY_APP_NAME
-        --image $CI_REGISTRY_IMAGE/$IMAGE_NAME:$IMAGE_TAG
-        --strategy rolling
-        --wait-timeout 180
-    - echo "--- Health check ---"
+    - flyctl deploy --app $FLY_APP_NAME --image $CI_REGISTRY_IMAGE/$IMAGE_NAME:$IMAGE_TAG --strategy rolling --wait-timeout 180
     - sleep 15
     - curl -sf https://$FLY_APP_NAME.fly.dev/health || exit 1
-    - echo "Production deploy OK — $IMAGE_TAG"
   needs:
     - build_docker
     - unit_tests
     - dependency_scan
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
- 
-# ── Rollback (manual, production only) ─────────────────────
+
 rollback_production:
   stage: deploy
   image: alpine:latest
@@ -360,16 +192,7 @@ rollback_production:
     - export PATH="$HOME/.fly/bin:$PATH"
     - flyctl auth token $FLY_API_TOKEN
   script:
-    - echo "--- Rolling back production ---"
     - export PATH="$HOME/.fly/bin:$PATH"
-    - flyctl releases list --app $FLY_APP_NAME --json | head -20
-    - flyctl deploy
-        --app $FLY_APP_NAME
-        --image $CI_REGISTRY_IMAGE/$IMAGE_NAME:$ROLLBACK_SHA
-        --strategy immediate
-        --wait-timeout 120
-    - echo "Rollback complete — verify at https://$FLY_APP_NAME.fly.dev"
+    - flyctl deploy --app $FLY_APP_NAME --image $CI_REGISTRY_IMAGE/$IMAGE_NAME:$ROLLBACK_SHA --strategy immediate --wait-timeout 120
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
-  # Usage: trigger with variable ROLLBACK_SHA=<previous commit sha>
- 
