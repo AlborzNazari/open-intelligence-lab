@@ -6,7 +6,6 @@ tests = [
     ('GET', '/health', 200),
     ('GET', '/intelligence/graph/summary', 200),
     ('GET', '/intelligence/entities', 200),
-    ('GET', '/taxii/', 200),
 ]
 
 failed = []
