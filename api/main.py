@@ -133,11 +133,8 @@ app.add_middleware(
 app.include_router(intelligence_router)
 
 
-# ─── Root health check ────────────────────────────────────────────────────────
+# --- Root & Health ---
 @app.get("/", tags=["Health"])
-@app.get("/health", tags=["Health"])
-def health():
-    return {"status": "ok", "version": "0.5.0"}
 def root():
     misp_active = bool(os.getenv("MISP_URL") and os.getenv("MISP_KEY"))
     return {
@@ -145,8 +142,13 @@ def root():
         "version": "0.4.0",
         "docs": "/docs",
         "misp_live_feed": (
-            "active — pulling from " + os.getenv("MISP_URL", "")
+            "active - pulling from " + os.getenv("MISP_URL", "")
             if misp_active
-            else "inactive — set MISP_URL and MISP_KEY environment variables to activate"
+            else "inactive - set MISP_URL and MISP_KEY to activate"
         ),
     }
+
+
+@app.get("/health", tags=["Health"])
+def health():
+    return {"status": "ok", "version": "0.5.0"}
