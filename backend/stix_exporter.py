@@ -14,16 +14,18 @@ import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
-
 # ─────────────────────────────────────────────
 # Helpers
 # ─────────────────────────────────────────────
 
+
 def _now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
+
 def _stix_id(object_type: str) -> str:
     return f"{object_type}--{uuid.uuid4()}"
+
 
 def _confidence_to_stix(confidence: float) -> int:
     """Map [0.0, 1.0] float to STIX 2.1 integer confidence [0, 100]."""
@@ -33,6 +35,7 @@ def _confidence_to_stix(confidence: float) -> int:
 # ─────────────────────────────────────────────
 # Entity → STIX Object Converters
 # ─────────────────────────────────────────────
+
 
 def threat_actor_to_stix(entity: dict) -> dict:
     """Convert a threat_entity of type 'threat_actor' to a STIX 2.1 threat-actor object."""
@@ -166,7 +169,9 @@ def relation_to_stix_relationship(
         "id": _stix_id("relationship"),
         "created": _now(),
         "modified": _now(),
-        "relationship_type": relation.get("relation_type", "related-to").lower().replace("_", "-"),
+        "relationship_type": relation.get("relation_type", "related-to")
+        .lower()
+        .replace("_", "-"),
         "source_ref": source_stix_id,
         "target_ref": target_stix_id,
         "confidence": _confidence_to_stix(relation.get("confidence", 0.5)),
@@ -202,6 +207,7 @@ def campaign_to_stix(campaign: dict) -> dict:
 # Main Bundle Builder
 # ─────────────────────────────────────────────
 
+
 def build_stix_bundle(
     entities: list[dict],
     attack_patterns: list[dict],
@@ -210,7 +216,7 @@ def build_stix_bundle(
 ) -> dict:
     """
     Assemble a complete STIX 2.1 Bundle from Open Intelligence Lab datasets.
-    
+
     Returns a dict ready for json.dumps() — compatible with:
       - Splunk ES (STIX-Taxii connector)
       - Microsoft Sentinel (Threat Intelligence blade)
@@ -264,8 +270,12 @@ def build_stix_bundle(
 
     # 3. Relationships
     for rel in relations:
-        src_id = id_map.get(rel.get("source_id", "")) or ap_id_map.get(rel.get("source_id", ""))
-        tgt_id = id_map.get(rel.get("target_id", "")) or ap_id_map.get(rel.get("target_id", ""))
+        src_id = id_map.get(rel.get("source_id", "")) or ap_id_map.get(
+            rel.get("source_id", "")
+        )
+        tgt_id = id_map.get(rel.get("target_id", "")) or ap_id_map.get(
+            rel.get("target_id", "")
+        )
         if src_id and tgt_id:
             rel_obj = relation_to_stix_relationship(rel, src_id, tgt_id)
             stix_objects.append(rel_obj)
@@ -289,6 +299,7 @@ def build_stix_bundle(
 # ─────────────────────────────────────────────
 # Format-Specific Export Helpers
 # ─────────────────────────────────────────────
+
 
 def export_for_splunk(bundle: dict) -> list[dict]:
     """
@@ -317,29 +328,37 @@ def export_for_sentinel(bundle: dict) -> list[dict]:
     Compatible with: Sentinel Threat Intelligence (TAXII) connector.
     """
     sentinel_objects = []
-    indicator_types = {"threat-actor", "malware", "attack-pattern", "vulnerability", "campaign"}
+    indicator_types = {
+        "threat-actor",
+        "malware",
+        "attack-pattern",
+        "vulnerability",
+        "campaign",
+    }
     for obj in bundle.get("objects", []):
         if obj.get("type") in indicator_types:
             # Sentinel expects a flat indicator wrapper
-            sentinel_objects.append({
-                "type": obj["type"],
-                "id": obj["id"],
-                "name": obj.get("name", ""),
-                "description": obj.get("description", ""),
-                "confidence": obj.get("confidence", 50),
-                "labels": obj.get("labels", []),
-                "created": obj.get("created", _now()),
-                "modified": obj.get("modified", _now()),
-                "spec_version": "2.1",
-                "externalReferences": obj.get("external_references", []),
-                "extensions": {
-                    "x-open-intelligence-lab": {
-                        "risk_score": obj.get("x_oi_risk_score", 0.0),
-                        "entity_id": obj.get("x_oi_entity_id", ""),
-                        "mitre_techniques": obj.get("x_mitre_techniques", []),
-                    }
-                },
-            })
+            sentinel_objects.append(
+                {
+                    "type": obj["type"],
+                    "id": obj["id"],
+                    "name": obj.get("name", ""),
+                    "description": obj.get("description", ""),
+                    "confidence": obj.get("confidence", 50),
+                    "labels": obj.get("labels", []),
+                    "created": obj.get("created", _now()),
+                    "modified": obj.get("modified", _now()),
+                    "spec_version": "2.1",
+                    "externalReferences": obj.get("external_references", []),
+                    "extensions": {
+                        "x-open-intelligence-lab": {
+                            "risk_score": obj.get("x_oi_risk_score", 0.0),
+                            "entity_id": obj.get("x_oi_entity_id", ""),
+                            "mitre_techniques": obj.get("x_mitre_techniques", []),
+                        }
+                    },
+                }
+            )
     return sentinel_objects
 
 
@@ -387,6 +406,7 @@ def export_for_qradar(bundle: dict) -> list[dict]:
 # CLI / Demo Entry Point
 # ─────────────────────────────────────────────
 
+
 def load_datasets(base_path: str = "datasets") -> tuple:
     """Load all OI Lab datasets from disk."""
     import os
@@ -408,6 +428,7 @@ def load_datasets(base_path: str = "datasets") -> tuple:
 def run_export(output_dir: str = "exports", base_path: str = "datasets"):
     """Run full STIX 2.1 export pipeline and write all platform-specific outputs."""
     import os
+
     os.makedirs(output_dir, exist_ok=True)
 
     entities, attack_patterns, relations, campaigns = load_datasets(base_path)
