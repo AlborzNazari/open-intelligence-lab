@@ -2,7 +2,8 @@
 
 [![Research Status](https://img.shields.io/badge/research-alpha-blue)](https://github.com/AlborzNazari/open-intelligence-lab)
 [![Dataset Version](https://img.shields.io/badge/datasets-v0.1-green)](https://github.com/AlborzNazari/open-intelligence-lab/tree/main/datasets)
-[![Model Version](https://img.shields.io/badge/intelligence_model-v0.4-orange)](https://github.com/AlborzNazari/open-intelligence-lab)
+[![Model Version](https://img.shields.io/badge/intelligence_model-v0.5-orange)](https://github.com/AlborzNazari/open-intelligence-lab)
+[![CI/CD](https://img.shields.io/badge/CI%2FCD-GitLab%20Pipeline-fc6d26)](https://gitlab.com/alborznazari4/open-intelligence-lab/-/pipelines)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue)](https://www.python.org/)
 [![MITRE ATT&CK](https://img.shields.io/badge/MITRE-ATT%26CK%20Aligned-red)](https://attack.mitre.org/)
@@ -548,6 +549,34 @@ OpenCTI               ──┘                                                 
 
 The platform now consumes community intelligence, validates its chain of custody, enriches the knowledge graph, and re-exports the unified result — closing the loop that v0.3.0 left open.
 
+## v0.5.0 — GitLab CI/CD Pipeline + Production Infrastructure
+
+v0.5.0 operationalizes the platform. Every commit to main now goes through eight automated checks before a human decides to deploy.
+
+### Pipeline — 5 Stages, 10 Jobs
+
+| Stage | Jobs | Purpose |
+|-------|------|---------|
+| validate | `lint`, `schema_validate` | flake8/black/isort code quality. STIX bundle and dataset JSON validation on every commit. |
+| test | `unit_tests`, `api_smoke_test` | pytest with coverage. Live FastAPI server spun up in CI — real endpoints, real datasets, not mocks. |
+| build | `build_docker`, `tag_release` | Docker image built with commit SHA tag, pushed to GitLab Container Registry. |
+| security | `dependency_scan`, `container_scan` | pip-audit + safety on requirements.txt. Trivy scans Docker image for HIGH/CRITICAL CVEs. |
+| deploy | `deploy_production`, `rollback_production` | Manual-gate deploy to Fly.io. One-click rollback via `ROLLBACK_SHA` variable. |
+
+### New Files
+
+| File | Description |
+|------|-------------|
+| `.gitlab-ci.yml` | 5-stage GitLab CI/CD pipeline |
+| `scripts/validate_schemas.py` | Dataset and STIX export validation called by CI |
+| `scripts/smoke_test.py` | API smoke test called by CI |
+| `tests/test_placeholder.py` | Placeholder pytest suite — full coverage in v0.5.1 |
+| `wrangler.jsonc` | Cloudflare Workers scoped to `visualization/` only |
+
+### GitLab Pipeline
+```
+https://gitlab.com/alborznazari4/open-intelligence-lab/-/pipelines
+```
 
 ## Core Principles
 
@@ -567,6 +596,7 @@ The platform now consumes community intelligence, validates its chain of custody
 | **v0.2.0** | FastAPI backend live; full-stack connected | ✅ Complete |
 | **v0.3.0** | STIX 2.1 export, TAXII 2.1 server, Splunk / Sentinel / OpenCTI / QRadar interop | ✅ Complete |
 | **v0.4.0** | MISP integration, TAXII feed ingestion, provenance validation, Docker support | ✅ Complete |
+| **v0.5.0** | GitLab CI/CD pipeline, Docker build, security scanning, production deploy gate | ✅ Complete |
 | **v1.0.0** | Neo4j backend, multi-hop actor pivoting, ML scoring with SHAP explainability | 🗓 Planned |
 
 
