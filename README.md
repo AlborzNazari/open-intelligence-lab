@@ -51,6 +51,16 @@ open-intelligence-lab/
 ├── index.html                     ← Visual Lab (GitHub Pages)
 ├── Dockerfile                     ← ★ v0.4.0 — Container build for OI Lab API
 ├── docker-compose.yml             ← ★ v0.4.0 — Full stack: OI Lab + MISP instance
+├── .gitlab-ci.yml                 ← ★ v0.5.0 — 5-stage GitLab CI/CD pipeline
+├── wrangler.jsonc                 ← ★ v0.5.0 — Cloudflare Workers scoped to visualization/
+│
+├── scripts/                       ← ★ v0.5.0 — CI helper scripts
+│   ├── validate_schemas.py        ← Dataset JSON and STIX export validation
+│   └── smoke_test.py              ← API endpoint smoke test (called by CI)
+│
+├── tests/                         ← ★ v0.5.0 — pytest suite
+│   ├── __init__.py                ← Package marker
+│   └── test_placeholder.py        ← Placeholder suite — full coverage in v0.5.1
 │
 ├── datasets/                      ← 5 JSON knowledge base files
 │   ├── threat_entities.json       ← 22 entities (actors, malware, CVEs, sectors, infra)
