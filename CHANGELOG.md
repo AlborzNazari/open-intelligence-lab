@@ -4,6 +4,8 @@ All notable changes to Open Intelligence Lab are documented here.
 
 ## [v0.5.0] — 2026-04-03 — GitLab CI/CD Pipeline + Production Infrastructure
 
+<img width="842" height="158" alt="CI-CD PIPELINE" src="https://github.com/user-attachments/assets/8da12d92-6774-453b-85a5-86c551f2502b" />
+
 ### Summary
 v0.5.0 operationalizes the platform. Previous releases built the intelligence engine — graph modeling, risk scoring, STIX 2.1 export, TAXII ingestion, MISP live feeds, and provenance validation. v0.5.0 adds the production infrastructure layer: a full 5-stage GitLab CI/CD pipeline, Docker image publishing to the GitLab Container Registry, automated security scanning, and a manual-gate deployment system targeting Fly.io. Every commit to main now goes through eight automated checks before a human decides to deploy.
 
