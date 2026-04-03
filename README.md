@@ -154,7 +154,7 @@ pip install -r requirements.txt
 > **Windows note:** If any package fails to build from source, use:
 > ```bash
 > pip install -r requirements.txt --only-binary=:all:
-> ```
+> 
 
 #### 4 — Run the Visual Lab
 
