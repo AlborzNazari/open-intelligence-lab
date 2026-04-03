@@ -20,6 +20,9 @@ It provides a clean, modular environment for researchers, analysts, and engineer
 As of **v0.4.0**, the platform is fully interoperable with Splunk Enterprise Security, Microsoft Sentinel, OpenCTI, and IBM QRadar via STIX 2.1 exports and a built-in TAXII 2.1 server — and now includes live MISP feed ingestion, a TAXII 2.1 client, and provenance-validated chain-of-custody for every ingested intelligence object.
 
 **How the Software Works**
+> 📖 [Read the v0.5.0 article — jump to Pipeline Architecture](https://medium.com/@alborznazari4/open-intelligence-lab-v0-5-0-from-research-platform-to-production-ci-cd-pipeline-4fb56cd21cd7)
+
+
 > 📖 Read the full article: [From a Black Box to a Transparent, Modular, and Open-Source Model](https://medium.com/@alborznazari4/open-intelligence-lab-on-git-from-a-black-box-to-a-transparent-modular-and-open-source-model-ffa154962964)
 
 **Visual Lab**
