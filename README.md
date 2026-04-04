@@ -31,7 +31,7 @@ As of **v0.4.0**, the platform is fully interoperable with Splunk Enterprise Sec
 
 ## What Does This Software Do?
 
-Open Intelligence Lab models real-world threat intelligence as a **traversable knowledge graph**:
+Open Intelligence Lab models real-world threat intelligence as a **traversable knowledge graph** -->
 
 - **22 entities** — threat actors (APT28, APT29, APT41, Lazarus, LockBit, Cl0p, KillNet), 8 malware families, 2 CVEs, 2 infrastructure nodes, and 3 target sectors
 - **28 documented relations** — `uses`, `exploits`, `targets`, `uses_pattern`, `related_to`
