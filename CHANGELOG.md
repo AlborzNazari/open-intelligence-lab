@@ -2,51 +2,67 @@
 
 All notable changes to Open Intelligence Lab are documented here.
 
----
-## [v0.5.0] — Planned — Test Suite, CI/CD Pipeline, Cloud Deployment
+## [v0.5.0] — 2026-04-03 — GitLab CI/CD Pipeline + Production Infrastructure
+
+<img width="842" height="158" alt="CI-CD PIPELINE" src="https://github.com/user-attachments/assets/8da12d92-6774-453b-85a5-86c551f2502b" />
 
 ### Summary
-v0.5.0 establishes the maintenance and reliability foundation. CI without tests is automating nothing — so this version ships a real pytest suite covering the graph engine, risk scorer, API endpoints, and provenance engine first, then wires it into a GitHub Actions CI pipeline that runs on every push and pull request. The CD side deploys the API to Fly.io, giving the platform a permanent public HTTPS endpoint and eliminating the localhost dependency for the Visual Lab entirely.
+v0.5.0 operationalizes the platform. Previous releases built the intelligence engine — graph modeling, risk scoring, STIX 2.1 export, TAXII ingestion, MISP live feeds, and provenance validation. v0.5.0 adds the production infrastructure layer: a full 5-stage GitLab CI/CD pipeline, Docker image publishing to the GitLab Container Registry, automated security scanning, and a manual-gate deployment system targeting Fly.io. Every commit to main now goes through eight automated checks before a human decides to deploy.
 
 ### Added
 
-**Test Suite (`tests/`)**
-- `tests/test_graph_builder.py` — graph structure, node count (37), edge count (28), presence of all known entity IDs, node attributes, edge wiring for known relations (APT28→X-Agent, Cl0p→CVE-2023-34362, LockBit→Healthcare)
-- `tests/test_risk_analyzer.py` — score bounds [0.0, 1.0], score clamping, degree-weighted scoring, threat actor baseline floor, compute_all_risks return type
-- `tests/test_api.py` — all REST endpoints: root health check, graph summary counts, edges, entity list with search/filter/pagination, analyze for all 17 known entity IDs, 404 for unknown IDs, risk score bounds validation
-- `tests/test_provenance.py` — record creation, trust prior application, staleness detection at 90-day threshold, trust penalty for stale objects, rejection below minimum trust floor, dict serialization
-- `tests/__init__.py` — package marker
-- `pyproject.toml` — pytest configuration (testpaths, addopts, verbosity)
+**CI/CD Pipeline (`.gitlab-ci.yml`)**
+- 5-stage GitLab CI/CD pipeline: validate → test → build → security → deploy
+- 10 jobs total, runs on GitLab SaaS shared runners (python:3.12-slim, docker:24.0, alpine:latest)
+- pip cache keyed on `requirements.txt` hash — shared across all Python jobs
 
-**CI Pipeline (`.github/workflows/ci.yml`)**
-- Runs on every push to `main` and every pull request
-- Matrix: Python 3.10, 3.11, 3.12 — tests must pass on all three
-- Steps: checkout, setup-python with pip cache, install requirements + pytest + httpx + pytest-cov, run full test suite with coverage report
-- Coverage artifact uploaded for Python 3.12 run
-- Ruff linting job runs in parallel
+**Stage 1 — Validate**
+- `lint` — flake8, black, isort across `api/` and `backend/`; `allow_failure: true` to warn without blocking
+- `schema_validate` — validates all dataset JSON files and STIX export bundles on every commit
 
-**CD Pipeline (`.github/workflows/cd.yml`)**
-- Deploys to Fly.io on every push to `main`
-- Uses `superfly/flyctl-actions` — no manual deploy steps
-- `FLY_API_TOKEN` stored as GitHub secret
-- Gated behind CI passing (add `needs: [test]` once test suite is stable)
+**Stage 2 — Test**
+- `unit_tests` — pytest with `--cov=api --cov=backend`, JUnit XML artifact uploaded to GitLab test reports panel
+- `api_smoke_test` — spins up live FastAPI server inside CI container, fires HTTP requests at `/health`, `/intelligence/graph/summary`, `/intelligence/entities`; real server against real datasets, not mocks
 
-**Fly.io Deployment (`fly.toml`)**
-- App region: `ams` (Amsterdam) — change to nearest region
-- Force HTTPS: true — Fly.io handles TLS, Caddy not needed in production
-- Auto-stop/start machines on traffic — zero cost when idle
-- 512MB memory, shared CPU — sufficient for the NetworkX graph at current scale
-- MISP env vars settable via `flyctl secrets set MISP_URL=... MISP_KEY=...`
-- Public endpoint: `https://open-intelligence-lab.fly.dev`
+**Stage 3 — Build**
+- `build_docker` — Docker image built with `--build-arg VERSION=v0.5.0 --build-arg GIT_SHA=$CI_COMMIT_SHA`, tagged with both commit SHA and `latest`, pushed to GitLab Container Registry
+- `tag_release` — produces `build.env` dotenv artifact (IMAGE_TAG, VERSION, BUILT_AT) passed downstream via `artifacts:reports:dotenv`
 
-### Changed
-- `index.html` — when deployed, update `API_BASE` default to the Fly.io URL so GitHub Pages connects without any localhost dependency
-- Roadmap updated: v0.5.0 marked planned, CI/CD and deployment added as explicit milestone
+**Stage 4 — Security**
+- `dependency_scan` — pip-audit + safety against `requirements.txt`; `allow_failure: true`
+- `container_scan` — Trivy scans Docker image for HIGH/CRITICAL CVEs; `allow_failure: true`; needs `build_docker`
 
-### Why This Matters
-CI/CD without tests is noise. Tests without deployment are untested in production. v0.5.0 does both properly: the test suite verifies the platform actually works before any code ships, and the deployment pipeline puts the API on a real HTTPS URL that GitHub Pages can call without mixed content restrictions, without Docker, and without any local server running on the user's machine.
+**Stage 5 — Deploy**
+- `deploy_production` — manual-gate (`when: manual`) Fly.io deployment via flyctl; needs `build_docker`, `unit_tests`, `dependency_scan`
+- `rollback_production` — manual-gate rollback to any previous image via `ROLLBACK_SHA` CI variable
 
----
+**Scripts**
+- `scripts/validate_schemas.py` — dataset JSON and STIX export validation, called by `schema_validate` job
+- `scripts/smoke_test.py` — API endpoint smoke test called by `api_smoke_test` job
+
+**Tests**
+- `tests/__init__.py` — test package marker
+- `tests/test_placeholder.py` — placeholder pytest suite; foundation for v0.5.1 full coverage
+
+**Cloudflare Workers**
+- `wrangler.jsonc` — scopes Workers deployment to `./visualization` only; prevents 25MB asset limit breach caused by `.git` pack files being included in the deploy
+
+**API**
+- `GET /health` — added dedicated health endpoint returning `{"status": "ok", "version": "0.5.0"}`; enables load balancer checks, CI smoke tests, and uptime monitoring
+
+### Fixed
+- Duplicate route definition in `api/main.py` — root `/` and `/health` were conflicting
+- Unused imports across `backend/` — `os`, `datetime`, `Optional`, `field` removed via autoflake
+- Whitespace and blank line violations (E302, W293, E241) across `taxii_server.py`, `provenance.py`, `stix_exporter.py`, `misp_client.py`, `feed_scheduler.py` — resolved via black
+- E226 missing whitespace around arithmetic operator in `taxii_server.py` — resolved via black
+- Cloudflare Workers deployment failing with 91MB asset too large — resolved by scoping `wrangler.jsonc` to `visualization/` only
+
+### Known Limitations
+- `deploy_production` and `rollback_production` require `FLY_API_TOKEN` GitLab CI variable; Fly.io SSO organization restriction prevents personal access token generation — deploy jobs are currently stubbed with `allow_failure: true`
+- `tests/` contains placeholder suite only — full pytest coverage (graph engine, risk analyzer, API endpoints, provenance) is the primary goal of v0.5.1
+- TAXII server (`taxii_server.py`) runs as a standalone FastAPI process separate from `api/main.py` — smoke test only tests routes registered on the main app
+
+### Roadmap Update
 
 
 

@@ -283,6 +283,151 @@ https://localhost:8443/
 Accept the self-signed cert warning once. Expected: same JSON as above.
 
 ---
+# v0.5.0 CI/CD Pipeline — Issues & Fixes
+
+---
+
+## #01 YAML Parse Error — mapping values not allowed at line 75
+**Severity: HIGH**
+
+**Symptom:** GitLab rejected .gitlab-ci.yml immediately. Pipeline could not start.
+
+**Cause:** Inline Python strings inside YAML used em dashes and nested quotes. YAML parser treats colon-space as a mapping operator inside unquoted multi-line strings.
+
+**Fix:** Moved all inline Python to `scripts/validate_schemas.py` and `scripts/smoke_test.py`. Eliminated all em dashes and multi-line `python -c` blocks from YAML.
+
+**Lesson:** Never embed complex Python logic inside YAML CI files. Always externalize to `scripts/`.
+
+---
+
+## #02 coverage_report Block Causing YAML Parse Failure
+**Severity: HIGH**
+
+**Symptom:** Pipeline still rejected after fixing em dashes.
+
+**Cause:** The `coverage_report` nested block under `artifacts.reports` requires a newer GitLab runner schema version than SaaS runners enforce.
+
+**Fix:** Removed the `coverage_report` block. Coverage still captured via regex: `/TOTAL.*\s+(\d+%)$/`.
+
+**Lesson:** Use the CI Lint tool at `/-/ci/editor` before committing.
+
+---
+
+## #03 Wrong GitLab Remote URL
+**Severity: MEDIUM**
+
+**Symptom:** `git push gitlab main` failed with repository not found.
+
+**Cause:** GitLab username is `alborznazari4`, not `AlborzNazari`. GitLab usernames are case-sensitive.
+
+**Fix:** `git remote set-url gitlab https://gitlab.com/alborznazari4/open-intelligence-lab.git`
+
+**Lesson:** Always verify the exact GitLab username from the profile URL before setting remotes.
+
+---
+
+## #04 Protected Branch Blocking Force Push
+**Severity: MEDIUM**
+
+**Symptom:** `git push --force` rejected: not allowed to force push to a protected branch.
+
+**Cause:** GitLab auto-protects the default branch. Initial README commit diverged from GitHub history.
+
+**Fix:** Unprotected main via Settings > Repository > Protected Branches, force pushed.
+
+**Lesson:** When mirroring to GitLab, uncheck "Initialize repository with README".
+
+---
+
+## #05 Corrupt .gitlab-ci.yml — Merged Versions on Disk
+**Severity: HIGH**
+
+**Symptom:** File contained content from multiple versions merged together.
+
+**Cause:** Failed PowerShell heredoc attempts appended content. The closing `'@` must be on a completely blank line.
+
+**Fix:** Deleted with `Remove-Item`, recreated in Notepad.
+
+**Lesson:** Use the GitLab web CI editor for .gitlab-ci.yml edits instead of local PowerShell heredocs.
+
+---
+
+## #06 Null Bytes in test_placeholder.py
+**Severity: MEDIUM**
+
+**Symptom:** `SyntaxError: source code string cannot contain null bytes`
+
+**Cause:** `echo "" > file.py` on Windows writes UTF-16 BOM + null bytes, not empty UTF-8.
+
+**Fix:** `pathlib.Path('tests/test_placeholder.py').write_text('def test_placeholder():\n    assert True\n', encoding='utf-8', newline='\n')`
+
+**Lesson:** Never use Windows echo redirect to create Python files. Use Python directly.
+
+---
+
+## #07 flake8 Lint Failures Across Backend
+**Severity: LOW**
+
+**Symptom:** E302, W293, E226, E241, F401 errors across taxii_server.py, provenance.py, stix_exporter.py, misp_client.py.
+
+**Cause:** Files written without automated formatting. Black and flake8 disagree on E203/E226.
+
+**Fix:** `black backend/ api/` + `autoflake --remove-all-unused-imports` + added `E203,E226,W391,F841` to flake8 ignore list.
+
+**Lesson:** Add black + flake8 to pre-commit hooks from the start.
+
+---
+
+## #08 /taxii/ 404 in Smoke Test
+**Severity: MEDIUM**
+
+**Symptom:** FAIL: GET /taxii/ -> 404
+
+**Cause:** `taxii_server.py` is a standalone FastAPI app, not mounted on `api/main.py`. CI runs `api.main:app` only.
+
+**Fix:** Removed `/taxii/` from smoke test. TAXII server runs as separate process in docker-compose.
+
+**Lesson:** Smoke tests should only test routes registered on the app being tested.
+
+---
+
+## #09 Missing /health Endpoint
+**Severity: LOW**
+
+**Symptom:** FAIL: GET /health -> 404
+
+**Cause:** `api/main.py` had a root `/` endpoint but no `/health` route.
+
+**Fix:** Added `@app.get("/health")` returning `{"status": "ok", "version": "0.5.0"}`.
+
+**Lesson:** Always add a /health endpoint to any production API.
+
+---
+
+## #10 Cloudflare Workers — Asset Too Large (91MB)
+**Severity: MEDIUM**
+
+**Symptom:** Workers Builds failed: .git pack file exceeds 25MB asset limit.
+
+**Cause:** Wrangler deployed the entire repo root including the .git directory.
+
+**Fix:** Added `wrangler.jsonc` with `assets.directory` set to `./visualization`.
+
+**Lesson:** Always configure assets directory in wrangler.jsonc explicitly on Python/FastAPI projects.
+
+---
+
+## #11 FLY_API_TOKEN — SSO Organization Restriction
+**Severity: LOW**
+
+**Symptom:** `flyctl auth token $FLY_API_TOKEN` failed: no access token available.
+
+**Cause:** Fly.io account under SSO-enforced organization. Personal access tokens blocked.
+
+**Fix:** Stubbed deploy jobs with echo placeholders and `allow_failure: true`.
+
+**Lesson:** Check SSO restrictions before designing deploy stages. Stub deploy jobs during initial pipeline setup.
+
 
 ## Still stuck?
 
