@@ -22,6 +22,7 @@ As of **v0.4.0**, the platform is fully interoperable with Splunk Enterprise Sec
 **How the Software Works**
 > 📖 Read the v0.5.0 article — [jump to Pipeline Architecture](https://medium.com/@alborznazari4/open-intelligence-lab-v0-5-0-from-research-platform-to-production-ci-cd-pipeline-4fb56cd21cd7)
 
+[![GitLab CI/CD](https://img.shields.io/badge/GitLab-Pipeline-fc6d26?logo=gitlab)](https://gitlab.com/alborznazari4/open-intelligence-lab/-/pipelines)
 
 > 📖 Read the full article: [From a Black Box to a Transparent, Modular, and Open-Source Model](https://medium.com/@alborznazari4/open-intelligence-lab-on-git-from-a-black-box-to-a-transparent-modular-and-open-source-model-ffa154962964)
 
