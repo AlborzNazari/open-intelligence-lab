@@ -1,9 +1,9 @@
-# fly.toml app configuration file generated for open-intelligence-lab on 2026-04-02T21:22:08Z
+# fly.toml app configuration file generated for open-intelligence-lab-cyrmjw on 2026-04-09T23:56:33Z
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
-app = 'open-intelligence-lab'
+app = 'open-intelligence-lab-cyrmjw'
 primary_region = 'ams'
 
 [build]
