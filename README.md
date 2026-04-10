@@ -27,6 +27,9 @@ As of **v0.4.0**, the platform is fully interoperable with Splunk Enterprise Sec
 > 📖 Read the full article: [From a Black Box to a Transparent, Modular, and Open-Source Model](https://medium.com/@alborznazari4/open-intelligence-lab-on-git-from-a-black-box-to-a-transparent-modular-and-open-source-model-ffa154962964)
 
 **Visual Lab**
+Open Intelligence Lab is fully live from v0.5.0!
+Fly.io hosts the backend on a server 24/7, so it no longer needs to be run locally via uvicorn: it has become a platform-independent, internet-facing service using PaaS.
+Just click on Probe backend. All data will turn live. 
 > 🔬 Explore the live graph: [alborznazari.github.io/open-intelligence-lab](https://alborznazari.github.io/open-intelligence-lab/)
 
 
