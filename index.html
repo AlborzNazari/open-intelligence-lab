@@ -470,7 +470,7 @@ let apiLive = false;
 //   - https:// (GitHub Pages)      → use https://localhost:8443 (Caddy HTTPS proxy)
 // This eliminates the mixed-content block without any manual configuration.
 const IS_HTTPS_PAGE = location.protocol === 'https:';
-let API_BASE = IS_HTTPS_PAGE ? 'https://localhost:8443' : 'http://localhost:8000';
+let API_BASE = IS_HTTPS_PAGE ? 'https://open-intelligence-lab.fly.dev' : 'http://localhost:8000';
 document.getElementById('api-url-input').value = API_BASE;
 
 // Show mixed-content warning only if the user has manually overridden
