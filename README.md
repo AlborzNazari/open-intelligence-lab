@@ -117,9 +117,9 @@ open-intelligence-lab/
 
 ## Quick Start
 
-Two ways to run the project. Choose based on what you need.
+### Not Necessary. For engineers & enthusiasts who use python or univorn app to run the app instead of paas Visual Lab (Paas) host server. 
 
----
+There are Two ways to run the project:
 
 ### Option A — Python (static data, no Docker required)
 
