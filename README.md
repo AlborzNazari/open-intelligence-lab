@@ -619,10 +619,6 @@ https://gitlab.com/alborznazari4/open-intelligence-lab/-/pipelines
 Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) before submitting a pull request.
 
 
-## License
-
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/AlborzNazari/open-intelligence-lab/blob/main/LICENSE)
-
 ## How to Use MISP Data in the Visual Lab
 
 Once MISP is connected and the live feed is active, the knowledge graph updates automatically every hour. Here is what happens and how to read it.
@@ -700,3 +696,8 @@ See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for the full guide covering:
 
 
 *Open Intelligence Lab · Alborz Nazari · 2026 · [medium.com/@alborznazari4](https://medium.com/@alborznazari4)*
+
+
+## License
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/AlborzNazari/open-intelligence-lab/blob/main/LICENSE)
