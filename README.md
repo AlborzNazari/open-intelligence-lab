@@ -11,6 +11,7 @@
 [![TAXII 2.1](https://img.shields.io/badge/TAXII-2.1%20Server-7c3aed)](https://docs.oasis-open.org/cti/taxii/v2.1/os/taxii-v2.1-os.html)
 [![MISP](https://img.shields.io/badge/MISP-Integrated-6d28d9)](https://www.misp-project.org/)
 [![GitLab CI/CD](https://img.shields.io/badge/GitLab-Pipeline-fc6d26?logo=gitlab)](https://gitlab.com/alborznazari4/open-intelligence-lab/-/pipelines)
+[![Deployed on Fly.io](https://img.shields.io/badge/deployed-Fly.io-8B5CF6?logo=flydotio&logoColor=white)](https://open-intelligence-lab.fly.dev)
 
 <img width="1237" height="596" alt="Sleeze_Slither" src="https://github.com/user-attachments/assets/8fde77d8-9d33-4365-9453-c35cbda7eb96" />
 
