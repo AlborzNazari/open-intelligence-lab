@@ -289,7 +289,7 @@ tbody td{padding:8px 12px;vertical-align:middle}
   <!-- TOP BAR -->
   <div id="topbar">
     <div class="tb-logo">⬡ OPEN INTELLIGENCE LAB</div>
-    <div class="tb-ver">v0.4.0</div>
+    <div class="tb-ver">v0.5.0</div>
     <div class="tb-sep"></div>
     <div class="tb-status">
       <div class="status-pill sp-live" id="api-pill"><div class="dot dot-a"></div><span>API Probing</span></div>
@@ -838,7 +838,7 @@ function exportSTIX(platform){
       created: new Date().toISOString(), modified: new Date().toISOString(),
       name: e.name, labels:[e.entity_type],
       confidence: Math.round((e.confidence||0.8)*100),
-      extensions:{'x-oil-risk':{risk_score:e.risk_score, source:'open-intelligence-lab-v0.4.0'}},
+      extensions:{'x-oil-risk':{risk_score:e.risk_score, source:'open-intelligence-lab-v0.5.0'}},
       x_platform: platform
     }]
   };
