@@ -1,24 +1,33 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# Open Intelligence Lab — Dockerfile
-# v0.4.0
-#
-# Built a self-contained container for the OI Lab FastAPI backend.
-# MISP is NOT bundled here on previous v0.3.0 use docker-compose.yml to spin up both
-# OI Lab + a MISP instance together (recommended for development).
+# Open Intelligence Lab — Dockerfile v0.6.0
 #
 # Standalone usage (no MISP):
 #   docker build -t open-intelligence-lab .
 #   docker run -p 8000:8000 open-intelligence-lab
 #
-# With MISP (recommended):
+# With MISP (recommended for full stack):
 #   docker compose up
 #
-# Author: Alborz Nazari
+# Build args (set automatically by GitLab CI):
+#   VERSION   — semantic version string (e.g. v0.6.0)
+#   GIT_SHA   — full commit SHA for traceability
+#
+# Author: Alborz Nazari — https://github.com/AlborzNazari/open-intelligence-lab
 # License: MIT
-# Note end
 # ─────────────────────────────────────────────────────────────────────────────
 
 FROM python:3.12-slim
+
+# ── Build args (passed in by CI; safe to leave unset for local builds) ────────
+ARG VERSION=dev
+ARG GIT_SHA=unknown
+
+# ── OCI image labels for registry traceability ────────────────────────────────
+LABEL org.opencontainers.image.title="Open Intelligence Lab"
+LABEL org.opencontainers.image.version="${VERSION}"
+LABEL org.opencontainers.image.revision="${GIT_SHA}"
+LABEL org.opencontainers.image.source="https://github.com/AlborzNazari/open-intelligence-lab"
+LABEL org.opencontainers.image.licenses="MIT"
 
 # ── System deps ───────────────────────────────────────────────────────────────
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -29,20 +38,23 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 # ── Python dependencies ───────────────────────────────────────────────────────
-# Copy requirements first so Docker can cache this layer
+# Copy requirements first — Docker layer cache skips pip on unchanged deps
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# ── Copy project files ────────────────────────────────────────────────────────
+# ── Copy project source ───────────────────────────────────────────────────────
 COPY api/         ./api/
 COPY backend/     ./backend/
 COPY core_engine/ ./core_engine/
 COPY datasets/    ./datasets/
 COPY visualization/ ./visualization/
 
-# ── Environment defaults (override at runtime via -e or docker-compose) ───────
-# Leave MISP_URL and MISP_KEY unset by default — app runs on static data
+# ── Runtime environment defaults ─────────────────────────────────────────────
+# MISP_URL / MISP_KEY unset → app runs on static curated datasets
+# Override at runtime via: docker run -e MISP_URL=... -e MISP_KEY=...
 ENV PYTHONPATH=/app
+ENV VERSION=${VERSION}
+ENV GIT_SHA=${GIT_SHA}
 ENV MISP_URL=""
 ENV MISP_KEY=""
 ENV MISP_LABEL="MISP-Live"
@@ -55,8 +67,13 @@ ENV MISP_INTERVAL_SECONDS="3600"
 EXPOSE 8000
 
 # ── Health check ──────────────────────────────────────────────────────────────
+# /health is faster than / — no MISP status check logic
 HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
-    CMD curl -f http://localhost:8000/ || exit 1
+    CMD curl -f http://localhost:8000/health || exit 1
+
+# ── Non-root user for security ────────────────────────────────────────────────
+RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
+USER appuser
 
 # ── Start server ──────────────────────────────────────────────────────────────
 CMD ["python", "-m", "uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
