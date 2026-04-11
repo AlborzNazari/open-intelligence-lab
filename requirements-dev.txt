@@ -1,0 +1,22 @@
+# Open Intelligence Lab — Development & CI dependencies
+# Install with: pip install -r requirements-dev.txt
+# Runtime deps are in requirements.txt
+
+# Testing
+pytest==8.3.5
+pytest-cov==6.1.0
+pytest-asyncio==0.25.3
+httpx==0.28.1
+
+# Linting
+flake8==7.2.0
+black==25.1.0
+isort==6.0.1
+
+# Security scanning
+pip-audit==2.9.0
+safety==3.3.3
+
+# Dataset validation
+jsonschema==4.23.0
+stix2==3.1.0
