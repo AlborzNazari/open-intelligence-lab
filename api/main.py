@@ -79,14 +79,15 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Open Intelligence Lab API",
-    version="0.4.0",
+    version="0.6.0",
     lifespan=lifespan,
     description=(
         "Ethical OSINT research platform — graph-based threat modeling, "
         "explainable risk analytics, STIX 2.1 export, TAXII 2.1 feed ingestion, "
         "MISP integration, and provenance-validated live intelligence.\n\n"
-        "**v0.4.0** adds bidirectional TAXII: MISP feed ingestion, TAXII client, "
-        "provenance chain-of-custody, confidence scoring, and staleness detection.\n\n"
+        "**v0.6.0** adds a full pytest suite (109 tests across 5 modules), real flyctl "
+        "deploy in CI, fixed validate_schemas.py paths, non-root Docker user, "
+        "OCI image labels, Fly.io memory fix, and CORS for fly.dev.\n\n"
         "**MISP live feed:** set `MISP_URL` and `MISP_KEY` environment variables "
         "before starting the server to activate live threat intelligence ingestion."
     ),
@@ -123,6 +124,7 @@ app.add_middleware(
         "http://127.0.0.1:3000",
         "http://127.0.0.1:5173",
         "https://alborznazari.github.io",
+        "https://open-intelligence-lab-cyrmjw.fly.dev",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -139,7 +141,7 @@ def root():
     misp_active = bool(os.getenv("MISP_URL") and os.getenv("MISP_KEY"))
     return {
         "status": "ok",
-        "version": "0.4.0",
+        "version": "0.6.0",
         "docs": "/docs",
         "misp_live_feed": (
             "active - pulling from " + os.getenv("MISP_URL", "")
@@ -151,4 +153,4 @@ def root():
 
 @app.get("/health", tags=["Health"])
 def health():
-    return {"status": "ok", "version": "0.5.0"}
+    return {"status": "ok", "version": "0.6.0"}
