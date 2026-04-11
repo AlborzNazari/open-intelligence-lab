@@ -1,12 +1,22 @@
-# fly.toml app configuration file generated for open-intelligence-lab-cyrmjw on 2026-04-09T23:56:33Z
-#
-# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
-#
+# fly.toml — Open Intelligence Lab v0.6.0
+# https://fly.io/docs/reference/configuration/
 
 app = 'open-intelligence-lab-cyrmjw'
 primary_region = 'ams'
 
 [build]
+  # Dockerfile at repo root; VERSION and GIT_SHA injected by flyctl
+  [build.args]
+    VERSION = "v0.6.0"
+
+[env]
+  # Non-secret runtime config. Secrets (MISP_KEY etc.) go in fly secrets.
+  PYTHONPATH = "/app"
+  MISP_LABEL = "MISP-Live"
+  MISP_PULL_DAYS = "7"
+  MISP_LIMIT = "200"
+  MISP_VERIFY_SSL = "true"
+  MISP_INTERVAL_SECONDS = "3600"
 
 [http_service]
   internal_port = 8000
@@ -16,8 +26,20 @@ primary_region = 'ams'
   min_machines_running = 0
   processes = ['app']
 
+  [http_service.concurrency]
+    type = "requests"
+    soft_limit = 100
+    hard_limit = 200
+
+# Health check — Fly uses this to decide if the machine is healthy before
+# routing traffic. Uses /health (fast, no MISP logic) not /.
+[[services.tcp_checks]]
+  interval = "15s"
+  timeout = "10s"
+  grace_period = "30s"
+
 [[vm]]
-  memory = '1gb'
+  # memory and memory_mb are mutually exclusive — use only memory
+  memory = '512mb'
   cpu_kind = 'shared'
   cpus = 1
-  memory_mb = 256
