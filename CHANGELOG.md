@@ -2,6 +2,69 @@
 
 All notable changes to Open Intelligence Lab are documented here.
 
+## [v0.6.0] — 2026-04-11 — Full Pytest Suite + Production CI/CD
+
+### Summary
+v0.6.0 delivers real test coverage (109 tests, 0 failures), a working Fly.io deploy step, and hardens the Docker image and infra configuration. Every previously stubbed or broken component now works end-to-end.
+
+### Added
+
+**Test Suite (`tests/`)**
+- `test_graph_builder.py` — 15 tests: dataset loading, node/edge integrity, known entity presence, attribute types, risk score range, manual `add_entity` API
+- `test_risk_analyzer.py` — 8 tests: `compute_entity_risk`, `compute_all_risks`, score capping at 1.0, write-back to graph nodes, connectivity-based risk inflation
+- `test_intelligence_explainer.py` — 14 tests: response structure, type-specific content (origin, malware type, CVSS), all four risk verdict labels
+- `test_service.py` — 27 tests: all service functions, query/type/risk filters, pagination, sort order, 200-entity cap
+- `test_api_endpoints.py` — 44 HTTP-level tests via Starlette `TestClient`: all 7 routes including 404 and 422 error paths
+- **Total: 109 tests, 0 failures**
+
+**`requirements-dev.txt`** — separate dev/CI deps: pytest, pytest-cov, httpx, flake8, black, isort, pip-audit, safety, jsonschema, stix2
+
+### Fixed
+
+**`scripts/validate_schemas.py`**
+- Was resolving paths relative to CWD (`data/`) — always failed in CI
+- Now uses `pathlib.Path(__file__).resolve().parent.parent` — works from any working directory
+- Covers all 5 dataset files including `mitre_mapping.json` (previously missing)
+- Added array-type assertion: validates structure, not just JSON parse
+
+**`scripts/smoke_test.py`**
+- Added 10-attempt retry loop — eliminates CI race condition with uvicorn startup
+- Added 5 new test cases: `/`, `/graph/edges`, `/entities/ids`, `/analyze/TA-001`, `/analyze/FAKE-0000` (404)
+- Prints expected vs actual status on failure
+
+**`fly.toml`**
+- Removed `memory_mb = 256` which conflicted with `memory = '1gb'` (lower value silently won)
+- Set to `memory = '512mb'` — correct for free-tier shared CPU
+- Added `[env]` block, `[http_service.concurrency]` limits, `[build.args]`
+
+**`Dockerfile`**
+- Added `ARG VERSION` / `ARG GIT_SHA` — previously declared in CI but not consumed, so OCI labels were empty
+- Added OCI image labels (`org.opencontainers.image.*`)
+- Healthcheck now targets `/health` instead of `/` (faster, no MISP logic)
+- Added non-root user (`appuser`) — container no longer runs as root
+
+**`.gitlab-ci.yml`**
+- `deploy_production` now installs flyctl and calls `flyctl deploy` — was a stub echo
+- `rollback_production` validates `ROLLBACK_SHA` before proceeding; exits 1 with clear message if unset
+- Added `PYTHONPATH: "$CI_PROJECT_DIR"` globally — fixes import errors without per-job export
+- `unit_tests` now emits Cobertura `coverage.xml` as a GitLab coverage report artifact
+- Upgraded Docker runner image from `docker:24.0` to `docker:26.1`
+- `requirements-dev.txt` added to pip cache key
+
+**`.github/workflows/static.yml`**
+- Added `test` job gating the Pages deploy — tests must pass before deploy runs
+- pip cache keyed on both requirements files
+- Test artifacts uploaded on `always` condition
+
+**`api/main.py`**
+- Version `0.6.0` across FastAPI app, root response, health endpoint
+- Added `https://open-intelligence-lab-cyrmjw.fly.dev` to CORS allowed origins
+
+### Known Limitations
+- `backend/` modules (misp_client, provenance, feed_scheduler, stix_exporter, taxii_server) have no unit tests — targeted for v0.7.0
+
+---
+
 ## [v0.5.0] — 2026-04-03 — GitLab CI/CD Pipeline + Production Infrastructure
 
 <img width="842" height="158" alt="CI-CD PIPELINE" src="https://github.com/user-attachments/assets/8da12d92-6774-453b-85a5-86c551f2502b" />
