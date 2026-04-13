@@ -16,7 +16,7 @@
 
 <img width="1237" height="596" alt="Sleeze_Slither" src="https://github.com/user-attachments/assets/8fde77d8-9d33-4365-9453-c35cbda7eb96" />
 
-**Open Intelligence Lab** is an ethical OSINT research platform focused on public-security intelligence representation, graph-based threat modeling, and explainable risk analytics.
+**Open Intelligence Lab** is an ethical OSINT research platform focused on public-security intelligence representation, graph-based threat modeling, and explainable risk analytics..
 
 It provides a clean, modular environment for researchers, analysts, and engineers who want to explore open-source intelligence signals **without compromising privacy or ethics** — using only public data, with every risk score backed by an interpretable rationale.
 
