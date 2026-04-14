@@ -5,7 +5,7 @@ All notable changes to Open Intelligence Lab are documented here.
 ## [v0.6.0] — 2026-04-11 — Full Pytest Suite + Production CI/CD
 
 ### Summary
-v0.6.0 delivers real test coverage (109 tests, 0 failures), a working Fly.io deploy step, and hardens the Docker image and infra configuration. Every previously stubbed or broken component now works end-to-end.
+Hardening release: This Version is an interactive release including real tests, Pure UI, working CI/CD, & API auth. v0.6.0 delivers real test coverage (109 tests, 0 failures), a working Fly.io deploy step, and hardens the Docker image and infra configuration. Every previously stubbed or broken component now works end-to-end.
 
 ### Added
 
