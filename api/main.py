@@ -1,5 +1,5 @@
 """
-api/main.py  —  v0.4.0
+api/main.py  —  v0.6.1
 CORS + router registration for Open Intelligence Lab API.
 
 On startup, reads MISP_URL and MISP_KEY from environment variables.
@@ -79,12 +79,16 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Open Intelligence Lab API",
-    version="0.6.0",
+    version="0.6.1",                          # v0.6.1
     lifespan=lifespan,
     description=(
         "Ethical OSINT research platform — graph-based threat modeling, "
         "explainable risk analytics, STIX 2.1 export, TAXII 2.1 feed ingestion, "
         "MISP integration, and provenance-validated live intelligence.\n\n"
+        "**v0.6.1** — UI fidelity patch: fixed vulnerability detail field mappings "
+        "(exploitation_status, patch_date), added Source column to entities table, "
+        "removed static provenance badge, corrected TAXII pill label, "
+        "bumped STIX export version string.\n\n"
         "**v0.6.0** adds a full pytest suite (109 tests across 5 modules), real flyctl "
         "deploy in CI, fixed validate_schemas.py paths, non-root Docker user, "
         "OCI image labels, Fly.io memory fix, and CORS for fly.dev.\n\n"
@@ -141,7 +145,7 @@ def root():
     misp_active = bool(os.getenv("MISP_URL") and os.getenv("MISP_KEY"))
     return {
         "status": "ok",
-        "version": "0.6.0",
+        "version": "0.6.1",                   # v0.6.1
         "docs": "/docs",
         "misp_live_feed": (
             "active - pulling from " + os.getenv("MISP_URL", "")
@@ -153,4 +157,4 @@ def root():
 
 @app.get("/health", tags=["Health"])
 def health():
-    return {"status": "ok", "version": "0.6.0"}
+    return {"status": "ok", "version": "0.6.1"}  # v0.6.1
