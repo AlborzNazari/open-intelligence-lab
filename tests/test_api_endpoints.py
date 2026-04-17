@@ -1,11 +1,14 @@
 """
-tests/test_api_endpoints.py — v0.6.0
+tests/test_api_endpoints.py — v0.6.1
 
 HTTP-level tests for all FastAPI routes via Starlette TestClient.
 No live server, no ports, no race conditions.
 Covers: root, health, /intelligence/entities, /intelligence/analyze/{id},
         /intelligence/graph/summary, /intelligence/graph/edges,
         /intelligence/entities/ids
+
+v0.6.1 fix: version assertions now read from app.version instead of
+hardcoded strings — bumping main.py never breaks this suite again.
 """
 
 import pytest
@@ -13,6 +16,10 @@ from fastapi.testclient import TestClient
 from api.main import app
 
 client = TestClient(app)
+
+# Single source of truth — pulled from FastAPI constructor in main.py.
+# Never hardcode a version string in a test.
+EXPECTED_VERSION = app.version
 
 
 class TestRootAndHealth:
@@ -28,6 +35,10 @@ class TestRootAndHealth:
         r = client.get("/")
         assert "version" in r.json()
 
+    def test_root_version_matches_app(self):
+        r = client.get("/")
+        assert r.json()["version"] == EXPECTED_VERSION
+
     def test_health_returns_200(self):
         r = client.get("/health")
         assert r.status_code == 200
@@ -36,9 +47,10 @@ class TestRootAndHealth:
         r = client.get("/health")
         assert r.json()["status"] == "ok"
 
-    def test_health_version_is_060(self):
+    def test_health_version_matches_app(self):
+        # v0.6.1: was hardcoded "0.6.0" — now reads from app.version
         r = client.get("/health")
-        assert r.json()["version"] == "0.6.0"
+        assert r.json()["version"] == EXPECTED_VERSION
 
     def test_docs_accessible(self):
         r = client.get("/docs")
