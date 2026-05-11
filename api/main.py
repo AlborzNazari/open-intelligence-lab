@@ -16,6 +16,23 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+app = FastAPI()
+
+# ── CORS ──────────────────────────────────────────────────────────────────────
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://alborznazari.github.io"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+from backend.auth import init_db
+from backend.auth_router import router as auth_router
+init_db()
+app.include_router(auth_router, prefix="/auth", tags=["auth"])
+
+
+
 from api.intelligence.router import router as intelligence_router
 
 logger = logging.getLogger(__name__)
