@@ -158,8 +158,11 @@ def root():
 def health():
     return {"status": "ok", "version": "0.6.1"}
 
-app.mount(
-    "/ui",
-    StaticFiles(directory=os.path.join(os.path.dirname(__file__), ".."), html=True),
-    name="static",
-)
+try:
+    app.mount(
+        "/ui",
+        StaticFiles(directory=os.path.join(os.path.dirname(__file__), ".."), html=True),
+        name="static",
+    )
+except Exception:
+    pass
