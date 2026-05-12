@@ -29,6 +29,9 @@ for attempt in range(10):
     except Exception:
         print(f"  Waiting for server... attempt {attempt + 1}/10")
         time.sleep(1)
+else:
+    print("  Server never came up after 10 attempts. Aborting.")
+    sys.exit(1)
 
 failed = []
 for method, path, expected in TESTS:
