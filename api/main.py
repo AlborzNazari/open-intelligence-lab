@@ -158,3 +158,6 @@ def root():
 @app.get("/health", tags=["Health"])
 def health():
     return {"status": "ok", "version": "0.6.1"}  # v0.6.1
+
+from fastapi.staticfiles import StaticFiles
+app.mount("/", StaticFiles(directory=".", html=True), name="static")
