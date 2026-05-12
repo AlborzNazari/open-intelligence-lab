@@ -159,4 +159,8 @@ def health():
     return {"status": "ok", "version": "0.6.1"}
 
 from fastapi.staticfiles import StaticFiles
-app.mount("/ui", StaticFiles(directory=".", html=True), name="static")
+app.mount(
+    "/ui",
+    StaticFiles(directory="/app", html=True),
+    name="static",
+)
