@@ -158,9 +158,8 @@ def root():
 def health():
     return {"status": "ok", "version": "0.6.1"}
 
-from fastapi.staticfiles import StaticFiles
 app.mount(
     "/ui",
-    StaticFiles(directory="/app", html=True),
+    StaticFiles(directory=os.path.join(os.path.dirname(__file__), ".."), html=True),
     name="static",
 )
