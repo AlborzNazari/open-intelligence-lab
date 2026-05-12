@@ -145,7 +145,7 @@ def root():
     misp_active = bool(os.getenv("MISP_URL") and os.getenv("MISP_KEY"))
     return {
         "status": "ok",
-        "version": "0.6.1",                   # v0.6.1
+        "version": "0.6.1",
         "docs": "/docs",
         "misp_live_feed": (
             "active - pulling from " + os.getenv("MISP_URL", "")
@@ -154,10 +154,9 @@ def root():
         ),
     }
 
-
 @app.get("/health", tags=["Health"])
 def health():
-    return {"status": "ok", "version": "0.6.1"}  # v0.6.1
+    return {"status": "ok", "version": "0.6.1"}
 
 from fastapi.staticfiles import StaticFiles
-app.mount("/", StaticFiles(directory=".", html=True), name="static")
+app.mount("/ui", StaticFiles(directory=".", html=True), name="static")
