@@ -1,0 +1,2 @@
+# Cloudflare Workers static-asset deploy target (see wrangler.jsonc: assets.directory = ./visualization).
+# demo.py generates dashboard.html here. This file keeps the directory tracked in git when empty.

@@ -1,0 +1,435 @@
+[
+  {
+    "campaign_id": "CAMP-001",
+    "campaign_name": "Operation Fancy Bear — Election Infrastructure Targeting",
+    "description": "A sustained Russian GRU-linked influence and espionage campaign targeting election infrastructure, political organizations, and government agencies across multiple NATO countries. Combines credential harvesting, spearphishing, and social media influence operations.",
+    "diamond_model": {
+      "adversary": {
+        "actor_id": "TA-001",
+        "actor_name": "APT28",
+        "confidence": 0.95
+      },
+      "capability": {
+        "malware": ["MA-001", "MA-002"],
+        "attack_patterns": ["OSINT-T003", "OSINT-T005", "OSINT-T012"],
+        "mitre_techniques": ["T1566.001", "T1078", "T1003", "T1027"],
+        "sophistication": "advanced"
+      },
+      "infrastructure": {
+        "infra_ids": ["INF-001"],
+        "types": ["c2_server", "phishing_domains", "compromised_websites"],
+        "hosting_countries": ["Netherlands", "France", "Germany"],
+        "protocols": ["HTTPS", "DNS-over-HTTPS"]
+      },
+      "victim": {
+        "sector_ids": ["SECTOR-003"],
+        "sector_names": ["Government & Defense"],
+        "specific_targets": ["Political party organizations", "Election management systems", "National security agencies"],
+        "countries_affected": ["USA", "Germany", "France", "Montenegro", "Ukraine"]
+      }
+    },
+    "timeline": {
+      "first_observed": "2014-01-01",
+      "last_observed": "2024-06-01",
+      "peak_activity": "2016-2017",
+      "status": "ongoing"
+    },
+    "kill_chain_coverage": {
+      "reconnaissance": true,
+      "weaponization": true,
+      "delivery": true,
+      "exploitation": true,
+      "installation": true,
+      "command_and_control": true,
+      "actions_on_objective": true
+    },
+    "impact": {
+      "type": ["data_exfiltration", "influence_operation", "credential_theft"],
+      "severity": "critical",
+      "estimated_victims": "hundreds of organizations",
+      "data_stolen": ["Emails", "Strategic documents", "Voter databases", "Internal communications"]
+    },
+    "attribution_confidence": 0.95,
+    "osint_risk_score": 0.93,
+    "sources": ["MITRE ATT&CK G0007", "Mueller Report 2019", "CISA / FBI Joint Advisory"],
+    "tags": ["nation-state", "russia", "elections", "espionage", "influence-ops"]
+  },
+  {
+    "campaign_id": "CAMP-002",
+    "campaign_name": "Operation SolarWinds (SUNBURST)",
+    "description": "The most sophisticated supply chain attack ever documented. APT29 trojanized the SolarWinds Orion software update mechanism, pushing SUNBURST backdoor to approximately 18,000 organizations. Approximately 100 were subsequently compromised in depth, including multiple US federal agencies and major technology companies.",
+    "diamond_model": {
+      "adversary": {
+        "actor_id": "TA-002",
+        "actor_name": "APT29",
+        "confidence": 0.99
+      },
+      "capability": {
+        "malware": ["MA-003"],
+        "attack_patterns": ["OSINT-T007", "OSINT-T005"],
+        "mitre_techniques": ["T1195.002", "T1036", "T1550.001", "T1098", "T1020"],
+        "sophistication": "elite"
+      },
+      "infrastructure": {
+        "infra_ids": [],
+        "types": ["compromised_software_update_server", "c2_via_avsvmcloud.com", "cloud_services"],
+        "hosting_countries": ["USA (cloud)", "Multiple (CDN)"],
+        "protocols": ["HTTPS", "DNS"]
+      },
+      "victim": {
+        "sector_ids": ["SECTOR-003"],
+        "sector_names": ["Government & Defense", "Technology"],
+        "specific_targets": [
+          "US Treasury Department",
+          "US Dept of Homeland Security",
+          "Microsoft",
+          "FireEye/Mandiant",
+          "Intel agencies"
+        ],
+        "countries_affected": ["USA", "UK", "Canada", "Israel", "UAE"]
+      }
+    },
+    "timeline": {
+      "first_observed": "2019-10-01",
+      "last_observed": "2020-12-31",
+      "peak_activity": "2020-03 to 2020-12",
+      "status": "concluded",
+      "discovery_date": "2020-12-08"
+    },
+    "kill_chain_coverage": {
+      "reconnaissance": true,
+      "weaponization": true,
+      "delivery": true,
+      "exploitation": true,
+      "installation": true,
+      "command_and_control": true,
+      "actions_on_objective": true
+    },
+    "impact": {
+      "type": ["data_exfiltration", "espionage", "persistent_access"],
+      "severity": "critical",
+      "estimated_victims": "~18,000 organizations received backdoor; ~100 deeply compromised",
+      "data_stolen": ["Government emails", "Classified documents", "Security tooling source code", "Intelligence assessments"]
+    },
+    "vulnerability_exploited": null,
+    "attribution_confidence": 0.99,
+    "osint_risk_score": 0.97,
+    "sources": ["CISA AA20-352A", "FireEye / Mandiant Report Dec 2020", "Microsoft MSTIC", "US Senate Intelligence Committee"],
+    "tags": ["supply-chain", "nation-state", "russia", "sunburst", "solarwinds", "elite-ttps"]
+  },
+  {
+    "campaign_id": "CAMP-003",
+    "campaign_name": "Operation Double Dragon — Telecom & Healthcare Espionage",
+    "description": "APT41's ongoing dual-mission campaign combining state-sponsored espionage targeting telecom networks (for SMS/call interception) and financially motivated attacks on healthcare and gaming sectors. Notable for near-instant exploitation of newly disclosed vulnerabilities.",
+    "diamond_model": {
+      "adversary": {
+        "actor_id": "TA-003",
+        "actor_name": "APT41",
+        "confidence": 0.91
+      },
+      "capability": {
+        "malware": ["MA-004", "MA-005"],
+        "attack_patterns": ["OSINT-T004", "OSINT-T010", "OSINT-T007"],
+        "mitre_techniques": ["T1190", "T1195.002", "T1059.001", "T1046", "T1090"],
+        "sophistication": "advanced"
+      },
+      "infrastructure": {
+        "infra_ids": [],
+        "types": ["compromised_telecom_infrastructure", "c2_via_legitimate_cloud", "proxy_chains"],
+        "hosting_countries": ["China", "Hong Kong", "Various compromised third parties"],
+        "protocols": ["HTTPS", "custom_protocols"]
+      },
+      "victim": {
+        "sector_ids": ["SECTOR-001", "SECTOR-002"],
+        "sector_names": ["Healthcare", "Financial Services", "Telecommunications", "Gaming"],
+        "specific_targets": [
+          "Telecom providers in Southeast Asia",
+          "US healthcare research organizations",
+          "Video game companies (IP theft)",
+          "Financial institutions"
+        ],
+        "countries_affected": ["USA", "India", "Australia", "Thailand", "Vietnam", "Indonesia"]
+      }
+    },
+    "timeline": {
+      "first_observed": "2014-01-01",
+      "last_observed": "2024-06-01",
+      "peak_activity": "2019-2021",
+      "status": "ongoing"
+    },
+    "kill_chain_coverage": {
+      "reconnaissance": true,
+      "weaponization": true,
+      "delivery": true,
+      "exploitation": true,
+      "installation": true,
+      "command_and_control": true,
+      "actions_on_objective": true
+    },
+    "impact": {
+      "type": ["data_exfiltration", "espionage", "ip_theft", "financial_theft"],
+      "severity": "high",
+      "estimated_victims": "dozens of telecom providers, hundreds of companies",
+      "data_stolen": ["SMS records", "Call data records", "Healthcare research", "Game source code", "Financial data"]
+    },
+    "attribution_confidence": 0.91,
+    "osint_risk_score": 0.90,
+    "sources": ["Mandiant APT41 Report 2019", "DOJ Indictment 2020", "MITRE ATT&CK G0096"],
+    "tags": ["nation-state", "china", "dual-use", "telecom", "healthcare", "gaming"]
+  },
+  {
+    "campaign_id": "CAMP-004",
+    "campaign_name": "Operation AppleJeus — Cryptocurrency Exchange Heists",
+    "description": "Lazarus Group's sustained campaign targeting cryptocurrency exchanges, DeFi protocols, and blockchain companies globally. Uses fake job offers and trojanized cryptocurrency trading applications as initial access vectors. Estimated to have stolen over $3 billion in cryptocurrency for the DPRK regime.",
+    "diamond_model": {
+      "adversary": {
+        "actor_id": "TA-004",
+        "actor_name": "Lazarus Group",
+        "confidence": 0.90
+      },
+      "capability": {
+        "malware": ["MA-006"],
+        "attack_patterns": ["OSINT-T005", "OSINT-T015", "OSINT-T012"],
+        "mitre_techniques": ["T1566.002", "T1204.002", "T1055", "T1657", "T1486"],
+        "sophistication": "advanced"
+      },
+      "infrastructure": {
+        "infra_ids": [],
+        "types": ["fake_company_websites", "trojanized_applications", "crypto_mixer_services"],
+        "hosting_countries": ["Various (VPS providers worldwide)", "Tor network"],
+        "protocols": ["HTTPS", "custom_crypto_protocols"]
+      },
+      "victim": {
+        "sector_ids": ["SECTOR-002"],
+        "sector_names": ["Financial Services"],
+        "specific_targets": [
+          "Cryptocurrency exchanges",
+          "DeFi protocols",
+          "Blockchain companies",
+          "Crypto wallet providers",
+          "NFT platforms"
+        ],
+        "countries_affected": ["USA", "South Korea", "Japan", "Estonia", "Slovenia", "UK"]
+      }
+    },
+    "timeline": {
+      "first_observed": "2018-01-01",
+      "last_observed": "2024-06-01",
+      "peak_activity": "2022-2023",
+      "status": "ongoing"
+    },
+    "kill_chain_coverage": {
+      "reconnaissance": true,
+      "weaponization": true,
+      "delivery": true,
+      "exploitation": true,
+      "installation": true,
+      "command_and_control": true,
+      "actions_on_objective": true
+    },
+    "impact": {
+      "type": ["financial_theft", "cryptocurrency_theft"],
+      "severity": "critical",
+      "estimated_victims": "50+ exchanges and protocols",
+      "financial_losses": "~$3B+ USD stolen in cryptocurrency",
+      "data_stolen": ["Private keys", "Wallet credentials", "Exchange admin access"]
+    },
+    "attribution_confidence": 0.90,
+    "osint_risk_score": 0.94,
+    "sources": ["UN Panel of Experts Report 2023", "Chainalysis 2023", "CISA Alert AA22-108A", "FBI Flash CU-000167-MW"],
+    "tags": ["nation-state", "north-korea", "crypto-theft", "financial", "applej eus", "lazarus"]
+  },
+  {
+    "campaign_id": "CAMP-005",
+    "campaign_name": "LockBit Global Ransomware Campaign",
+    "description": "The world's most prolific ransomware operation, responsible for more than 2,000 confirmed victims across 60+ countries. LockBit operates as a RaaS platform, providing affiliates with ransomware, infrastructure, and negotiation support in exchange for a share of ransom payments.",
+    "diamond_model": {
+      "adversary": {
+        "actor_id": "TA-005",
+        "actor_name": "LockBit",
+        "confidence": 0.95
+      },
+      "capability": {
+        "malware": ["MA-007"],
+        "attack_patterns": ["OSINT-T005", "OSINT-T011", "OSINT-T015"],
+        "mitre_techniques": ["T1110.004", "T1486", "T1490", "T1083", "T1021.001", "T1567.002"],
+        "sophistication": "high"
+      },
+      "infrastructure": {
+        "infra_ids": ["INF-002"],
+        "types": ["leak_site", "negotiation_portal", "affiliate_panel", "ransom_payment_portal"],
+        "hosting_countries": ["Tor Network"],
+        "protocols": ["Tor/HTTP"]
+      },
+      "victim": {
+        "sector_ids": ["SECTOR-001", "SECTOR-002", "SECTOR-003"],
+        "sector_names": ["Healthcare", "Financial Services", "Government & Defense", "Manufacturing"],
+        "specific_targets": [
+          "Boeing",
+          "Royal Mail UK",
+          "Bank of America (via third party)",
+          "Hospitals globally",
+          "Law firms"
+        ],
+        "countries_affected": ["USA", "UK", "France", "Germany", "Canada", "Australia", "60+ others"]
+      }
+    },
+    "timeline": {
+      "first_observed": "2019-09-01",
+      "last_observed": "2024-06-01",
+      "peak_activity": "2022-2023",
+      "status": "disrupted_but_active",
+      "law_enforcement_action": "Operation Cronos — Feb 2024, Europol / FBI / NCA seizure"
+    },
+    "kill_chain_coverage": {
+      "reconnaissance": true,
+      "weaponization": true,
+      "delivery": true,
+      "exploitation": true,
+      "installation": true,
+      "command_and_control": true,
+      "actions_on_objective": true
+    },
+    "impact": {
+      "type": ["ransomware", "data_exfiltration", "extortion"],
+      "severity": "critical",
+      "estimated_victims": "2,000+ confirmed; likely many more unreported",
+      "financial_losses": "~$91M+ USD in ransom payments to US victims alone",
+      "data_stolen": ["PII", "Financial records", "Healthcare records", "Legal documents", "Intellectual property"]
+    },
+    "vulnerability_exploited": null,
+    "attribution_confidence": 0.95,
+    "osint_risk_score": 0.92,
+    "sources": ["CISA Advisory AA23-075A", "FBI / Europol Joint Advisory", "Operation Cronos Press Release 2024"],
+    "tags": ["ransomware", "raas", "double-extortion", "global", "critical-infrastructure"]
+  },
+  {
+    "campaign_id": "CAMP-006",
+    "campaign_name": "Operation MOVEit Mass Exploitation",
+    "description": "Cl0p's most devastating campaign: mass zero-day exploitation of CVE-2023-34362 in MOVEit Transfer software. By exploiting a single SQL injection flaw, Cl0p breached hundreds of organizations simultaneously in what became one of the largest data theft operations in history by breadth of victims.",
+    "diamond_model": {
+      "adversary": {
+        "actor_id": "TA-006",
+        "actor_name": "Cl0p",
+        "confidence": 0.99
+      },
+      "capability": {
+        "malware": ["MA-008"],
+        "attack_patterns": ["OSINT-T010", "OSINT-T005", "OSINT-T015"],
+        "mitre_techniques": ["T1190", "T1059.003", "T1213", "T1657", "T1486"],
+        "sophistication": "high"
+      },
+      "infrastructure": {
+        "infra_ids": [],
+        "types": ["exploitation_infrastructure", "data_exfiltration_servers", "dark_web_leak_site"],
+        "hosting_countries": ["Tor network", "Various bulletproof hosting"],
+        "protocols": ["HTTPS", "Tor/HTTP"]
+      },
+      "victim": {
+        "sector_ids": ["SECTOR-001", "SECTOR-002", "SECTOR-003"],
+        "sector_names": ["Financial Services", "Healthcare", "Government", "Education"],
+        "specific_targets": [
+          "US Department of Energy",
+          "Shell",
+          "British Airways",
+          "BBC",
+          "Aer Lingus",
+          "University of Georgia",
+          "Zellis HR (payroll provider)"
+        ],
+        "countries_affected": ["USA", "UK", "Germany", "Canada", "Australia", "France"]
+      }
+    },
+    "timeline": {
+      "first_observed": "2023-05-27",
+      "last_observed": "2023-09-30",
+      "peak_activity": "2023-06",
+      "status": "concluded",
+      "zero_day_disclosure": "2023-06-01 (Progress Software)"
+    },
+    "kill_chain_coverage": {
+      "reconnaissance": true,
+      "weaponization": true,
+      "delivery": true,
+      "exploitation": true,
+      "installation": false,
+      "command_and_control": false,
+      "actions_on_objective": true
+    },
+    "vulnerability_exploited": "VUL-001",
+    "impact": {
+      "type": ["data_exfiltration", "extortion"],
+      "severity": "critical",
+      "estimated_victims": "2,600+ organizations; 77M+ individuals",
+      "financial_losses": "Estimated $9.9B total economic impact",
+      "data_stolen": ["Employee PII", "Payroll data", "Healthcare records", "Government contractor data"]
+    },
+    "attribution_confidence": 0.99,
+    "osint_risk_score": 0.97,
+    "sources": ["CISA Advisory AA23-158A", "Emsisoft MOVEit Tracker", "Microsoft MSTIC"],
+    "tags": ["zero-day", "mass-exploitation", "moveit", "supply-chain", "data-theft"]
+  },
+  {
+    "campaign_id": "CAMP-007",
+    "campaign_name": "KillNet NATO Infrastructure DDoS Campaign",
+    "description": "KillNet's sustained hacktivist DDoS campaign targeting NATO member state infrastructure following Russia's invasion of Ukraine. Coordinated primarily via Telegram, the campaign disrupted government websites, airports, hospitals, and media outlets across Europe and North America.",
+    "diamond_model": {
+      "adversary": {
+        "actor_id": "TA-007",
+        "actor_name": "KillNet",
+        "confidence": 0.87
+      },
+      "capability": {
+        "malware": [],
+        "attack_patterns": ["OSINT-T003", "OSINT-T012", "OSINT-T015"],
+        "mitre_techniques": ["T1498", "T1498.001", "T1583.006", "T1593.001"],
+        "sophistication": "medium"
+      },
+      "infrastructure": {
+        "infra_ids": [],
+        "types": ["botnet", "ddos_for_hire_services", "telegram_coordination_channels"],
+        "hosting_countries": ["Russia", "Various (rented botnets)"],
+        "protocols": ["HTTP", "UDP", "TCP flood"]
+      },
+      "victim": {
+        "sector_ids": ["SECTOR-001", "SECTOR-003"],
+        "sector_names": ["Government & Defense", "Healthcare", "Critical Infrastructure"],
+        "specific_targets": [
+          "NATO websites",
+          "US Congress website",
+          "Lockheed Martin",
+          "Hospitals in Netherlands and Germany",
+          "Airport websites across Europe",
+          "Media outlets"
+        ],
+        "countries_affected": ["USA", "Germany", "Netherlands", "Czech Republic", "Latvia", "Lithuania", "Poland", "Romania"]
+      }
+    },
+    "timeline": {
+      "first_observed": "2022-02-24",
+      "last_observed": "2024-06-01",
+      "peak_activity": "2022-2023",
+      "status": "ongoing"
+    },
+    "kill_chain_coverage": {
+      "reconnaissance": true,
+      "weaponization": false,
+      "delivery": true,
+      "exploitation": false,
+      "installation": false,
+      "command_and_control": true,
+      "actions_on_objective": true
+    },
+    "impact": {
+      "type": ["denial_of_service", "disruption", "influence_operation"],
+      "severity": "medium",
+      "estimated_victims": "100+ organizations disrupted",
+      "financial_losses": "Mostly temporary disruption; limited lasting damage",
+      "data_stolen": []
+    },
+    "attribution_confidence": 0.87,
+    "osint_risk_score": 0.73,
+    "sources": ["EU ENISA Threat Landscape 2023", "HHS HC3 Alert Feb 2023", "CISA"],
+    "tags": ["hacktivist", "ddos", "pro-russia", "nato", "ukraine-war", "influence-ops"]
+  }
+]

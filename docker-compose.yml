@@ -1,0 +1,117 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Open Intelligence Lab — Docker Compose v0.4.0
+# ─────────────────────────────────────────────────────────────────────────────
+
+networks:
+  oilab-net:
+    driver: bridge
+
+services:
+
+  db:
+    image: mariadb:10.11
+    container_name: oilab-db
+    networks:
+      - oilab-net
+    environment:
+      - MYSQL_ROOT_PASSWORD=misproot
+      - MYSQL_DATABASE=misp
+      - MYSQL_USER=misp
+      - MYSQL_PASSWORD=misp
+    volumes:
+      - misp_db:/var/lib/mysql
+    healthcheck:
+      test: mysqladmin --user=misp --password=misp status
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+  redis:
+    image: valkey/valkey:7.2
+    container_name: oilab-redis
+    networks:
+      - oilab-net
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  misp:
+    image: ghcr.io/misp/misp-docker/misp-core:latest
+    container_name: oilab-misp
+    networks:
+      - oilab-net
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - MYSQL_HOST=db
+      - MYSQL_PORT=3306
+      - MYSQL_DATABASE=misp
+      - MYSQL_USER=misp
+      - MYSQL_PASSWORD=misp
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - MISP_BASEURL=https://localhost
+      - MISP_ADMIN_EMAIL=admin@admin.test
+      - MISP_ADMIN_PASSPHRASE=admin
+      - MISP_ORG=Open Intelligence Lab
+    volumes:
+      - misp_data:/var/www/MISP/app/files
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fk", "https://localhost/users/heartbeat"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 120s
+    restart: unless-stopped
+
+  oilab:
+    build: .
+    container_name: oilab-api
+    networks:
+      - oilab-net
+    ports:
+      - "8000:8000"
+    environment:
+      - MISP_URL=https://misp
+      - MISP_KEY=${MISP_KEY:-}
+      - MISP_LABEL=MISP-Local
+      - MISP_VERIFY_SSL=false
+      - MISP_PULL_DAYS=7
+      - MISP_LIMIT=200
+      - MISP_INTERVAL_SECONDS=3600
+    depends_on:
+      misp:
+        condition: service_healthy
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: oilab-caddy
+    networks:
+      - oilab-net
+    ports:
+      - "8443:8443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - oilab
+    restart: unless-stopped
+
+volumes:
+  misp_db:
+  misp_data:
+  caddy_data:
+  caddy_config:

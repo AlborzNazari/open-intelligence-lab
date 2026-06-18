@@ -1,0 +1,39 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# ---- Virtual environments (this is what bloated the repo) ----
+venv/
+.venv/
+env/
+ENV/
+
+# ---- Secrets and local config ----
+.env
+.env.*
+
+# ---- Auth database: NEVER commit, it holds user password hashes ----
+*.db
+oil_users.db
+
+# ---- Generated artifacts ----
+exports/
+visualization/dashboard.html
+
+# ---- Test / tooling caches ----
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# ---- OS / editor noise ----
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp

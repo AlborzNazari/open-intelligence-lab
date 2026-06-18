@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Open Intelligence Lab</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500&display=swap');
+
+:root{
+  --bg:#000;
+  --surface:#0b0b0b;
+  --raised:#141414;
+  --line:#1b1b1b;
+  --line2:#2c2c2c;
+  --fg:#ffffff;
+  --fg2:#9a9a9a;
+  --fg3:#5e5e5e;
+  --fg4:#3a3a3a;
+  --crit:#ffffff;
+  --high:#c2c2c2;
+  --med:#8a8a8a;
+  --low:#565656;
+  --mono:'IBM Plex Mono',monospace;
+  --sans:'IBM Plex Sans',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--fg);font-family:var(--mono);font-size:13px;overflow:hidden}
+::selection{background:#fff;color:#000}
+button{font-family:var(--mono);cursor:pointer}
+input{font-family:var(--mono)}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-thumb{background:var(--line2)}
+::-webkit-scrollbar-track{background:transparent}
+
+#app{display:grid;grid-template-rows:44px 1fr;height:100vh}
+
+/* TOPBAR */
+#topbar{display:flex;align-items:center;gap:16px;padding:0 18px;border-bottom:1px solid var(--line)}
+.tb-logo{font-size:12px;font-weight:600;letter-spacing:.22em;color:var(--fg)}
+.tb-ver{font-size:10px;color:var(--fg3);border:1px solid var(--line2);padding:1px 6px}
+.tb-sep{flex:1}
+#api-status{font-size:11px;color:var(--fg3);letter-spacing:.06em}
+#api-status.live{color:var(--fg)}
+#api-status::before{content:'● ';color:var(--fg4)}
+#api-status.live::before{color:var(--fg)}
+
+/* SESSION */
+#session{display:flex;align-items:center;gap:10px}
+.sess-user{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--fg2)}
+.sess-role{font-size:9px;font-weight:600;padding:1px 6px;border:1px solid var(--line2);color:var(--fg2);letter-spacing:.1em;text-transform:uppercase}
+.sess-role.role-admin{color:var(--fg);border-color:var(--fg2)}
+.sess-exp{font-size:10px;color:var(--fg3)}
+.sess-exp.warn{color:var(--fg)}
+.btn{font-size:10px;padding:4px 12px;border:1px solid var(--line2);background:transparent;color:var(--fg2);letter-spacing:.06em;transition:all .12s}
+.btn:hover{border-color:var(--fg2);color:var(--fg)}
+.btn-primary{border-color:var(--fg2);color:var(--fg)}
+.btn-primary:hover{background:var(--fg);color:#000}
+
+/* MAIN */
+#main{display:grid;grid-template-columns:248px 1fr 296px;height:100%;overflow:hidden}
+
+/* SIDEBAR */
+#sidebar{border-right:1px solid var(--line);display:flex;flex-direction:column;overflow:hidden}
+.sb-head{padding:14px 16px 10px;border-bottom:1px solid var(--line)}
+.label{font-size:9px;color:var(--fg3);letter-spacing:.18em;text-transform:uppercase;margin-bottom:10px}
+#search-input{width:100%;background:transparent;border:none;border-bottom:1px solid var(--line2);color:var(--fg);font-size:12px;padding:5px 0;outline:none}
+#search-input:focus{border-bottom-color:var(--fg2)}
+#search-input::placeholder{color:var(--fg4)}
+.filter-row{display:flex;flex-wrap:wrap;gap:14px;margin-top:12px}
+.filter-btn{font-size:10px;border:none;background:none;color:var(--fg3);padding:0 0 2px;border-bottom:1px solid transparent;letter-spacing:.04em}
+.filter-btn:hover{color:var(--fg2)}
+.filter-btn.active{color:var(--fg);border-bottom-color:var(--fg)}
+#entity-list{flex:1;overflow-y:auto}
+.ent-item{display:flex;align-items:center;gap:9px;padding:8px 16px;cursor:pointer;border-left:2px solid transparent}
+.ent-item:hover{background:var(--surface)}
+.ent-item.selected{background:var(--raised);border-left-color:var(--fg)}
+.ent-badge{font-size:9px;color:var(--fg3);border:1px solid var(--line2);padding:1px 4px;min-width:28px;text-align:center;letter-spacing:.05em}
+.ent-name{flex:1;font-size:12px;color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ent-risk{font-size:11px;font-weight:600}
+.r-crit{color:var(--crit)} .r-high{color:var(--high)} .r-med{color:var(--med)} .r-low{color:var(--low)}
+#sb-stats{padding:12px 16px;border-top:1px solid var(--line)}
+.stat-row{display:flex;justify-content:space-between;margin-bottom:5px}
+.stat-label{font-size:10px;color:var(--fg3);letter-spacing:.06em}
+.stat-val{font-size:10px;color:var(--fg);font-weight:600}
+.risk-legend{display:flex;flex-direction:column;gap:3px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+.rl-row{display:flex;align-items:center;gap:7px;font-size:9px;color:var(--fg3)}
+.rl-swatch{width:16px;height:3px}
+.sb-api{padding:10px 16px;border-top:1px solid var(--line)}
+#api-url-input{width:100%;background:transparent;border:none;border-bottom:1px solid var(--line2);color:var(--fg2);font-size:10px;padding:3px 0;outline:none}
+#api-url-input:focus{border-bottom-color:var(--fg2)}
+
+/* CENTER */
+#center{display:flex;flex-direction:column;overflow:hidden}
+#tabs{display:flex;gap:22px;padding:0 18px;border-bottom:1px solid var(--line)}
+.tab-btn{font-size:11px;background:none;border:none;color:var(--fg3);padding:13px 0;border-bottom:1px solid transparent;letter-spacing:.08em}
+.tab-btn:hover{color:var(--fg2)}
+.tab-btn.active{color:var(--fg);border-bottom-color:var(--fg)}
+.tab-panel{flex:1;overflow:hidden;display:none}
+.tab-panel.active{display:flex;flex-direction:column}
+
+/* GRAPH */
+#graph-panel{flex:1;position:relative;overflow:hidden}
+#graph{width:100%;height:100%;display:block;cursor:grab}
+#graph:active{cursor:grabbing}
+.graph-note{position:absolute;left:16px;bottom:14px;font-size:9px;color:var(--fg4);letter-spacing:.08em}
+.graph-controls{position:absolute;right:14px;bottom:14px;display:flex;flex-direction:column;gap:5px}
+.gc-btn{width:26px;height:26px;background:var(--surface);border:1px solid var(--line2);color:var(--fg2);font-size:13px;display:flex;align-items:center;justify-content:center}
+.gc-btn:hover{border-color:var(--fg2);color:var(--fg)}
+
+/* TABLE */
+#table-panel{flex:1;overflow:auto;padding:0}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead th{font-size:9px;color:var(--fg3);text-align:left;padding:11px 14px;border-bottom:1px solid var(--line2);letter-spacing:.1em;text-transform:uppercase;position:sticky;top:0;background:var(--bg);cursor:pointer}
+thead th:hover{color:var(--fg)}
+tbody tr{border-bottom:1px solid var(--line);cursor:pointer}
+tbody tr:hover{background:var(--surface)}
+tbody td{padding:9px 14px;vertical-align:middle}
+.td-id{color:var(--fg3);font-size:11px}
+.td-name{color:var(--fg)}
+.td-dim{color:var(--fg3);font-size:11px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.risk-bar{height:3px;background:var(--line2);width:54px;display:inline-block;vertical-align:middle;margin-right:7px;position:relative}
+.risk-bar span{position:absolute;left:0;top:0;height:100%;background:var(--fg)}
+
+/* CAMPAIGNS / ATTACK CARDS */
+#campaigns-panel,#attack-panel{flex:1;overflow:auto;padding:16px}
+.card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px;align-content:start}
+.card{border:1px solid var(--line);padding:13px;background:var(--surface)}
+.card:hover{border-color:var(--line2)}
+.card-head{display:flex;justify-content:space-between;gap:8px;margin-bottom:8px;align-items:baseline}
+.card-title{font-size:12px;font-weight:600;color:var(--fg)}
+.card-score{font-size:11px;font-weight:600}
+.card-sub{font-size:10px;color:var(--fg3);margin-bottom:8px;letter-spacing:.04em}
+.card-desc{font-family:var(--sans);font-size:11px;color:var(--fg2);line-height:1.6;margin-bottom:10px}
+.card-tags{display:flex;flex-wrap:wrap;gap:5px}
+.tag{font-size:9px;color:var(--fg3);border:1px solid var(--line2);padding:1px 6px}
+
+/* DETAIL */
+#detail{border-left:1px solid var(--line);display:flex;flex-direction:column;overflow:hidden}
+.detail-head{padding:12px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+#detail-area{flex:1;overflow-y:auto;padding:16px}
+#detail-placeholder{color:var(--fg4);font-size:11px;text-align:center;padding:48px 16px;line-height:2.2;letter-spacing:.06em}
+.det-name{font-size:16px;font-weight:600;color:var(--fg);margin-bottom:3px}
+.det-id{font-size:10px;color:var(--fg3);margin-bottom:14px;letter-spacing:.06em}
+.det-risk{margin:12px 0}
+.det-risk-bar{height:4px;background:var(--line2);position:relative;margin-bottom:5px}
+.det-risk-bar span{position:absolute;left:0;top:0;height:100%;background:var(--fg)}
+.det-risk-val{font-size:13px;font-weight:600;color:var(--fg)}
+.det-row{display:flex;justify-content:space-between;gap:12px;padding:5px 0;border-bottom:1px solid var(--line)}
+.det-key{font-size:10px;color:var(--fg3);letter-spacing:.04em}
+.det-val{font-size:11px;color:var(--fg);text-align:right;max-width:170px;word-break:break-word}
+.det-section{margin:14px 0 7px;font-size:9px;color:var(--fg3);letter-spacing:.16em;text-transform:uppercase}
+.det-rel{padding:5px 8px;border:1px solid var(--line);margin-bottom:4px;font-size:11px;color:var(--fg2)}
+.det-rel b{color:var(--fg);font-weight:500}
+.det-line{font-family:var(--sans);font-size:11px;color:var(--fg2);line-height:1.6;margin-bottom:5px;padding-left:9px;border-left:1px solid var(--line2)}
+.det-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.link-act{font-size:10px;color:var(--fg3);background:none;border:none;letter-spacing:.06em;text-decoration:underline;text-underline-offset:3px}
+.link-act:hover{color:var(--fg)}
+
+/* LOGIN MODAL */
+#auth-modal{position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.82)}
+#auth-modal.open{display:flex}
+.auth-card{width:330px;max-width:calc(100vw - 32px);background:var(--bg);border:1px solid var(--line2);padding:24px}
+.auth-card h2{font-size:13px;letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px}
+.auth-card .sub{font-family:var(--sans);font-size:11px;color:var(--fg3);margin-bottom:18px;line-height:1.6}
+.auth-field{margin-bottom:13px}
+.auth-field label{display:block;font-size:9px;color:var(--fg3);text-transform:uppercase;letter-spacing:.12em;margin-bottom:5px}
+.auth-field input{width:100%;background:transparent;border:1px solid var(--line2);color:var(--fg);font-size:12px;padding:8px 10px;outline:none}
+.auth-field input:focus{border-color:var(--fg2)}
+.auth-submit{width:100%;padding:9px;margin-top:4px;border:1px solid var(--fg2);background:var(--fg);color:#000;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase}
+.auth-submit:hover{background:var(--fg2)}
+.auth-submit:disabled{opacity:.5;cursor:not-allowed}
+.auth-err{min-height:15px;font-size:10px;color:var(--fg);margin:8px 0 4px;line-height:1.5}
+.auth-foot{margin-top:14px;font-family:var(--sans);font-size:10px;color:var(--fg3);text-align:center;line-height:1.7}
+.auth-foot a{color:var(--fg2)}
+.auth-x{float:right;color:var(--fg3);font-size:16px;line-height:1;cursor:pointer}
+.auth-x:hover{color:var(--fg)}
+
+/* LOADING */
+#loading{position:fixed;inset:0;background:var(--bg);z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;transition:opacity .4s}
+.ld-logo{font-size:15px;letter-spacing:.3em;color:var(--fg)}
+.ld-bar{width:160px;height:1px;background:var(--line2);overflow:hidden}
+.ld-fill{height:100%;background:var(--fg);animation:ld 1s ease forwards}
+@keyframes ld{from{width:0}to{width:100%}}
+.ld-sub{font-size:10px;color:var(--fg3);letter-spacing:.1em}
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <div class="ld-logo">OPEN INTELLIGENCE LAB</div>
+  <div class="ld-bar"><div class="ld-fill"></div></div>
+  <div class="ld-sub" id="ld-msg">loading</div>
+</div>
+
+<div id="auth-modal">
+  <div class="auth-card">
+    <span class="auth-x" onclick="closeLogin()">×</span>
+    <h2 id="auth-title">Sign in</h2>
+    <p class="sub" id="auth-sub">Authenticate to pull live intelligence. Without a session the lab runs on local curated data.</p>
+    <div class="auth-field" id="field-name" style="display:none"><label for="login-name">Full name</label><input id="login-name" type="text" placeholder="Jane Analyst"/></div>
+    <div class="auth-field"><label for="login-user">Username</label><input id="login-user" type="text" autocomplete="username" placeholder="analyst"/></div>
+    <div class="auth-field"><label for="login-pass">Password</label><input id="login-pass" type="password" autocomplete="current-password" placeholder="at least 8 characters"/></div>
+    <div class="auth-err" id="login-err"></div>
+    <button class="auth-submit" id="login-submit" onclick="submitAuth()">Sign in</button>
+    <div class="auth-foot">
+      <div id="auth-toggle"><a href="#" onclick="setAuthMode('register');return false">Create an analyst account</a></div>
+      <div style="margin-top:6px">Admin tools live in the <a id="portal-link" href="#" target="_blank" rel="noopener">access portal</a>.</div>
+    </div>
+  </div>
+</div>
+
+<div id="app">
+  <div id="topbar">
+    <div class="tb-logo">OPEN·INTELLIGENCE·LAB</div>
+    <div class="tb-ver" id="tb-ver">v0.7.0</div>
+    <div class="tb-sep"></div>
+    <div id="api-status">local data</div>
+    <div id="session"></div>
+  </div>
+
+  <div id="main">
+    <div id="sidebar">
+      <div class="sb-head">
+        <div class="label">Entities</div>
+        <input id="search-input" type="text" placeholder="search id or name" oninput="filterEntities()"/>
+        <div class="filter-row">
+          <button class="filter-btn active" onclick="setTypeFilter('all',this)">all</button>
+          <button class="filter-btn" onclick="setTypeFilter('threat_actor',this)">actor</button>
+          <button class="filter-btn" onclick="setTypeFilter('malware',this)">malware</button>
+          <button class="filter-btn" onclick="setTypeFilter('vulnerability',this)">vuln</button>
+          <button class="filter-btn" onclick="setTypeFilter('infrastructure',this)">infra</button>
+          <button class="filter-btn" onclick="setTypeFilter('target_sector',this)">sector</button>
+        </div>
+      </div>
+      <div id="entity-list"></div>
+      <div id="sb-stats">
+        <div class="stat-row"><span class="stat-label">entities</span><span class="stat-val" id="stat-nodes">—</span></div>
+        <div class="stat-row"><span class="stat-label">relations</span><span class="stat-val" id="stat-edges">—</span></div>
+        <div class="stat-row"><span class="stat-label">avg risk</span><span class="stat-val" id="stat-risk">—</span></div>
+        <div class="stat-row"><span class="stat-label">source</span><span class="stat-val" id="stat-source">local</span></div>
+        <div class="risk-legend">
+          <div class="rl-row"><span class="rl-swatch" style="background:var(--crit)"></span>critical ≥ 0.90</div>
+          <div class="rl-row"><span class="rl-swatch" style="background:var(--high)"></span>high ≥ 0.70</div>
+          <div class="rl-row"><span class="rl-swatch" style="background:var(--med)"></span>medium ≥ 0.50</div>
+          <div class="rl-row"><span class="rl-swatch" style="background:var(--low)"></span>low &lt; 0.50</div>
+        </div>
+      </div>
+      <div class="sb-api"><input id="api-url-input" type="text" placeholder="api base url — enter to probe"/></div>
+    </div>
+
+    <div id="center">
+      <div id="tabs">
+        <button class="tab-btn active" onclick="switchTab('graph',this)">graph</button>
+        <button class="tab-btn" onclick="switchTab('table',this)">entities</button>
+        <button class="tab-btn" onclick="switchTab('campaigns',this)">campaigns</button>
+        <button class="tab-btn" onclick="switchTab('attack',this)">patterns</button>
+      </div>
+      <div id="tab-graph" class="tab-panel active">
+        <div id="graph-panel">
+          <canvas id="graph"></canvas>
+          <div class="graph-note">node brightness = risk · drag to move · scroll to zoom</div>
+          <div class="graph-controls">
+            <button class="gc-btn" onclick="zoomIn()">+</button>
+            <button class="gc-btn" onclick="zoomOut()">−</button>
+            <button class="gc-btn" onclick="resetView()">○</button>
+          </div>
+        </div>
+      </div>
+      <div id="tab-table" class="tab-panel">
+        <div id="table-panel">
+          <table>
+            <thead><tr>
+              <th onclick="sortTable('entity_id')">id</th>
+              <th onclick="sortTable('name')">name</th>
+              <th>type</th>
+              <th onclick="sortTable('risk_score')">risk</th>
+              <th>aliases</th>
+              <th onclick="sortTable('source')">source</th>
+            </tr></thead>
+            <tbody id="table-body"></tbody>
+          </table>
+        </div>
+      </div>
+      <div id="tab-campaigns" class="tab-panel"><div id="campaigns-panel"><div class="card-grid" id="campaigns-grid"></div></div></div>
+      <div id="tab-attack" class="tab-panel"><div id="attack-panel"><div class="card-grid" id="attack-grid"></div></div></div>
+    </div>
+
+    <div id="detail">
+      <div class="detail-head"><span class="label" style="margin:0">Detail</span><button class="link-act" id="stix-btn" onclick="exportSTIX()" style="display:none">export stix</button></div>
+      <div id="detail-area"><div id="detail-placeholder">select an entity<br/>to inspect its<br/>intelligence profile</div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const LOCAL_ENTITIES = [{"entity_id":"TA-001","entity_type":"threat_actor","name":"APT28","aliases":["Fancy Bear","SOFACY","Pawn Storm","Sednit"],"origin_country":"RU","motivation":["espionage","influence_operations"],"sophistication":"advanced","active_since":"2004","target_sectors":["government","military","elections","defense"],"associated_patterns":["OSINT-T003","OSINT-T005","OSINT-T012"],"associated_malware":["MA-001","MA-002"],"risk_score":0.95,"confidence":0.93,"source":"MITRE ATT&CK G0007","tags":["nation-state","russia","gru","apt"]},{"entity_id":"TA-002","entity_type":"threat_actor","name":"APT29","aliases":["Cozy Bear","The Dukes","Midnight Blizzard","NOBELIUM"],"origin_country":"RU","motivation":["espionage"],"sophistication":"advanced","active_since":"2008","target_sectors":["government","healthcare","think_tanks","supply_chain"],"associated_patterns":["OSINT-T007","OSINT-T005","OSINT-T015"],"associated_malware":["MA-003"],"risk_score":0.97,"confidence":0.95,"source":"MITRE ATT&CK G0016","tags":["nation-state","russia","svr","apt","solarwinds"]},{"entity_id":"TA-003","entity_type":"threat_actor","name":"APT41","aliases":["Double Dragon","Winnti","BARIUM","Wicked Panda"],"origin_country":"CN","motivation":["espionage","financial"],"sophistication":"advanced","active_since":"2012","target_sectors":["telecom","finance","gaming","healthcare","technology"],"associated_patterns":["OSINT-T004","OSINT-T010","OSINT-T007"],"associated_malware":["MA-004","MA-005"],"risk_score":0.93,"confidence":0.91,"source":"MITRE ATT&CK G0096","tags":["nation-state","china","dual-use","apt"]},{"entity_id":"TA-004","entity_type":"threat_actor","name":"Lazarus Group","aliases":["Hidden Cobra","Guardians of Peace","APT38","ZINC"],"origin_country":"KP","motivation":["financial","espionage","sabotage"],"sophistication":"advanced","active_since":"2009","target_sectors":["finance","cryptocurrency","defense","energy"],"associated_patterns":["OSINT-T005","OSINT-T015","OSINT-T011"],"associated_malware":["MA-006"],"risk_score":0.94,"confidence":0.9,"source":"MITRE ATT&CK G0032","tags":["nation-state","north-korea","swift-fraud","crypto-theft"]},{"entity_id":"TA-005","entity_type":"threat_actor","name":"LockBit","aliases":["LockBit 2.0","LockBit 3.0","LockBit Black"],"origin_country":"unknown","motivation":["financial"],"sophistication":"high","active_since":"2019","target_sectors":["healthcare","finance","manufacturing","government","legal"],"associated_patterns":["OSINT-T005","OSINT-T011","OSINT-T015"],"associated_malware":["MA-007"],"risk_score":0.91,"confidence":0.92,"source":"CISA Advisory AA23-075A","tags":["ransomware","raas","double-extortion","cybercriminal"]},{"entity_id":"TA-006","entity_type":"threat_actor","name":"Cl0p","aliases":["TA505","FIN11"],"origin_country":"unknown","motivation":["financial"],"sophistication":"high","active_since":"2019","target_sectors":["finance","retail","healthcare","education"],"associated_patterns":["OSINT-T005","OSINT-T010","OSINT-T015"],"associated_malware":["MA-008"],"risk_score":0.88,"confidence":0.87,"source":"CISA Advisory AA23-158A","tags":["ransomware","moveit","zero-day-exploitation","cybercriminal"]},{"entity_id":"TA-007","entity_type":"threat_actor","name":"KillNet","aliases":["KillMilk"],"origin_country":"RU","motivation":["ideological","influence_operations"],"sophistication":"medium","active_since":"2022","target_sectors":["government","healthcare","critical_infrastructure","media"],"associated_patterns":["OSINT-T003","OSINT-T012","OSINT-T015"],"associated_malware":[],"risk_score":0.72,"confidence":0.85,"source":"CISA Advisory 2023","tags":["hacktivist","ddos","pro-russia","nato-targets"]},{"entity_id":"MA-001","entity_type":"malware","name":"X-Agent","aliases":["Sofacy","CHOPSTICK"],"malware_type":"RAT","associated_actor":"TA-001","platforms":["Windows","Linux","macOS","iOS","Android"],"capabilities":["keylogging","file_exfiltration","screenshot_capture","remote_shell"],"first_seen":"2007","risk_score":0.88,"confidence":0.92,"source":"MITRE ATT&CK S0054","tags":["apt28","rat","cross-platform","espionage"]},{"entity_id":"MA-002","entity_type":"malware","name":"X-Tunnel","aliases":["TRANSGRESSOR"],"malware_type":"tunneling_tool","associated_actor":"TA-001","platforms":["Windows"],"capabilities":["encrypted_c2_tunnel","network_exfiltration"],"first_seen":"2015","risk_score":0.75,"confidence":0.89,"source":"MITRE ATT&CK S0004","tags":["apt28","c2","encryption","exfiltration"]},{"entity_id":"MA-003","entity_type":"malware","name":"SUNBURST","aliases":["Solorigate"],"malware_type":"backdoor","associated_actor":"TA-002","platforms":["Windows"],"capabilities":["supply_chain_persistence","c2_communication","lateral_movement","data_collection"],"first_seen":"2019","risk_score":0.97,"confidence":0.99,"source":"MITRE ATT&CK S0559","tags":["apt29","supply-chain","solarwinds","nation-state"]},{"entity_id":"MA-004","entity_type":"malware","name":"MESSAGETAP","aliases":[],"malware_type":"network_sniffer","associated_actor":"TA-003","platforms":["Linux"],"capabilities":["sms_interception","call_record_theft","network_traffic_capture"],"first_seen":"2019","risk_score":0.85,"confidence":0.88,"source":"Mandiant Report 2019","tags":["apt41","telecom","sms","espionage"]},{"entity_id":"MA-005","entity_type":"malware","name":"Winnti","aliases":["POISONPLUG"],"malware_type":"backdoor","associated_actor":"TA-003","platforms":["Windows","Linux"],"capabilities":["remote_access","rootkit","persistence","lateral_movement"],"first_seen":"2011","risk_score":0.87,"confidence":0.91,"source":"MITRE ATT&CK S0141","tags":["apt41","rootkit","gaming","supply-chain"]},{"entity_id":"MA-006","entity_type":"malware","name":"BLINDINGCAN","aliases":["AIRDRY"],"malware_type":"RAT","associated_actor":"TA-004","platforms":["Windows"],"capabilities":["remote_shell","file_management","process_injection","keylogging"],"first_seen":"2020","risk_score":0.86,"confidence":0.88,"source":"CISA Alert AA20-239A","tags":["lazarus","rat","north-korea","espionage"]},{"entity_id":"MA-007","entity_type":"malware","name":"LockBit Ransomware","aliases":["LockBit 3.0","LockBit Black"],"malware_type":"ransomware","associated_actor":"TA-005","platforms":["Windows","Linux","VMware ESXi"],"capabilities":["file_encryption","data_exfiltration","self_propagation","defense_evasion"],"first_seen":"2019","risk_score":0.93,"confidence":0.95,"source":"CISA Advisory AA23-075A","tags":["ransomware","raas","double-extortion"]},{"entity_id":"MA-008","entity_type":"malware","name":"Cl0p Ransomware","aliases":["Clop"],"malware_type":"ransomware","associated_actor":"TA-006","platforms":["Windows"],"capabilities":["file_encryption","data_exfiltration","shadow_copy_deletion","backup_destruction"],"first_seen":"2019","risk_score":0.89,"confidence":0.91,"source":"CISA Advisory AA23-158A","tags":["ransomware","moveit","zero-day"]},{"entity_id":"INF-001","entity_type":"infrastructure","name":"APT28 Primary C2 Cluster","infra_type":"c2_server","associated_actor":"TA-001","hosting_regions":["Netherlands","France","Germany"],"protocols":["HTTPS","DNS-over-HTTPS"],"detection_notes":"Uses compromised legitimate websites as first-stage C2 relays.","risk_score":0.88,"confidence":0.8,"source":"Public threat reports","tags":["apt28","c2","infrastructure"]},{"entity_id":"INF-002","entity_type":"infrastructure","name":"LockBit Leak Site","infra_type":"leak_site","associated_actor":"TA-005","hosting_regions":["Tor Network"],"protocols":["Tor/HTTP"],"detection_notes":"Used to publish stolen data of non-paying victims as extortion pressure.","risk_score":0.9,"confidence":0.95,"source":"CISA Advisory AA23-075A","tags":["lockbit","leak-site","extortion","dark-web"]},{"entity_id":"VUL-001","entity_type":"vulnerability","name":"CVE-2023-34362","cve_id":"CVE-2023-34362","affected_product":"MOVEit Transfer","vendor":"Progress Software","cvss_score":9.8,"vuln_type":"SQL Injection","exploited_by":["TA-006"],"exploitation_status":"actively_exploited","patch_available":true,"patch_date":"2023-06-01","risk_score":0.97,"confidence":0.99,"source":"NVD / CISA KEV","tags":["critical","sql-injection","moveit","cl0p","mass-exploitation"]},{"entity_id":"VUL-002","entity_type":"vulnerability","name":"CVE-2024-3400","cve_id":"CVE-2024-3400","affected_product":"PAN-OS GlobalProtect","vendor":"Palo Alto Networks","cvss_score":10.0,"vuln_type":"OS Command Injection","exploited_by":["TA-002"],"exploitation_status":"actively_exploited","patch_available":true,"patch_date":"2024-04-14","risk_score":0.99,"confidence":0.98,"source":"NVD / CISA KEV","tags":["critical","zero-day","palo-alto","vpn","rce"]},{"entity_id":"SECTOR-001","entity_type":"target_sector","name":"Healthcare","targeted_by":["TA-002","TA-005","TA-006","TA-007"],"primary_risk":"ransomware disrupting patient care, PHI exfiltration","regulatory_context":"HIPAA, HITECH","risk_score":0.92,"confidence":0.95,"source":"HHS HC3 Threat Briefings","tags":["critical-sector","hipaa","ransomware-target"]},{"entity_id":"SECTOR-002","entity_type":"target_sector","name":"Financial Services","targeted_by":["TA-004","TA-005","TA-006"],"primary_risk":"SWIFT fraud, ransomware, data theft, crypto exchange compromise","regulatory_context":"PCI-DSS, SOX, DORA","risk_score":0.93,"confidence":0.96,"source":"FS-ISAC Reports","tags":["critical-sector","swift","fraud","crypto"]},{"entity_id":"SECTOR-003","entity_type":"target_sector","name":"Government & Defense","targeted_by":["TA-001","TA-002","TA-004","TA-007"],"primary_risk":"espionage, classified data exfiltration, influence operations, sabotage","regulatory_context":"FISMA, CMMC, NIS2","risk_score":0.97,"confidence":0.97,"source":"CISA / NSA Joint Advisories","tags":["critical-sector","espionage","nation-state-target"]}];
+const LOCAL_RELATIONS = [{"relation_id":"REL-001","relation_type":"uses","source_id":"TA-001","source_type":"threat_actor","target_id":"MA-001","target_type":"malware","description":"APT28 deploys X-Agent as its primary espionage RAT across campaigns.","confidence":0.95,"first_observed":"2014","last_observed":"2023","source_ref":"MITRE ATT&CK G0007","tags":["apt28","primary-tool"]},{"relation_id":"REL-002","relation_type":"uses","source_id":"TA-001","source_type":"threat_actor","target_id":"MA-002","target_type":"malware","description":"APT28 uses X-Tunnel to create encrypted channels for data exfiltration.","confidence":0.91,"first_observed":"2015","last_observed":"2022","source_ref":"MITRE ATT&CK G0007","tags":["apt28","exfiltration-tool"]},{"relation_id":"REL-003","relation_type":"uses","source_id":"TA-001","source_type":"threat_actor","target_id":"INF-001","target_type":"infrastructure","description":"APT28 operates a cluster of C2 servers hosted primarily in European countries.","confidence":0.8,"first_observed":"2016","last_observed":"2024","source_ref":"Public threat intelligence reports","tags":["apt28","c2-infrastructure"]},{"relation_id":"REL-004","relation_type":"uses","source_id":"TA-002","source_type":"threat_actor","target_id":"MA-003","target_type":"malware","description":"APT29 deployed SUNBURST via a trojanized SolarWinds Orion software update.","confidence":0.99,"first_observed":"2019","last_observed":"2020","source_ref":"CISA AA20-352A / FireEye Report","tags":["apt29","supply-chain","sunburst"]},{"relation_id":"REL-005","relation_type":"exploits","source_id":"TA-002","source_type":"threat_actor","target_id":"VUL-002","target_type":"vulnerability","description":"APT29-linked activity exploited CVE-2024-3400 in PAN-OS as a zero-day for initial access.","confidence":0.92,"first_observed":"2024","last_observed":"2024","source_ref":"Volexity / Palo Alto Unit 42","tags":["apt29","zero-day","pan-os"]},{"relation_id":"REL-006","relation_type":"uses","source_id":"TA-003","source_type":"threat_actor","target_id":"MA-004","target_type":"malware","description":"APT41 deployed MESSAGETAP on telecom networks to intercept SMS and call records.","confidence":0.88,"first_observed":"2019","last_observed":"2021","source_ref":"Mandiant APT41 Report 2019","tags":["apt41","telecom","interception"]},{"relation_id":"REL-007","relation_type":"uses","source_id":"TA-003","source_type":"threat_actor","target_id":"MA-005","target_type":"malware","description":"APT41 uses Winnti as a long-term backdoor for persistent access in espionage operations.","confidence":0.93,"first_observed":"2012","last_observed":"2024","source_ref":"MITRE ATT&CK G0096","tags":["apt41","persistence","rootkit"]},{"relation_id":"REL-008","relation_type":"uses","source_id":"TA-004","source_type":"threat_actor","target_id":"MA-006","target_type":"malware","description":"Lazarus Group uses BLINDINGCAN as a primary RAT for espionage and financial theft operations.","confidence":0.88,"first_observed":"2020","last_observed":"2023","source_ref":"CISA Alert AA20-239A","tags":["lazarus","rat","financial-theft"]},{"relation_id":"REL-009","relation_type":"uses","source_id":"TA-005","source_type":"threat_actor","target_id":"MA-007","target_type":"malware","description":"LockBit group deploys LockBit ransomware payload as the final stage of their RaaS operations.","confidence":0.97,"first_observed":"2019","last_observed":"2024","source_ref":"CISA Advisory AA23-075A","tags":["lockbit","ransomware","raas"]},{"relation_id":"REL-010","relation_type":"uses","source_id":"TA-005","source_type":"threat_actor","target_id":"INF-002","target_type":"infrastructure","description":"LockBit operates a dark web leak site on Tor to pressure victims with threat of data publication.","confidence":0.99,"first_observed":"2020","last_observed":"2024","source_ref":"CISA Advisory AA23-075A","tags":["lockbit","extortion","leak-site"]},{"relation_id":"REL-011","relation_type":"uses","source_id":"TA-006","source_type":"threat_actor","target_id":"MA-008","target_type":"malware","description":"Cl0p deploys its eponymous ransomware after mass exploitation of zero-day vulnerabilities.","confidence":0.95,"first_observed":"2019","last_observed":"2024","source_ref":"CISA Advisory AA23-158A","tags":["cl0p","ransomware"]},{"relation_id":"REL-012","relation_type":"exploits","source_id":"TA-006","source_type":"threat_actor","target_id":"VUL-001","target_type":"vulnerability","description":"Cl0p exclusively exploited CVE-2023-34362 in MOVEit Transfer to breach hundreds of organizations globally.","confidence":0.99,"first_observed":"2023","last_observed":"2023","source_ref":"CISA Advisory AA23-158A / Microsoft MSTIC","tags":["cl0p","moveit","mass-exploitation","zero-day"]},{"relation_id":"REL-013","relation_type":"targets","source_id":"TA-001","source_type":"threat_actor","target_id":"SECTOR-003","target_type":"target_sector","description":"APT28 primarily targets government, military, and defense organizations for espionage.","confidence":0.97,"first_observed":"2007","last_observed":"2024","source_ref":"MITRE ATT&CK G0007","tags":["apt28","espionage"]},{"relation_id":"REL-014","relation_type":"targets","source_id":"TA-002","source_type":"threat_actor","target_id":"SECTOR-003","target_type":"target_sector","description":"APT29 targets government, defense, and intelligence agencies primarily for espionage.","confidence":0.96,"first_observed":"2010","last_observed":"2024","source_ref":"MITRE ATT&CK G0016","tags":["apt29","espionage"]},{"relation_id":"REL-015","relation_type":"targets","source_id":"TA-004","source_type":"threat_actor","target_id":"SECTOR-002","target_type":"target_sector","description":"Lazarus Group systematically targets financial institutions and cryptocurrency exchanges for revenue generation.","confidence":0.94,"first_observed":"2015","last_observed":"2024","source_ref":"UN Panel of Experts Report 2023","tags":["lazarus","financial-theft","crypto"]},{"relation_id":"REL-016","relation_type":"targets","source_id":"TA-005","source_type":"threat_actor","target_id":"SECTOR-001","target_type":"target_sector","description":"LockBit frequently targets healthcare organizations due to high ransom payment likelihood.","confidence":0.93,"first_observed":"2020","last_observed":"2024","source_ref":"HHS HC3 Threat Brief / CISA","tags":["lockbit","healthcare","ransomware"]},{"relation_id":"REL-017","relation_type":"targets","source_id":"TA-006","source_type":"threat_actor","target_id":"SECTOR-002","target_type":"target_sector","description":"Cl0p targets financial services organizations, stealing sensitive data for extortion.","confidence":0.9,"first_observed":"2020","last_observed":"2024","source_ref":"CISA Advisory AA23-158A","tags":["cl0p","finance","extortion"]},{"relation_id":"REL-018","relation_type":"targets","source_id":"TA-007","source_type":"threat_actor","target_id":"SECTOR-001","target_type":"target_sector","description":"KillNet has conducted DDoS campaigns against healthcare organizations, disrupting patient services.","confidence":0.87,"first_observed":"2022","last_observed":"2023","source_ref":"HHS HC3 Alert February 2023","tags":["killnet","ddos","healthcare","hacktivist"]},{"relation_id":"REL-019","relation_type":"uses_pattern","source_id":"TA-001","source_type":"threat_actor","target_id":"OSINT-T003","target_type":"attack_pattern","description":"APT28 uses social media footprint analysis during reconnaissance to identify and profile targets for spearphishing.","confidence":0.88,"first_observed":"2014","last_observed":"2024","source_ref":"MITRE ATT&CK T1593.001","tags":["apt28","reconnaissance","socmint"]},{"relation_id":"REL-020","relation_type":"uses_pattern","source_id":"TA-002","source_type":"threat_actor","target_id":"OSINT-T007","target_type":"attack_pattern","description":"APT29 has leveraged exposed repository secrets and supply chain access as part of its toolchain.","confidence":0.85,"first_observed":"2019","last_observed":"2024","source_ref":"MITRE ATT&CK T1552.001","tags":["apt29","supply-chain","credential-theft"]},{"relation_id":"REL-021","relation_type":"uses_pattern","source_id":"TA-005","source_type":"threat_actor","target_id":"OSINT-T005","target_type":"attack_pattern","description":"LockBit affiliates use credential stuffing with leaked credentials for initial access to target networks.","confidence":0.91,"first_observed":"2020","last_observed":"2024","source_ref":"CISA Advisory AA23-075A","tags":["lockbit","initial-access","credential-stuffing"]},{"relation_id":"REL-022","relation_type":"uses_pattern","source_id":"TA-006","source_type":"threat_actor","target_id":"OSINT-T010","target_type":"attack_pattern","description":"Cl0p uses internet scanning to discover exposed MOVEit Transfer instances before exploitation.","confidence":0.89,"first_observed":"2023","last_observed":"2023","source_ref":"CISA Advisory AA23-158A","tags":["cl0p","scanning","reconnaissance"]},{"relation_id":"REL-023","relation_type":"uses_pattern","source_id":"TA-004","source_type":"threat_actor","target_id":"OSINT-T015","target_type":"attack_pattern","description":"Lazarus Group monitors dark web forums and cryptocurrency channels to identify and approach potential victims.","confidence":0.82,"first_observed":"2018","last_observed":"2024","source_ref":"Chainalysis Crypto Crime Report 2023","tags":["lazarus","dark-web","crypto-targeting"]},{"relation_id":"REL-024","relation_type":"uses_pattern","source_id":"TA-003","source_type":"threat_actor","target_id":"OSINT-T004","target_type":"attack_pattern","description":"APT41 conducts DNS and subdomain enumeration to discover the full attack surface of target organizations.","confidence":0.86,"first_observed":"2017","last_observed":"2024","source_ref":"MITRE ATT&CK G0096","tags":["apt41","reconnaissance","dns-enumeration"]},{"relation_id":"REL-025","relation_type":"related_to","source_id":"MA-001","source_type":"malware","target_id":"MA-002","target_type":"malware","description":"X-Agent and X-Tunnel are used together in APT28 campaigns: X-Agent collects data while X-Tunnel exfiltrates it.","confidence":0.93,"first_observed":"2015","last_observed":"2022","source_ref":"MITRE ATT&CK G0007","tags":["apt28","malware-pair","collect-and-exfil"]},{"relation_id":"REL-026","relation_type":"related_to","source_id":"VUL-001","source_type":"vulnerability","target_id":"SECTOR-002","target_type":"target_sector","description":"CVE-2023-34362 in MOVEit Transfer had outsized impact on financial services due to widespread adoption of the file transfer product.","confidence":0.95,"first_observed":"2023","last_observed":"2023","source_ref":"CISA / Progress Software","tags":["moveit","financial-sector","mass-exploitation"]},{"relation_id":"REL-027","relation_type":"uses_pattern","source_id":"TA-007","source_type":"threat_actor","target_id":"OSINT-T003","target_type":"attack_pattern","description":"KillNet uses social media to coordinate attacks, recruit members, and conduct influence operations against target nations.","confidence":0.88,"first_observed":"2022","last_observed":"2024","source_ref":"EU ENISA Threat Landscape 2023","tags":["killnet","social-media","coordination"]},{"relation_id":"REL-028","relation_type":"uses_pattern","source_id":"TA-005","source_type":"threat_actor","target_id":"OSINT-T011","target_type":"attack_pattern","description":"LockBit monitors paste sites and dark web forums to post stolen data and communicate ransom demands.","confidence":0.92,"first_observed":"2021","last_observed":"2024","source_ref":"CISA Advisory AA23-075A","tags":["lockbit","extortion","dark-web"]}];
+const LOCAL_ATTACK = [{"pattern_id":"OSINT-T001","pattern_name":"Public Metadata Exposure","category":"Privacy Risk","risk_level":0.6,"description":"Sensitive metadata (author names, GPS coordinates, software versions) embedded in publicly accessible documents, images, or files.","mitre_ref":"T1592","kill_chain_phase":"reconnaissance","platforms":["web","documents","images"],"data_sources":["EXIF data","PDF metadata","Office file properties"],"detection":"Scan public-facing files for embedded metadata using ExifTool or FOCA.","mitigation":"Strip metadata before publishing. Use metadata scrubbers in CI/CD pipeline."},{"pattern_id":"OSINT-T002","pattern_name":"Repeated Breach Mentions","category":"Reputation Risk","risk_level":0.7,"description":"An entity (person, organization, or domain) repeatedly appears in data breach databases, indicating systemic security hygiene failures.","mitre_ref":"T1589.002","kill_chain_phase":"reconnaissance","platforms":["web","dark web","paste sites"],"data_sources":["HaveIBeenPwned","DeHashed","LeakCheck","dark web forums"],"detection":"Monitor breach notification services for mentions of organizational email domains.","mitigation":"Enforce MFA, credential rotation policies, and monitor for credential stuffing attempts."},{"pattern_id":"OSINT-T003","pattern_name":"Social Media Footprint Analysis","category":"Identity Risk","risk_level":0.55,"description":"Aggregating public social media posts, connections, and activity patterns to profile individuals or organizations, revealing behavioral patterns, schedules, affiliations, and vulnerabilities.","mitre_ref":"T1593.001","kill_chain_phase":"reconnaissance","platforms":["LinkedIn","Twitter/X","Facebook","Instagram","Reddit"],"data_sources":["Public posts","profile bios","friend/follower lists","check-ins"],"detection":"Monitor for unusual third-party API queries on social accounts.","mitigation":"Audit public profile visibility settings. Train employees on OPSEC."},{"pattern_id":"OSINT-T004","pattern_name":"DNS & Subdomain Enumeration","category":"Infrastructure Risk","risk_level":0.75,"description":"Systematically querying DNS records and brute-forcing subdomains to map an organization's full internet footprint, identifying internal systems, staging environments, and forgotten assets.","mitre_ref":"T1590.002","kill_chain_phase":"reconnaissance","platforms":["DNS","web"],"data_sources":["Certificate Transparency logs","DNS zone transfers","Shodan","Censys"],"detection":"Monitor CT logs for new certificate issuances on your domains.","mitigation":"Disable zone transfers. Audit and shut down unused subdomains. Use split-horizon DNS."},{"pattern_id":"OSINT-T005","pattern_name":"Credential Leak Exploitation","category":"Access Risk","risk_level":0.9,"description":"Using credentials exposed in historical data breaches to attempt authentication against current services via credential stuffing or password spraying.","mitre_ref":"T1110.004","kill_chain_phase":"initial-access","platforms":["web applications","VPN portals","email services","cloud consoles"],"data_sources":["Breach compilation databases","combo lists","dark web markets"],"detection":"Detect unusual login volumes and logins from new geographies or IPs.","mitigation":"Enforce MFA everywhere. Block known breach passwords at login."},{"pattern_id":"OSINT-T006","pattern_name":"Job Posting Intelligence Extraction","category":"Infrastructure Risk","risk_level":0.5,"description":"Analyzing job postings to infer an organization's technology stack, security gaps, planned projects, and internal tools from required skills and qualifications.","mitre_ref":"T1591","kill_chain_phase":"reconnaissance","platforms":["LinkedIn","Indeed","Glassdoor","company career pages"],"data_sources":["Job posting text","skill requirements","technology mentions"],"detection":"Difficult to detect; this is passive OSINT by the adversary.","mitigation":"Sanitize job postings to avoid exposing specific vendor names and internal tool stacks."},{"pattern_id":"OSINT-T007","pattern_name":"Exposed Repository Secret Mining","category":"Access Risk","risk_level":0.95,"description":"Scanning public code repositories (GitHub, GitLab, Bitbucket) for accidentally committed secrets: API keys, passwords, database connection strings, private certificates.","mitre_ref":"T1552.001","kill_chain_phase":"reconnaissance","platforms":["GitHub","GitLab","Bitbucket","npm registry","PyPI"],"data_sources":["Public git commits","repo history","package source code"],"detection":"Use GitHub secret scanning alerts. Integrate Gitleaks or TruffleHog in CI/CD.","mitigation":"Never commit secrets. Use environment variables + secret managers (Vault, AWS Secrets Manager). Rotate any exposed credential immediately."},{"pattern_id":"OSINT-T008","pattern_name":"Geolocation Inference via Public Data","category":"Privacy Risk","risk_level":0.65,"description":"Determining precise physical locations of individuals or infrastructure by correlating public data: photo backgrounds, IP geolocation, social media check-ins, street view imagery.","mitre_ref":"T1591.002","kill_chain_phase":"reconnaissance","platforms":["social media","web","mapping services"],"data_sources":["EXIF GPS tags","photo backgrounds","IP records","WHOIS"],"detection":"Monitor for mass lookups of organizational IP ranges.","mitigation":"Strip GPS metadata from photos. Use privacy-preserving proxies for public-facing services."},{"pattern_id":"OSINT-T009","pattern_name":"Whois & Registration Data Harvesting","category":"Infrastructure Risk","risk_level":0.45,"description":"Extracting domain registration data, registrant names, emails, and organization details from WHOIS databases and historical WHOIS archives to identify infrastructure ownership and pivot to related assets.","mitre_ref":"T1590.001","kill_chain_phase":"reconnaissance","platforms":["WHOIS databases","domain registrars"],"data_sources":["WHOIS","DomainTools","SecurityTrails","historical WHOIS archives"],"detection":"Passive; difficult to detect directly.","mitigation":"Use domain privacy protection. Ensure registrant emails are not tied to operational accounts."},{"pattern_id":"OSINT-T010","pattern_name":"Shodan/Censys Exposed Service Discovery","category":"Infrastructure Risk","risk_level":0.8,"description":"Using internet scanning platforms to identify publicly exposed services, open ports, misconfigured devices, and unpatched software versions belonging to a target organization.","mitre_ref":"T1046","kill_chain_phase":"reconnaissance","platforms":["internet-facing infrastructure","IoT devices","industrial control systems"],"data_sources":["Shodan","Censys","ZoomEye","FOFA"],"detection":"Monitor Shodan/Censys for your own IP ranges. Set up alerts for new exposures.","mitigation":"Minimize internet-exposed attack surface. Implement firewall rules. Use vulnerability management tools."},{"pattern_id":"OSINT-T011","pattern_name":"Paste Site Monitoring for Sensitive Data","category":"Reputation Risk","risk_level":0.85,"description":"Monitoring paste sites (Pastebin, Ghostbin, Rentry) for leaked internal data, credentials, source code snippets, and internal communications posted by insiders or attackers post-compromise.","mitre_ref":"T1213","kill_chain_phase":"collection","platforms":["Pastebin","Ghostbin","Rentry","PrivateBin","dark web paste sites"],"data_sources":["Paste site content","dork queries","automated monitoring services"],"detection":"Use PasteHunter or Dumpmon to continuously monitor for organizational keywords.","mitigation":"Implement DLP controls. Monitor paste sites for organizational keywords and domains."},{"pattern_id":"OSINT-T012","pattern_name":"Employee Profiling via LinkedIn","category":"Identity Risk","risk_level":0.6,"description":"Building detailed profiles of employees including their roles, reporting structure, technology skills, project history, and connections to identify high-value targets for spearphishing or social engineering.","mitre_ref":"T1591.004","kill_chain_phase":"reconnaissance","platforms":["LinkedIn","professional directories","conference speaker lists"],"data_sources":["Public profiles","endorsements","publications","conference talks"],"detection":"Monitor for mass profile views on corporate LinkedIn accounts.","mitigation":"Security awareness training on OPSEC. Limit public exposure of sensitive role details."},{"pattern_id":"OSINT-T013","pattern_name":"Wayback Machine / Cached Page Analysis","category":"Infrastructure Risk","risk_level":0.5,"description":"Using web archive services to access old versions of websites, retrieving previously exposed data, deprecated admin panels, old API endpoints, or removed sensitive content.","mitre_ref":"T1593","kill_chain_phase":"reconnaissance","platforms":["web"],"data_sources":["Wayback Machine","Google cache","Bing cache","CommonCrawl"],"detection":"Passive; nearly impossible to detect.","mitigation":"Submit robots.txt disallow rules to archive services. Use legal takedown for sensitive cached content."},{"pattern_id":"OSINT-T014","pattern_name":"Certificate Transparency Log Monitoring","category":"Infrastructure Risk","risk_level":0.55,"description":"Monitoring public certificate transparency logs to discover new subdomains, internal project names, and infrastructure changes as TLS certificates are issued.","mitre_ref":"T1596.003","kill_chain_phase":"reconnaissance","platforms":["web","cloud infrastructure"],"data_sources":["crt.sh","Censys","Facebook CT Monitor","Google CT logs"],"detection":"Use CT log monitoring defensively to detect unauthorized certificate issuance for your domains.","mitigation":"Monitor CT logs for your own domains. Use CAA DNS records to restrict which CAs can issue certificates."},{"pattern_id":"OSINT-T015","pattern_name":"Dark Web Threat Actor Monitoring","category":"Threat Intelligence","risk_level":0.9,"description":"Monitoring dark web forums, markets, and Telegram channels for mentions of target organizations, sale of stolen data, planned attacks, or recruitment of insiders.","mitre_ref":"T1597","kill_chain_phase":"reconnaissance","platforms":["Tor network","I2P","Telegram","Discord"],"data_sources":["Dark web forums (XSS, Exploit.in)","ransomware leak sites","Telegram threat actor channels"],"detection":"Use dark web monitoring services (Recorded Future, DarkOwl, Flare).","mitigation":"Proactive dark web monitoring. Incident response plan for when data is found on dark web."}];
+const LOCAL_CAMPAIGNS = [{"campaign_id":"CAMP-001","campaign_name":"Operation Fancy Bear \u2014 Election Infrastructure Targeting","description":"A sustained Russian GRU-linked influence and espionage campaign targeting election infrastructure, political organizations, and government agencies across multiple NATO countries. Combines credential harvesting, spearphishing, and social media influence operations.","diamond_model":{"adversary":{"actor_id":"TA-001","actor_name":"APT28","confidence":0.95},"capability":{"malware":["MA-001","MA-002"],"attack_patterns":["OSINT-T003","OSINT-T005","OSINT-T012"],"mitre_techniques":["T1566.001","T1078","T1003","T1027"],"sophistication":"advanced"},"infrastructure":{"infra_ids":["INF-001"],"types":["c2_server","phishing_domains","compromised_websites"],"hosting_countries":["Netherlands","France","Germany"],"protocols":["HTTPS","DNS-over-HTTPS"]},"victim":{"sector_ids":["SECTOR-003"],"sector_names":["Government & Defense"],"specific_targets":["Political party organizations","Election management systems","National security agencies"],"countries_affected":["USA","Germany","France","Montenegro","Ukraine"]}},"timeline":{"first_observed":"2014-01-01","last_observed":"2024-06-01","peak_activity":"2016-2017","status":"ongoing"},"kill_chain_coverage":{"reconnaissance":true,"weaponization":true,"delivery":true,"exploitation":true,"installation":true,"command_and_control":true,"actions_on_objective":true},"impact":{"type":["data_exfiltration","influence_operation","credential_theft"],"severity":"critical","estimated_victims":"hundreds of organizations","data_stolen":["Emails","Strategic documents","Voter databases","Internal communications"]},"attribution_confidence":0.95,"osint_risk_score":0.93,"sources":["MITRE ATT&CK G0007","Mueller Report 2019","CISA / FBI Joint Advisory"],"tags":["nation-state","russia","elections","espionage","influence-ops"]},{"campaign_id":"CAMP-002","campaign_name":"Operation SolarWinds (SUNBURST)","description":"The most sophisticated supply chain attack ever documented. APT29 trojanized the SolarWinds Orion software update mechanism, pushing SUNBURST backdoor to approximately 18,000 organizations. Approximately 100 were subsequently compromised in depth, including multiple US federal agencies and major technology companies.","diamond_model":{"adversary":{"actor_id":"TA-002","actor_name":"APT29","confidence":0.99},"capability":{"malware":["MA-003"],"attack_patterns":["OSINT-T007","OSINT-T005"],"mitre_techniques":["T1195.002","T1036","T1550.001","T1098","T1020"],"sophistication":"elite"},"infrastructure":{"infra_ids":[],"types":["compromised_software_update_server","c2_via_avsvmcloud.com","cloud_services"],"hosting_countries":["USA (cloud)","Multiple (CDN)"],"protocols":["HTTPS","DNS"]},"victim":{"sector_ids":["SECTOR-003"],"sector_names":["Government & Defense","Technology"],"specific_targets":["US Treasury Department","US Dept of Homeland Security","Microsoft","FireEye/Mandiant","Intel agencies"],"countries_affected":["USA","UK","Canada","Israel","UAE"]}},"timeline":{"first_observed":"2019-10-01","last_observed":"2020-12-31","peak_activity":"2020-03 to 2020-12","status":"concluded","discovery_date":"2020-12-08"},"kill_chain_coverage":{"reconnaissance":true,"weaponization":true,"delivery":true,"exploitation":true,"installation":true,"command_and_control":true,"actions_on_objective":true},"impact":{"type":["data_exfiltration","espionage","persistent_access"],"severity":"critical","estimated_victims":"~18,000 organizations received backdoor; ~100 deeply compromised","data_stolen":["Government emails","Classified documents","Security tooling source code","Intelligence assessments"]},"vulnerability_exploited":null,"attribution_confidence":0.99,"osint_risk_score":0.97,"sources":["CISA AA20-352A","FireEye / Mandiant Report Dec 2020","Microsoft MSTIC","US Senate Intelligence Committee"],"tags":["supply-chain","nation-state","russia","sunburst","solarwinds","elite-ttps"]},{"campaign_id":"CAMP-003","campaign_name":"Operation Double Dragon \u2014 Telecom & Healthcare Espionage","description":"APT41's ongoing dual-mission campaign combining state-sponsored espionage targeting telecom networks (for SMS/call interception) and financially motivated attacks on healthcare and gaming sectors. Notable for near-instant exploitation of newly disclosed vulnerabilities.","diamond_model":{"adversary":{"actor_id":"TA-003","actor_name":"APT41","confidence":0.91},"capability":{"malware":["MA-004","MA-005"],"attack_patterns":["OSINT-T004","OSINT-T010","OSINT-T007"],"mitre_techniques":["T1190","T1195.002","T1059.001","T1046","T1090"],"sophistication":"advanced"},"infrastructure":{"infra_ids":[],"types":["compromised_telecom_infrastructure","c2_via_legitimate_cloud","proxy_chains"],"hosting_countries":["China","Hong Kong","Various compromised third parties"],"protocols":["HTTPS","custom_protocols"]},"victim":{"sector_ids":["SECTOR-001","SECTOR-002"],"sector_names":["Healthcare","Financial Services","Telecommunications","Gaming"],"specific_targets":["Telecom providers in Southeast Asia","US healthcare research organizations","Video game companies (IP theft)","Financial institutions"],"countries_affected":["USA","India","Australia","Thailand","Vietnam","Indonesia"]}},"timeline":{"first_observed":"2014-01-01","last_observed":"2024-06-01","peak_activity":"2019-2021","status":"ongoing"},"kill_chain_coverage":{"reconnaissance":true,"weaponization":true,"delivery":true,"exploitation":true,"installation":true,"command_and_control":true,"actions_on_objective":true},"impact":{"type":["data_exfiltration","espionage","ip_theft","financial_theft"],"severity":"high","estimated_victims":"dozens of telecom providers, hundreds of companies","data_stolen":["SMS records","Call data records","Healthcare research","Game source code","Financial data"]},"attribution_confidence":0.91,"osint_risk_score":0.9,"sources":["Mandiant APT41 Report 2019","DOJ Indictment 2020","MITRE ATT&CK G0096"],"tags":["nation-state","china","dual-use","telecom","healthcare","gaming"]},{"campaign_id":"CAMP-004","campaign_name":"Operation AppleJeus \u2014 Cryptocurrency Exchange Heists","description":"Lazarus Group's sustained campaign targeting cryptocurrency exchanges, DeFi protocols, and blockchain companies globally. Uses fake job offers and trojanized cryptocurrency trading applications as initial access vectors. Estimated to have stolen over $3 billion in cryptocurrency for the DPRK regime.","diamond_model":{"adversary":{"actor_id":"TA-004","actor_name":"Lazarus Group","confidence":0.9},"capability":{"malware":["MA-006"],"attack_patterns":["OSINT-T005","OSINT-T015","OSINT-T012"],"mitre_techniques":["T1566.002","T1204.002","T1055","T1657","T1486"],"sophistication":"advanced"},"infrastructure":{"infra_ids":[],"types":["fake_company_websites","trojanized_applications","crypto_mixer_services"],"hosting_countries":["Various (VPS providers worldwide)","Tor network"],"protocols":["HTTPS","custom_crypto_protocols"]},"victim":{"sector_ids":["SECTOR-002"],"sector_names":["Financial Services"],"specific_targets":["Cryptocurrency exchanges","DeFi protocols","Blockchain companies","Crypto wallet providers","NFT platforms"],"countries_affected":["USA","South Korea","Japan","Estonia","Slovenia","UK"]}},"timeline":{"first_observed":"2018-01-01","last_observed":"2024-06-01","peak_activity":"2022-2023","status":"ongoing"},"kill_chain_coverage":{"reconnaissance":true,"weaponization":true,"delivery":true,"exploitation":true,"installation":true,"command_and_control":true,"actions_on_objective":true},"impact":{"type":["financial_theft","cryptocurrency_theft"],"severity":"critical","estimated_victims":"50+ exchanges and protocols","financial_losses":"~$3B+ USD stolen in cryptocurrency","data_stolen":["Private keys","Wallet credentials","Exchange admin access"]},"attribution_confidence":0.9,"osint_risk_score":0.94,"sources":["UN Panel of Experts Report 2023","Chainalysis 2023","CISA Alert AA22-108A","FBI Flash CU-000167-MW"],"tags":["nation-state","north-korea","crypto-theft","financial","applejeus","lazarus"]},{"campaign_id":"CAMP-005","campaign_name":"LockBit Global Ransomware Campaign","description":"The world's most prolific ransomware operation, responsible for more than 2,000 confirmed victims across 60+ countries. LockBit operates as a RaaS platform, providing affiliates with ransomware, infrastructure, and negotiation support in exchange for a share of ransom payments.","diamond_model":{"adversary":{"actor_id":"TA-005","actor_name":"LockBit","confidence":0.95},"capability":{"malware":["MA-007"],"attack_patterns":["OSINT-T005","OSINT-T011","OSINT-T015"],"mitre_techniques":["T1110.004","T1486","T1490","T1083","T1021.001","T1567.002"],"sophistication":"high"},"infrastructure":{"infra_ids":["INF-002"],"types":["leak_site","negotiation_portal","affiliate_panel","ransom_payment_portal"],"hosting_countries":["Tor Network"],"protocols":["Tor/HTTP"]},"victim":{"sector_ids":["SECTOR-001","SECTOR-002","SECTOR-003"],"sector_names":["Healthcare","Financial Services","Government & Defense","Manufacturing"],"specific_targets":["Boeing","Royal Mail UK","Bank of America (via third party)","Hospitals globally","Law firms"],"countries_affected":["USA","UK","France","Germany","Canada","Australia","60+ others"]}},"timeline":{"first_observed":"2019-09-01","last_observed":"2024-06-01","peak_activity":"2022-2023","status":"disrupted_but_active","law_enforcement_action":"Operation Cronos \u2014 Feb 2024, Europol / FBI / NCA seizure"},"kill_chain_coverage":{"reconnaissance":true,"weaponization":true,"delivery":true,"exploitation":true,"installation":true,"command_and_control":true,"actions_on_objective":true},"impact":{"type":["ransomware","data_exfiltration","extortion"],"severity":"critical","estimated_victims":"2,000+ confirmed; likely many more unreported","financial_losses":"~$91M+ USD in ransom payments to US victims alone","data_stolen":["PII","Financial records","Healthcare records","Legal documents","Intellectual property"]},"vulnerability_exploited":null,"attribution_confidence":0.95,"osint_risk_score":0.92,"sources":["CISA Advisory AA23-075A","FBI / Europol Joint Advisory","Operation Cronos Press Release 2024"],"tags":["ransomware","raas","double-extortion","global","critical-infrastructure"]},{"campaign_id":"CAMP-006","campaign_name":"Operation MOVEit Mass Exploitation","description":"Cl0p's most devastating campaign: mass zero-day exploitation of CVE-2023-34362 in MOVEit Transfer software. By exploiting a single SQL injection flaw, Cl0p breached hundreds of organizations simultaneously in what became one of the largest data theft operations in history by breadth of victims.","diamond_model":{"adversary":{"actor_id":"TA-006","actor_name":"Cl0p","confidence":0.99},"capability":{"malware":["MA-008"],"attack_patterns":["OSINT-T010","OSINT-T005","OSINT-T015"],"mitre_techniques":["T1190","T1059.003","T1213","T1657","T1486"],"sophistication":"high"},"infrastructure":{"infra_ids":[],"types":["exploitation_infrastructure","data_exfiltration_servers","dark_web_leak_site"],"hosting_countries":["Tor network","Various bulletproof hosting"],"protocols":["HTTPS","Tor/HTTP"]},"victim":{"sector_ids":["SECTOR-001","SECTOR-002","SECTOR-003"],"sector_names":["Financial Services","Healthcare","Government","Education"],"specific_targets":["US Department of Energy","Shell","British Airways","BBC","Aer Lingus","University of Georgia","Zellis HR (payroll provider)"],"countries_affected":["USA","UK","Germany","Canada","Australia","France"]}},"timeline":{"first_observed":"2023-05-27","last_observed":"2023-09-30","peak_activity":"2023-06","status":"concluded","zero_day_disclosure":"2023-06-01 (Progress Software)"},"kill_chain_coverage":{"reconnaissance":true,"weaponization":true,"delivery":true,"exploitation":true,"installation":false,"command_and_control":false,"actions_on_objective":true},"vulnerability_exploited":"VUL-001","impact":{"type":["data_exfiltration","extortion"],"severity":"critical","estimated_victims":"2,600+ organizations; 77M+ individuals","financial_losses":"Estimated $9.9B total economic impact","data_stolen":["Employee PII","Payroll data","Healthcare records","Government contractor data"]},"attribution_confidence":0.99,"osint_risk_score":0.97,"sources":["CISA Advisory AA23-158A","Emsisoft MOVEit Tracker","Microsoft MSTIC"],"tags":["zero-day","mass-exploitation","moveit","supply-chain","data-theft"]},{"campaign_id":"CAMP-007","campaign_name":"KillNet NATO Infrastructure DDoS Campaign","description":"KillNet's sustained hacktivist DDoS campaign targeting NATO member state infrastructure following Russia's invasion of Ukraine. Coordinated primarily via Telegram, the campaign disrupted government websites, airports, hospitals, and media outlets across Europe and North America.","diamond_model":{"adversary":{"actor_id":"TA-007","actor_name":"KillNet","confidence":0.87},"capability":{"malware":[],"attack_patterns":["OSINT-T003","OSINT-T012","OSINT-T015"],"mitre_techniques":["T1498","T1498.001","T1583.006","T1593.001"],"sophistication":"medium"},"infrastructure":{"infra_ids":[],"types":["botnet","ddos_for_hire_services","telegram_coordination_channels"],"hosting_countries":["Russia","Various (rented botnets)"],"protocols":["HTTP","UDP","TCP flood"]},"victim":{"sector_ids":["SECTOR-001","SECTOR-003"],"sector_names":["Government & Defense","Healthcare","Critical Infrastructure"],"specific_targets":["NATO websites","US Congress website","Lockheed Martin","Hospitals in Netherlands and Germany","Airport websites across Europe","Media outlets"],"countries_affected":["USA","Germany","Netherlands","Czech Republic","Latvia","Lithuania","Poland","Romania"]}},"timeline":{"first_observed":"2022-02-24","last_observed":"2024-06-01","peak_activity":"2022-2023","status":"ongoing"},"kill_chain_coverage":{"reconnaissance":true,"weaponization":false,"delivery":true,"exploitation":false,"installation":false,"command_and_control":true,"actions_on_objective":true},"impact":{"type":["denial_of_service","disruption","influence_operation"],"severity":"medium","estimated_victims":"100+ organizations disrupted","financial_losses":"Mostly temporary disruption; limited lasting damage","data_stolen":[]},"attribution_confidence":0.87,"osint_risk_score":0.73,"sources":["EU ENISA Threat Landscape 2023","HHS HC3 Alert Feb 2023","CISA"],"tags":["hacktivist","ddos","pro-russia","nato","ukraine-war","influence-ops"]}];
+
+// ═══════════════════════════ STATE ═══════════════════════════
+let entities = [];
+let relations = [];
+let selectedEntityId = null;
+let typeFilter = 'all';
+let sortKey = 'risk_score';
+let sortAsc = false;
+let apiLive = false;
+
+const TOKEN_KEY = 'oil_token';   // keep identical in auth.html
+let authToken = null, authClaims = null;
+
+const IS_HTTPS_PAGE = location.protocol === 'https:';
+let API_BASE = IS_HTTPS_PAGE ? 'https://open-intelligence-lab.fly.dev' : 'http://localhost:8000';
+
+// ═══════════════════════════ INIT ═══════════════════════════
+async function init(){
+  entities = LOCAL_ENTITIES;
+  relations = LOCAL_RELATIONS;
+
+  document.getElementById('api-url-input').value = API_BASE;
+  document.getElementById('api-url-input').addEventListener('keydown', e=>{ if(e.key==='Enter') probeAPI(); });
+
+  restoreSession();
+  renderSession();
+
+  buildGraphData();
+  renderEntityList();
+  renderTable();
+  renderCampaigns();
+  renderAttack();
+  updateStats();
+
+  setLoadMsg('probing backend');
+  await probeAPI();
+
+  setLoadMsg('ready');
+  setTimeout(()=>{ const l=document.getElementById('loading'); l.style.opacity='0'; setTimeout(()=>l.remove(),400); }, 300);
+
+  initGraph();
+  setInterval(updateClock,1000); updateClock();
+  setInterval(tickSession,1000);
+}
+function setLoadMsg(m){ const e=document.getElementById('ld-msg'); if(e) e.textContent=m; }
+
+// ═══════════════════════════ AUTH ═══════════════════════════
+function decodeJwt(t){
+  try{ const p=t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'); return JSON.parse(atob(p+'='.repeat((4-p.length%4)%4))); }
+  catch(e){ return null; }
+}
+function authHeaders(){ return authToken ? {'Authorization':'Bearer '+authToken} : {}; }
+function restoreSession(){
+  const t=localStorage.getItem(TOKEN_KEY);
+  if(!t){ authToken=null; authClaims=null; return; }
+  const c=decodeJwt(t);
+  if(!c||(c.exp&&c.exp*1000<Date.now())){ localStorage.removeItem(TOKEN_KEY); authToken=null; authClaims=null; return; }
+  authToken=t; authClaims=c;
+}
+function renderSession(){
+  const el=document.getElementById('session');
+  if(authToken&&authClaims){
+    const role=(authClaims.role||'analyst').toLowerCase();
+    el.innerHTML=`<span class="sess-user">${authClaims.sub||'user'}<span class="sess-role role-${role}">${role}</span></span>`+
+                 `<span class="sess-exp" id="sess-exp"></span>`+
+                 `<button class="btn" onclick="doLogout()">sign out</button>`;
+    tickSession();
+  } else {
+    el.innerHTML=`<button class="btn btn-primary" onclick="openLogin()">sign in</button>`;
+  }
+}
+function tickSession(){
+  if(!authClaims||!authClaims.exp) return;
+  const exp=document.getElementById('sess-exp'); if(!exp) return;
+  const left=authClaims.exp*1000-Date.now();
+  if(left<=0){ doLogout(true); return; }
+  const m=Math.floor(left/60000), s=Math.floor((left%60000)/1000);
+  exp.textContent=`${m}:${String(s).padStart(2,'0')}`;
+  exp.className='sess-exp'+(left<120000?' warn':'');
+}
+function openLogin(){
+  setAuthMode('login');
+  document.getElementById('portal-link').href=API_BASE.replace(/\/$/,'')+'/ui/auth.html';
+  document.getElementById('login-err').textContent='';
+  document.getElementById('auth-modal').classList.add('open');
+  document.getElementById('login-user').focus();
+}
+function closeLogin(){ document.getElementById('auth-modal').classList.remove('open'); }
+
+let authMode='login';
+function setAuthMode(m){
+  authMode=m;
+  const reg=m==='register';
+  document.getElementById('auth-title').textContent=reg?'Create account':'Sign in';
+  document.getElementById('auth-sub').textContent=reg
+    ?'Create an analyst account. Registration is open; an analyst gets read access to the intelligence graph.'
+    :'Authenticate to pull live intelligence. Without a session the lab runs on local curated data.';
+  document.getElementById('field-name').style.display=reg?'block':'none';
+  document.getElementById('login-submit').textContent=reg?'Create account':'Sign in';
+  document.getElementById('auth-toggle').innerHTML=reg
+    ?`Have an account? <a href="#" onclick="setAuthMode('login');return false">Sign in</a>`
+    :`<a href="#" onclick="setAuthMode('register');return false">Create an analyst account</a>`;
+  document.getElementById('login-err').textContent='';
+}
+function submitAuth(){ authMode==='register' ? doRegister() : doLogin(); }
+
+async function doRegister(){
+  const btn=document.getElementById('login-submit'), err=document.getElementById('login-err');
+  const name=document.getElementById('login-name').value.trim();
+  const u=document.getElementById('login-user').value.trim(), p=document.getElementById('login-pass').value;
+  if(!name||!u||!p){ err.textContent='Fill in name, username, and password.'; return; }
+  if(p.length<8){ err.textContent='Password must be at least 8 characters.'; return; }
+  btn.disabled=true; btn.textContent='creating'; err.textContent='';
+  try{
+    const r=await fetch(API_BASE.replace(/\/$/,'')+'/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p,full_name:name}),signal:AbortSignal.timeout(8000)});
+    if(r.status===409){ err.textContent='That username is taken.'; }
+    else if(!r.ok){ const d=await r.json().catch(()=>({})); err.textContent=d.detail||'Registration failed.'; }
+    else { await doLogin(); }   // auto sign-in after creating the account
+  }catch(e){ err.textContent='Could not reach the auth server.'; }
+  finally{ btn.disabled=false; btn.textContent=(authMode==='register'?'Create account':'Sign in'); }
+}
+
+async function doLogin(){
+  const btn=document.getElementById('login-submit'), err=document.getElementById('login-err');
+  const u=document.getElementById('login-user').value.trim(), p=document.getElementById('login-pass').value;
+  if(!u||!p){ err.textContent='Enter a username and password.'; return; }
+  btn.disabled=true; btn.textContent='signing in'; err.textContent='';
+  try{
+    const r=await fetch(API_BASE.replace(/\/$/,'')+'/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p}),signal:AbortSignal.timeout(8000)});
+    if(r.status===429){ err.textContent='Account locked after too many attempts.'; }
+    else if(!r.ok){ err.textContent='Sign in failed. Check your credentials.'; }
+    else{
+      const d=await r.json();
+      authToken=d.access_token; authClaims=decodeJwt(authToken);
+      localStorage.setItem(TOKEN_KEY,authToken);
+      closeLogin(); renderSession(); await probeAPI();
+      if(selectedEntityId) selectEntity(selectedEntityId);
+    }
+  }catch(e){ err.textContent='Could not reach the auth server.'; }
+  finally{ btn.disabled=false; btn.textContent='Sign in'; }
+}
+function doLogout(expired){
+  localStorage.removeItem(TOKEN_KEY); authToken=null; authClaims=null; apiLive=false;
+  renderSession(); probeAPI();
+}
+
+// ═══════════════════════════ API PROBE (minimal) ═══════════════════════════
+async function probeAPI(){
+  API_BASE=document.getElementById('api-url-input').value.replace(/\/$/,'')||API_BASE;
+  const st=document.getElementById('api-status');
+  st.textContent='probing'; st.className='';
+  try{
+    const r=await fetch(API_BASE+'/intelligence/graph/summary',{headers:authHeaders(),signal:AbortSignal.timeout(3000)});
+    if(r.ok){
+      const d=await r.json();
+      apiLive=true;
+      document.getElementById('stat-nodes').textContent=d.node_count||entities.length;
+      document.getElementById('stat-edges').textContent=d.edge_count||relations.length;
+      document.getElementById('stat-risk').textContent=(d.avg_risk_score||avgRisk()).toFixed(3);
+      document.getElementById('stat-source').textContent='api live';
+      st.textContent='live'; st.className='live';
+      fetch(API_BASE+'/health',{signal:AbortSignal.timeout(3000)}).then(x=>x.ok?x.json():null).then(h=>{ if(h&&h.version) document.getElementById('tb-ver').textContent='v'+h.version; }).catch(()=>{});
+    } else if(r.status===401||r.status===403){
+      apiLive=false; st.textContent=authToken?'session invalid':'sign in for live data';
+      if(authToken&&!authClaims) doLogout(); updateStats();
+    } else { apiLive=false; st.textContent='api '+r.status; updateStats(); }
+  }catch(e){ apiLive=false; st.textContent='local data'; updateStats(); }
+}
+
+// ═══════════════════════════ STATS / CLOCK ═══════════════════════════
+function avgRisk(){ return entities.reduce((s,e)=>s+(e.risk_score||0),0)/entities.length; }
+function updateStats(){
+  document.getElementById('stat-nodes').textContent=entities.length;
+  document.getElementById('stat-edges').textContent=relations.length;
+  document.getElementById('stat-risk').textContent=avgRisk().toFixed(3);
+  if(!apiLive) document.getElementById('stat-source').textContent='local';
+}
+function updateClock(){ /* clock removed from chrome; kept as no-op for compatibility */ }
+
+// ═══════════════════════════ TABS ═══════════════════════════
+function switchTab(id,btn){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-'+id).classList.add('active');
+  if(id==='graph') setTimeout(resizeGraph,50);
+}
+
+// ═══════════════════════════ RISK / TYPE HELPERS (monochrome) ═══════════════════════════
+function riskClass(r){ return r>=.9?'r-crit':r>=.7?'r-high':r>=.5?'r-med':'r-low'; }
+function riskShade(r){ return r>=.9?'#ffffff':r>=.7?'#c2c2c2':r>=.5?'#8a8a8a':'#565656'; }
+const TYPE_LABEL={threat_actor:'TA',malware:'MW',infrastructure:'INF',vulnerability:'VUL',target_sector:'SEC'};
+function typeBadge(t){ return `<span class="ent-badge">${TYPE_LABEL[t]||t.slice(0,3).toUpperCase()}</span>`; }
+
+// ═══════════════════════════ ENTITY LIST ═══════════════════════════
+function filterEntities(){
+  const q=document.getElementById('search-input').value.toLowerCase();
+  const list=entities.filter(e=>{
+    const mt=typeFilter==='all'||e.entity_type===typeFilter;
+    const mq=!q||(e.name||'').toLowerCase().includes(q)||(e.entity_id||'').toLowerCase().includes(q);
+    return mt&&mq;
+  });
+  renderEntityList(list);
+}
+function setTypeFilter(t,btn){
+  typeFilter=t;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active'); filterEntities();
+}
+function renderEntityList(list){
+  list=(list||entities).slice().sort((a,b)=>(b.risk_score||0)-(a.risk_score||0));
+  document.getElementById('entity-list').innerHTML=list.map(e=>`
+    <div class="ent-item${selectedEntityId===e.entity_id?' selected':''}" onclick="selectEntity('${e.entity_id}')">
+      ${typeBadge(e.entity_type)}
+      <span class="ent-name">${e.name}</span>
+      <span class="ent-risk ${riskClass(e.risk_score||0)}">${((e.risk_score||0)*100).toFixed(0)}</span>
+    </div>`).join('');
+}
+
+// ═══════════════════════════ DETAIL ═══════════════════════════
+function row(k,v){ return `<div class="det-row"><span class="det-key">${k}</span><span class="det-val">${v}</span></div>`; }
+async function selectEntity(id){
+  selectedEntityId=id; filterEntities();
+  const e=entities.find(x=>x.entity_id===id); if(!e) return;
+
+  let detail=null;
+  if(apiLive){
+    try{ const r=await fetch(API_BASE+'/intelligence/analyze/'+id,{headers:authHeaders(),signal:AbortSignal.timeout(3000)}); if(r.ok) detail=await r.json(); }catch(err){}
+  }
+
+  const risk=e.risk_score||0, shade=riskShade(risk);
+  let info='';
+  if(e.entity_type==='threat_actor'){
+    info+=row('origin',e.origin_country||'—'); info+=row('active since',e.active_since||'—');
+    info+=row('sophistication',e.sophistication||'—'); info+=row('motivation',(e.motivation||[]).join(', ')||'—');
+    info+=row('targets',(e.target_sectors||[]).join(', ')||'—');
+  } else if(e.entity_type==='malware'){
+    info+=row('type',e.malware_type||'—'); info+=row('platforms',(e.platforms||[]).join(', ')||'—');
+    info+=row('first seen',e.first_seen||'—'); info+=row('capabilities',(e.capabilities||[]).slice(0,3).join(', ')||'—');
+  } else if(e.entity_type==='vulnerability'){
+    info+=row('cvss',e.cvss_score!=null?e.cvss_score:'—'); info+=row('vuln type',e.vuln_type||'—');
+    info+=row('product',e.affected_product||'—'); info+=row('exploitation',e.exploitation_status||'—');
+    info+=row('patch',e.patch_available?('yes — '+(e.patch_date||'')):'no');
+  } else if(e.entity_type==='infrastructure'){
+    info+=row('type',e.infra_type||'—'); info+=row('regions',(e.hosting_regions||[]).join(', ')||'—');
+    info+=row('protocols',(e.protocols||[]).join(', ')||'—');
+  } else if(e.entity_type==='target_sector'){
+    info+=row('primary risk',e.primary_risk||'—'); info+=row('regulatory',e.regulatory_context||'—');
+    info+=row('targeted by',(e.targeted_by||[]).join(', ')||'—');
+  }
+  info+=row('confidence',e.confidence?((e.confidence*100).toFixed(0)+'%'):'—');
+  info+=row('source',e.source||'—');
+
+  let explain='';
+  if(detail&&detail.explanation){
+    explain='<div class="det-section">explanation</div>'+(detail.explanation||[]).map(l=>`<div class="det-line">${l}</div>`).join('');
+  }
+
+  const rels=relations.filter(r=>r.source_id===id||r.target_id===id);
+  let relsHtml='';
+  if(rels.length){
+    relsHtml='<div class="det-section">relations ('+rels.length+')</div>'+rels.slice(0,8).map(r=>{
+      const other=r.source_id===id?r.target_id:r.source_id;
+      const dir=r.source_id===id?'→':'←';
+      const oe=entities.find(x=>x.entity_id===other);
+      return `<div class="det-rel"><b>${dir} ${r.relation_type}</b> · ${oe?oe.name:other}</div>`;
+    }).join('');
+  }
+
+  const aliases=e.aliases||[], tags=e.tags||[];
+  document.getElementById('detail-area').innerHTML=`
+    <div class="det-name">${e.name}</div>
+    <div class="det-id">${e.entity_id} · ${e.entity_type}</div>
+    <div class="det-risk">
+      <div class="det-risk-bar"><span style="width:${risk*100}%;background:${shade}"></span></div>
+      <span class="det-risk-val" style="color:${shade}">${risk.toFixed(3)}</span>
+      <span class="det-key"> risk</span>
+    </div>
+    ${info}
+    ${explain}
+    ${relsHtml}
+    ${aliases.length?'<div class="det-section">aliases</div><div class="det-tags">'+aliases.map(a=>`<span class="tag">${a}</span>`).join('')+'</div>':''}
+    ${tags.length?'<div class="det-section">tags</div><div class="det-tags">'+tags.map(t=>`<span class="tag">${t}</span>`).join('')+'</div>':''}`;
+  document.getElementById('stix-btn').style.display='inline';
+  highlightNode(id);
+}
+
+// ═══════════════════════════ TABLE ═══════════════════════════
+function sortTable(k){ if(sortKey===k) sortAsc=!sortAsc; else { sortKey=k; sortAsc=false; } renderTable(); }
+function renderTable(){
+  const sorted=entities.slice().sort((a,b)=>{
+    let av=a[sortKey]||0, bv=b[sortKey]||0;
+    if(typeof av==='string'){ av=av.toLowerCase(); bv=(bv||'').toLowerCase(); }
+    return sortAsc?(av>bv?1:-1):(av<bv?1:-1);
+  });
+  document.getElementById('table-body').innerHTML=sorted.map(e=>{
+    const risk=e.risk_score||0, shade=riskShade(risk);
+    return `<tr onclick="selectEntity('${e.entity_id}')" style="${selectedEntityId===e.entity_id?'background:var(--raised)':''}">
+      <td class="td-id">${e.entity_id}</td>
+      <td class="td-name">${e.name}</td>
+      <td>${typeBadge(e.entity_type)}</td>
+      <td><span class="risk-bar"><span style="width:${risk*100}%;background:${shade}"></span></span><span style="color:${shade}">${risk.toFixed(2)}</span></td>
+      <td class="td-dim">${(e.aliases||[]).slice(0,2).join(', ')||'—'}</td>
+      <td class="td-dim" title="${e.source||''}">${e.source||'—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ═══════════════════════════ CAMPAIGNS / ATTACK ═══════════════════════════
+function renderCampaigns(){
+  document.getElementById('campaigns-grid').innerHTML=LOCAL_CAMPAIGNS.map(c=>{
+    const risk=c.osint_risk_score||0, shade=riskShade(risk);
+    return `<div class="card">
+      <div class="card-head"><span class="card-title">${c.campaign_name}</span><span class="card-score" style="color:${shade}">${risk.toFixed(2)}</span></div>
+      <div class="card-sub">${c.campaign_id||''}${c.attribution_confidence?' · conf '+(c.attribution_confidence*100).toFixed(0)+'%':''}</div>
+      <div class="card-desc">${(c.description||'').slice(0,170)}…</div>
+      <div class="card-tags">${(c.tags||[]).slice(0,4).map(t=>`<span class="tag">${t}</span>`).join('')}</div>
+    </div>`;
+  }).join('');
+}
+function renderAttack(){
+  document.getElementById('attack-grid').innerHTML=LOCAL_ATTACK.map(a=>{
+    const risk=a.risk_level||0, shade=riskShade(risk);
+    return `<div class="card">
+      <div class="card-head"><span class="card-title">${a.pattern_name}</span><span class="card-score" style="color:${shade}">${risk.toFixed(2)}</span></div>
+      <div class="card-sub">${a.pattern_id} · ${a.mitre_ref||''} · ${a.kill_chain_phase||''}</div>
+      <div class="card-desc">${(a.description||'').slice(0,150)}…</div>
+      <div class="card-tags">${a.category?`<span class="tag">${a.category}</span>`:''}</div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════ STIX EXPORT (single action, downloads bundle) ═══════════════════════════
+function exportSTIX(){
+  const e=entities.find(x=>x.entity_id===selectedEntityId)||entities[0];
+  const now=new Date().toISOString();
+  const bundle={type:'bundle',id:'bundle--'+uuid4(),spec_version:'2.1',objects:[{
+    type:'threat-actor',id:'threat-actor--'+uuid4(),spec_version:'2.1',created:now,modified:now,
+    name:e.name,labels:[e.entity_type],confidence:Math.round((e.confidence||0.8)*100),
+    extensions:{'x-oil-risk':{risk_score:e.risk_score,source:'open-intelligence-lab'}}
+  }]};
+  const blob=new Blob([JSON.stringify(bundle,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob); const a=document.createElement('a');
+  a.href=url; a.download=(e.entity_id||'entity')+'.stix.json'; a.click();
+  URL.revokeObjectURL(url);
+}
+function uuid4(){ return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{ const r=Math.random()*16|0; return (c==='x'?r:(r&0x3|0x8)).toString(16); }); }
+
+// ═══════════════════════════ THREAT GRAPH (monochrome) ═══════════════════════════
+const TYPE_RADIUS={threat_actor:16,malware:13,infrastructure:11,vulnerability:12,target_sector:10};
+let gNodes=[],gEdges=[];
+let scale=1,panX=0,panY=0;
+let isDragging=false,dragNode=null,isPanning=false,panStart={x:0,y:0},panBase={x:0,y:0};
+let pulseT=0,highlightId=null,canvas,ctx;
+
+function buildGraphData(){
+  gNodes=entities.map(e=>({id:e.entity_id,label:e.name,type:e.entity_type,risk:e.risk_score||0,x:0,y:0,vx:0,vy:0,r:TYPE_RADIUS[e.entity_type]||11}));
+  gEdges=relations.map(r=>({s:r.source_id,t:r.target_id}));
+}
+function initGraph(){
+  canvas=document.getElementById('graph'); ctx=canvas.getContext('2d');
+  resizeGraph(); initPositions();
+  window.addEventListener('resize',resizeGraph);
+  canvas.addEventListener('wheel',onWheel,{passive:false});
+  canvas.addEventListener('mousedown',onMouseDown);
+  canvas.addEventListener('mousemove',onMouseMove);
+  canvas.addEventListener('mouseup',onMouseUp);
+  canvas.addEventListener('click',onGraphClick);
+  requestAnimationFrame(graphLoop);
+}
+function resizeGraph(){ canvas.width=canvas.offsetWidth; canvas.height=canvas.offsetHeight; }
+function initPositions(){
+  const cx=canvas.width/2||400,cy=canvas.height/2||300,rad=Math.min(cx,cy)*.65;
+  gNodes.forEach((n,i)=>{ const a=(i/gNodes.length)*Math.PI*2-Math.PI/2,j=.5+Math.random()*.6; n.x=cx+Math.cos(a)*rad*j; n.y=cy+Math.sin(a)*rad*j; n.vx=0; n.vy=0; });
+}
+function simulate(){
+  const rep=4500,spring=.01,rest=80;
+  gNodes.forEach(a=>{ gNodes.forEach(b=>{ if(a===b) return; const dx=a.x-b.x,dy=a.y-b.y,d=Math.sqrt(dx*dx+dy*dy)||1,f=rep/(d*d); a.vx+=(dx/d)*f*.5; a.vy+=(dy/d)*f*.5; }); });
+  gEdges.forEach(e=>{ const a=gNodes.find(n=>n.id===e.s),b=gNodes.find(n=>n.id===e.t); if(!a||!b) return; const dx=b.x-a.x,dy=b.y-a.y,d=Math.sqrt(dx*dx+dy*dy)||1,f=(d-rest)*spring; a.vx+=(dx/d)*f; a.vy+=(dy/d)*f; b.vx-=(dx/d)*f; b.vy-=(dy/d)*f; });
+  const cx=canvas.width/2,cy=canvas.height/2;
+  gNodes.forEach(n=>{ n.vx+=(cx-n.x)*.003; n.vy+=(cy-n.y)*.003; n.vx*=.82; n.vy*=.82; n.x+=n.vx; n.y+=n.vy; });
+}
+function screenToGraph(sx,sy){ const cx=canvas.width/2,cy=canvas.height/2; return {x:(sx-cx-panX)/scale+cx,y:(sy-cy-panY)/scale+cy}; }
+function graphLoop(){ pulseT+=.03; simulate(); drawGraph(); requestAnimationFrame(graphLoop); }
+function drawGraph(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  const cx=canvas.width/2,cy=canvas.height/2;
+  ctx.save(); ctx.translate(cx+panX,cy+panY); ctx.scale(scale,scale); ctx.translate(-cx,-cy);
+  gEdges.forEach(e=>{
+    const a=gNodes.find(n=>n.id===e.s),b=gNodes.find(n=>n.id===e.t); if(!a||!b) return;
+    const sel=highlightId&&(a.id===highlightId||b.id===highlightId);
+    ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y);
+    ctx.strokeStyle=sel?'rgba(255,255,255,.45)':'rgba(255,255,255,.07)'; ctx.lineWidth=sel?1.2:.7; ctx.stroke();
+  });
+  gNodes.forEach(n=>{
+    const shade=riskShade(n.risk);
+    const isSel=n.id===highlightId;
+    const pr=isSel?Math.sin(pulseT)*2+2:0, r=n.r+pr;
+    ctx.beginPath(); ctx.arc(n.x,n.y,r,0,Math.PI*2);
+    ctx.fillStyle=shade+'22'; ctx.fill();
+    ctx.strokeStyle=isSel?'#fff':shade; ctx.lineWidth=isSel?2:1; ctx.stroke();
+    ctx.fillStyle=isSel?'#fff':'#9a9a9a';
+    ctx.font=`${isSel?600:400} ${r<12?8:10}px IBM Plex Mono,monospace`;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(n.label.length>9?n.label.slice(0,8)+'…':n.label, n.x, n.y+r+10);
+  });
+  ctx.restore();
+}
+function highlightNode(id){ highlightId=id; const n=gNodes.find(x=>x.id===id); if(n){ const cx=canvas.width/2,cy=canvas.height/2; panX=(cx-n.x)*scale; panY=(cy-n.y)*scale; } }
+function onWheel(e){ e.preventDefault(); scale=Math.min(Math.max(scale*(e.deltaY<0?1.12:.89),.2),5); }
+function onMouseDown(e){ const g=screenToGraph(e.offsetX,e.offsetY); dragNode=gNodes.find(n=>Math.hypot(n.x-g.x,n.y-g.y)<n.r+4); if(dragNode){ isDragging=true; canvas.style.cursor='grabbing'; } else { isPanning=true; panStart={x:e.clientX,y:e.clientY}; panBase={x:panX,y:panY}; } }
+function onMouseMove(e){ if(isDragging&&dragNode){ const g=screenToGraph(e.offsetX,e.offsetY); dragNode.x=g.x; dragNode.y=g.y; dragNode.vx=0; dragNode.vy=0; } else if(isPanning){ panX=panBase.x+(e.clientX-panStart.x); panY=panBase.y+(e.clientY-panStart.y); } }
+function onMouseUp(){ isDragging=false; isPanning=false; dragNode=null; canvas.style.cursor='grab'; }
+function onGraphClick(e){ const g=screenToGraph(e.offsetX,e.offsetY); const n=gNodes.find(n=>Math.hypot(n.x-g.x,n.y-g.y)<n.r+6); if(n) selectEntity(n.id); }
+function zoomIn(){ scale=Math.min(scale*1.2,5); }
+function zoomOut(){ scale=Math.max(scale/1.2,.2); }
+function resetView(){ scale=1; panX=0; panY=0; highlightId=null; }
+
+window.addEventListener('load',init);
+</script>
+</body>
+</html>
