@@ -33,10 +33,14 @@ primary_region = 'ams'
 
 # Health check — Fly uses this to decide if the machine is healthy before
 # routing traffic. Uses /health (fast, no MISP logic) not /.
-[[services.tcp_checks]]
+
+[[http_service.checks]]
   interval = "15s"
   timeout = "10s"
   grace_period = "30s"
+  method = "GET"
+  path = "/health"
+
 
 [[vm]]
   # memory and memory_mb are mutually exclusive — use only memory
