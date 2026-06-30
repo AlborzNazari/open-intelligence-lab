@@ -21,6 +21,7 @@ License: MIT
 
 import json
 import logging
+import os
 import uuid
 import base64
 import ssl
@@ -39,6 +40,77 @@ STIX_CONTENT_TYPE = "application/stix+json;version=2.1"
 
 # Accept header required by TAXII 2.1 spec
 TAXII_ACCEPT = f"{TAXII_CONTENT_TYPE}, {STIX_CONTENT_TYPE}"
+
+# Hard ceiling on JSON nesting depth and response size for any external TAXII
+# response, untrusted by definition. A legitimate STIX 2.1 bundle envelope
+# (bundle -> objects[] -> object -> a few nested dicts for things like
+# external_references or extensions) does not exceed depth ~20 in practice;
+# 64 leaves generous headroom without leaving the door open to a multi-KB
+# nesting bomb. See CHANGELOG / TECHNICAL_REVIEW for the incident this guards
+# against: backend.taxii_ingestor._get() previously called json.loads()
+# directly on attacker-controlled input with no depth or size bound, letting
+# a ~20KB payload of nested brackets raise an uncaught RecursionError that
+# silently discarded an entire feed-run's already-validated objects.
+MAX_JSON_DEPTH: int = int(os.getenv("OIL_MAX_JSON_DEPTH", "64"))
+MAX_RESPONSE_BYTES: int = int(os.getenv("OIL_MAX_TAXII_RESPONSE_BYTES", str(10 * 1024 * 1024)))  # 10 MB
+
+
+class TAXIIProtocolError(ConnectionError):
+    """Raised when a TAXII server returns malformed or maliciously-shaped data."""
+
+
+def _assert_safe_json_depth(raw: str, max_depth: int = MAX_JSON_DEPTH) -> None:
+    """
+    Iteratively scan `raw` for JSON nesting depth before it ever reaches the
+    parser. Deliberately NOT recursive — a depth check written with recursion
+    would be exploitable by the exact same payload it's meant to reject.
+
+    Walks the string once (no backtracking), correctly skipping over string
+    literals and escape sequences so brackets inside string values are never
+    counted. Raises TAXIIProtocolError if nesting exceeds max_depth, before
+    any parser sees the input.
+    """
+    depth = 0
+    in_string = False
+    escape = False
+    for ch in raw:
+        if in_string:
+            if escape:
+                escape = False
+            elif ch == "\\":
+                escape = True
+            elif ch == '"':
+                in_string = False
+            continue
+        if ch == '"':
+            in_string = True
+        elif ch in "{[":
+            depth += 1
+            if depth > max_depth:
+                raise TAXIIProtocolError(
+                    f"Response exceeds maximum JSON nesting depth ({max_depth}); "
+                    f"rejected before parsing (possible nesting-bomb DoS attempt)."
+                )
+        elif ch in "}]":
+            depth -= 1
+
+
+def safe_json_loads(raw: str, max_depth: int = MAX_JSON_DEPTH) -> dict:
+    """
+    Depth-bounded replacement for json.loads() on untrusted TAXII/STIX input.
+
+    Two layers of defence, matching the pattern used by Jackson's
+    StreamReadConstraints (2.15+) and serde-json-wasm's check_recursion!:
+      1. An iterative pre-scan rejects excessive nesting before parsing.
+      2. json.loads() itself is still wrapped in try/except, because the
+         pre-scan is the primary control but defence-in-depth costs nothing
+         here and catches any edge case the scan logic might miss.
+    """
+    _assert_safe_json_depth(raw, max_depth)
+    try:
+        return json.loads(raw)
+    except RecursionError as e:
+        raise TAXIIProtocolError(f"JSON payload rejected during parsing: {e}") from e
 
 
 def _now() -> str:
@@ -143,8 +215,14 @@ class TAXIIIngestor:
             with urllib.request.urlopen(
                 req, context=ssl_ctx, timeout=self.timeout
             ) as resp:
-                raw = resp.read().decode("utf-8")
-                return json.loads(raw)
+                body = resp.read(MAX_RESPONSE_BYTES + 1)
+                if len(body) > MAX_RESPONSE_BYTES:
+                    raise TAXIIProtocolError(
+                        f"Response from {url} exceeds {MAX_RESPONSE_BYTES} bytes; "
+                        f"rejected before parsing (possible resource-exhaustion attempt)."
+                    )
+                raw = body.decode("utf-8")
+                return safe_json_loads(raw)
         except urllib.error.HTTPError as e:
             body = e.read().decode("utf-8", errors="replace")
             raise ConnectionError(f"TAXII HTTP {e.code} at {url}: {body[:200]}") from e
