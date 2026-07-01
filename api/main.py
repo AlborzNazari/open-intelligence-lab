@@ -14,6 +14,7 @@ Every /intelligence/* endpoint requires a valid JWT carrying a known role
 
 import os
 import sys
+import shutil
 import logging
 from contextlib import asynccontextmanager
 
@@ -27,23 +28,19 @@ from backend.auth_router import router as auth_router
 
 logger = logging.getLogger(__name__)
 
-# Single source of truth for the API version (served by /, /health, and /docs).
 API_VERSION = "7.2.0"
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # On startup: initialise the user/auth database (idempotent, safe every boot)
     init_db()
     logger.info("[Startup] Auth database initialised")
 
-    # ── On startup: wire up MISP if env vars are set ──────────────────────────
     misp_url = os.getenv("MISP_URL", "").strip()
     misp_key = os.getenv("MISP_KEY", "").strip()
 
     if misp_url and misp_key:
         try:
-            # Add backend/ to path so feed_scheduler can import misp_client etc.
             backend_path = os.path.join(os.path.dirname(__file__), "..", "backend")
             if backend_path not in sys.path:
                 sys.path.insert(0, backend_path)
@@ -76,9 +73,8 @@ async def lifespan(app: FastAPI):
             "running on static datasets. Set env vars to activate live feed."
         )
 
-    yield  # server runs here
+    yield
 
-    # ── On shutdown: stop background scheduler cleanly ────────────────────────
     try:
         backend_path = os.path.join(os.path.dirname(__file__), "..", "backend")
         if backend_path not in sys.path:
@@ -113,22 +109,10 @@ app = FastAPI(
 )
 
 # ─── CORS ─────────────────────────────────────────────────────────────────────
-# Three scenarios that need CORS access:
-#
-#   1. Local dev  — index.html opened from file:// or a local dev server
-#   2. GitHub Pages — https://alborznazari.github.io fetching localhost API
-#      NOTE: browsers block https→http (mixed-content) by default.
-#      Users must either:
-#        a) run the API behind a local HTTPS proxy (see README), OR
-#        b) open the GitHub Pages URL in Firefox and set
-#           security.mixed_content.block_active_content = false in about:config
-#        c) use the local index.html (file://) which talks to http:// fine
-#   3. Any localhost port (e.g. Vite dev server on :5173)
-#
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "null",  # file:// pages send Origin: null
+        "null",
         "http://localhost",
         "http://localhost:8000",
         "http://localhost:3000",
@@ -146,21 +130,15 @@ app.add_middleware(
 )
 
 # ─── Routers ──────────────────────────────────────────────────────────────────
-# Auth router: public /auth/register and /auth/login, plus authenticated and
-# admin-only management endpoints. Must be mounted for any /auth/* route to exist.
 app.include_router(auth_router, prefix="/auth", tags=["auth"])
 
-# Intelligence router: every endpoint requires a valid JWT carrying a known role
-# (analyst or admin). Enforced at the router level so no individual route can
-# ship without authorisation. Unauthenticated requests are rejected before the
-# handler ever runs.
 app.include_router(
     intelligence_router,
     dependencies=[Depends(require_role("analyst", "admin"))],
 )
 
 
-# --- Root & Health ---
+# ─── Root & Health ────────────────────────────────────────────────────────────
 @app.get("/", tags=["Health"])
 def root():
     misp_active = bool(os.getenv("MISP_URL") and os.getenv("MISP_KEY"))
@@ -175,14 +153,28 @@ def root():
         ),
     }
 
+
 @app.get("/health", tags=["Health"])
 def health():
     return {"status": "ok", "version": API_VERSION}
 
+
+# ─── Static UI ────────────────────────────────────────────────────────────────
+# Serve only index.html and auth.html from a safe subdirectory.
+# The previous mount used ".." (repo root), which exposed fly.toml,
+# Dockerfile, backend/, requirements.txt and everything else at /ui/*.
 try:
+    _root = os.path.join(os.path.dirname(__file__), "..")
+    _safe_dir = os.path.join(_root, "visualization")
+    os.makedirs(_safe_dir, exist_ok=True)
+    for _f in ["index.html", "auth.html"]:
+        _src = os.path.join(_root, _f)
+        _dst = os.path.join(_safe_dir, _f)
+        if os.path.exists(_src) and not os.path.exists(_dst):
+            shutil.copy2(_src, _dst)
     app.mount(
         "/ui",
-        StaticFiles(directory=os.path.join(os.path.dirname(__file__), ".."), html=True),
+        StaticFiles(directory=_safe_dir, html=True),
         name="static",
     )
 except Exception:
