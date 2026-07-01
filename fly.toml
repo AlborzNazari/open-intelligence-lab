@@ -9,8 +9,8 @@ primary_region = 'ams'
     VERSION = "v7.2.0"
 
 [env]
-  PYTHONPATH    = "/app"
-  MISP_LABEL    = "MISP-Live"
+  PYTHONPATH            = "/app"
+  MISP_LABEL            = "MISP-Live"
   MISP_PULL_DAYS        = "7"
   MISP_LIMIT            = "200"
   MISP_VERIFY_SSL       = "true"
@@ -22,12 +22,12 @@ primary_region = 'ams'
   destination = "/data"
 
 [http_service]
-  internal_port       = 8000
-  force_https         = true
-  auto_stop_machines  = 'stop'
-  auto_start_machines = true
+  internal_port        = 8000
+  force_https          = true
+  auto_stop_machines   = 'stop'
+  auto_start_machines  = true
   min_machines_running = 0
-  processes           = ['app']
+  processes            = ['app']
 
   [http_service.concurrency]
     type       = "requests"
