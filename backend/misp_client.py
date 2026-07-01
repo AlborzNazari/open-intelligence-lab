@@ -27,6 +27,7 @@ import urllib.error
 import ssl
 
 from provenance import ProvenanceRecord, ProvenanceEngine
+from taxii_ingestor import safe_json_loads, TAXIIProtocolError
 
 logger = logging.getLogger(__name__)
 
@@ -35,8 +36,6 @@ logger = logging.getLogger(__name__)
 # MISP Attribute Type → STIX Type Mapping
 # ─────────────────────────────────────────────
 
-# Maps MISP attribute categories/types to STIX 2.1 object types.
-# MISP uses a flat attribute model; we lift these into structured STIX objects.
 MISP_TYPE_TO_STIX: dict[str, str] = {
     "ip-src": "indicator",
     "ip-dst": "indicator",
@@ -53,20 +52,20 @@ MISP_TYPE_TO_STIX: dict[str, str] = {
     "campaign-name": "campaign",
 }
 
-# MISP threat levels map to STIX confidence bands
 MISP_THREAT_LEVEL_TO_CONFIDENCE: dict[str, float] = {
-    "1": 0.95,  # High
-    "2": 0.75,  # Medium
-    "3": 0.50,  # Low
-    "4": 0.25,  # Undefined
+    "1": 0.95,
+    "2": 0.75,
+    "3": 0.50,
+    "4": 0.25,
 }
 
-# MISP analysis states
 MISP_ANALYSIS_TO_LABEL: dict[str, str] = {
     "0": "initial",
     "1": "ongoing",
     "2": "complete",
 }
+
+_MISP_MAX_RESPONSE_BYTES = 10 * 1024 * 1024  # 10 MB
 
 
 def _now() -> str:
@@ -123,10 +122,10 @@ class MISPClient:
         All MISP API traffic runs over HTTPS (TLS mandatory).
         """
         url = f"{self.base_url}{path}"
-        body = json.dumps(payload).encode("utf-8") if payload else None
+        data = json.dumps(payload).encode("utf-8") if payload else None
         method = "POST" if payload else "GET"
 
-        req = urllib.request.Request(url, data=body, method=method)
+        req = urllib.request.Request(url, data=data, method=method)
         req.add_header("Authorization", self.api_key)
         req.add_header("Accept", "application/json")
         req.add_header("Content-Type", "application/json")
@@ -140,15 +139,17 @@ class MISPClient:
             with urllib.request.urlopen(
                 req, context=ssl_ctx, timeout=self.timeout
             ) as resp:
-                body = resp.read(10 * 1024 * 1024 + 1)
-if len(body) > 10 * 1024 * 1024:
-    raise ConnectionError("MISP response too large, rejected.")
-raw = body.decode("utf-8")
-from taxii_ingestor import safe_json_loads, TAXIIProtocolError
-try:
-    return safe_json_loads(raw)
-except TAXIIProtocolError as e:
-    raise ConnectionError(f"MISP response rejected: {e}") from e
+                body = resp.read(_MISP_MAX_RESPONSE_BYTES + 1)
+                if len(body) > _MISP_MAX_RESPONSE_BYTES:
+                    raise ConnectionError(
+                        f"MISP response from {url} exceeds 10 MB limit, rejected."
+                    )
+                try:
+                    return safe_json_loads(body.decode("utf-8"))
+                except TAXIIProtocolError as e:
+                    raise ConnectionError(
+                        f"MISP response rejected (malformed/malicious JSON): {e}"
+                    ) from e
         except urllib.error.HTTPError as e:
             body_text = e.read().decode("utf-8", errors="replace")
             raise ConnectionError(
@@ -167,13 +168,6 @@ except TAXIIProtocolError as e:
         """
         Fetch MISP events from the last N days.
         Returns (stix_objects, provenance_records).
-
-        Each STIX object has a corresponding ProvenanceRecord carrying:
-        - source: which MISP instance
-        - reported_by: event org name
-        - timestamp: when the event was created
-        - trust_level: derived from MISP threat level
-        - analysis_state: initial / ongoing / complete
         """
         logger.info(
             f"[MISP] Fetching events from last {days} days — source: {self.source_label}"
@@ -246,15 +240,12 @@ except TAXIIProtocolError as e:
         distribution = int(event.get("distribution", 0))
 
         base_confidence = MISP_THREAT_LEVEL_TO_CONFIDENCE.get(threat_level, 0.25)
-        # Distribution level also affects trust:
-        # 0=org-only, 1=community, 2=connected communities, 3=all, 4=sharing-group, 5=inherit
         distribution_modifier = {0: -0.15, 1: 0.0, 2: 0.05, 3: 0.05, 4: 0.0, 5: 0.0}
         adjusted_confidence = max(
             0.05,
             min(1.0, base_confidence + distribution_modifier.get(distribution, 0.0)),
         )
 
-        # Build a STIX note to represent the MISP event context
         event_note = {
             "type": "note",
             "spec_version": "2.1",
@@ -269,7 +260,6 @@ except TAXIIProtocolError as e:
                 MISP_ANALYSIS_TO_LABEL.get(analysis_state, "initial"),
             ],
             "confidence": int(adjusted_confidence * 100),
-            # Chain-of-custody extension fields
             "x_oi_source": self.source_label,
             "x_oi_misp_event_id": event_id,
             "x_oi_misp_uuid": event_uuid,
@@ -294,7 +284,6 @@ except TAXIIProtocolError as e:
         )
         provenance_records.append(prov)
 
-        # Process each MISP attribute
         attributes = event.get("Attribute", [])
         for attr in attributes:
             stix_obj = self._attribute_to_stix(
@@ -342,11 +331,10 @@ except TAXIIProtocolError as e:
 
         stix_type = MISP_TYPE_TO_STIX.get(attr_type)
         if not stix_type:
-            return None  # Unsupported attribute type — skip silently
+            return None
 
         created_ts = f"{event_date}T00:00:00.000Z"
 
-        # Network and file IOCs → STIX indicator with pattern
         if stix_type == "indicator":
             pattern = self._build_indicator_pattern(attr_type, attr_value)
             if not pattern:
@@ -366,7 +354,6 @@ except TAXIIProtocolError as e:
                 "confidence": int(confidence * 100),
                 "labels": ["misp-attribute", attr_type],
                 "object_marking_refs": [],
-                # Chain-of-custody extension fields
                 "x_oi_source": self.source_label,
                 "x_oi_reported_by": org_name,
                 "x_oi_ingested_at": _now(),
@@ -456,16 +443,17 @@ except TAXIIProtocolError as e:
     @staticmethod
     def _build_indicator_pattern(attr_type: str, value: str) -> Optional[str]:
         """Build a STIX 2.1 patterning expression from a MISP attribute type/value."""
+        safe_value = value.replace("'", "\\'")
         patterns = {
-            "ip-src": f"[network-traffic:src_ref.type = 'ipv4-addr' AND network-traffic:src_ref.value = '{value}']",
-            "ip-dst": f"[network-traffic:dst_ref.type = 'ipv4-addr' AND network-traffic:dst_ref.value = '{value}']",
-            "domain": f"[domain-name:value = '{value}']",
-            "hostname": f"[domain-name:value = '{value}']",
-            "url": f"[url:value = '{value}']",
-            "md5": f"[file:hashes.MD5 = '{value}']",
-            "sha1": f"[file:hashes.SHA-1 = '{value}']",
-            "sha256": f"[file:hashes.SHA-256 = '{value}']",
-            "filename": f"[file:name = '{value}']",
+            "ip-src": f"[network-traffic:src_ref.type = 'ipv4-addr' AND network-traffic:src_ref.value = '{safe_value}']",
+            "ip-dst": f"[network-traffic:dst_ref.type = 'ipv4-addr' AND network-traffic:dst_ref.value = '{safe_value}']",
+            "domain": f"[domain-name:value = '{safe_value}']",
+            "hostname": f"[domain-name:value = '{safe_value}']",
+            "url": f"[url:value = '{safe_value}']",
+            "md5": f"[file:hashes.MD5 = '{safe_value}']",
+            "sha1": f"[file:hashes.SHA-1 = '{safe_value}']",
+            "sha256": f"[file:hashes.SHA-256 = '{safe_value}']",
+            "filename": f"[file:name = '{safe_value}']",
         }
         return patterns.get(attr_type)
 
