@@ -140,7 +140,15 @@ class MISPClient:
             with urllib.request.urlopen(
                 req, context=ssl_ctx, timeout=self.timeout
             ) as resp:
-                return json.loads(resp.read().decode("utf-8"))
+                body = resp.read(10 * 1024 * 1024 + 1)
+if len(body) > 10 * 1024 * 1024:
+    raise ConnectionError("MISP response too large, rejected.")
+raw = body.decode("utf-8")
+from taxii_ingestor import safe_json_loads, TAXIIProtocolError
+try:
+    return safe_json_loads(raw)
+except TAXIIProtocolError as e:
+    raise ConnectionError(f"MISP response rejected: {e}") from e
         except urllib.error.HTTPError as e:
             body_text = e.read().decode("utf-8", errors="replace")
             raise ConnectionError(
