@@ -28,10 +28,8 @@ body{
     repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,212,255,.012) 2px,rgba(0,212,255,.012) 3px);
 }
 
-/* ── SHELL ─────────────────────────────────────────────────────────────────── */
 .shell{width:100%;max-width:480px;position:relative}
 
-/* ── BRAND ─────────────────────────────────────────────────────────────────── */
 .brand{display:flex;align-items:center;gap:.85rem;margin-bottom:2.25rem}
 .brand-icon{
   width:42px;height:42px;border:1.5px solid var(--accent);border-radius:5px;
@@ -41,14 +39,12 @@ body{
 .brand-name{font-size:1.2rem;font-weight:700;letter-spacing:.14em;color:var(--accent);text-transform:uppercase}
 .brand-sub{font-family:var(--mono);font-size:.62rem;color:var(--text3);letter-spacing:.07em;margin-top:.15rem}
 
-/* ── CARD ──────────────────────────────────────────────────────────────────── */
 .card{
   background:var(--panel);border:1px solid var(--border);border-radius:var(--r);
   padding:1.85rem;
   box-shadow:0 0 0 1px rgba(0,212,255,.03),0 28px 56px rgba(0,0,0,.55)
 }
 
-/* ── TABS ──────────────────────────────────────────────────────────────────── */
 .tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:1.6rem}
 .tab{
   flex:1;padding:.55rem 0;background:none;border:none;cursor:pointer;
@@ -59,10 +55,8 @@ body{
 .tab.active{color:var(--accent);border-bottom-color:var(--accent)}
 .tab:hover:not(.active){color:var(--text2)}
 
-/* ── PANELS ────────────────────────────────────────────────────────────────── */
 .panel{display:none}.panel.active{display:block}
 
-/* ── FIELDS ────────────────────────────────────────────────────────────────── */
 .field{margin-bottom:1rem}
 .field label{
   display:block;font-family:var(--mono);font-size:.62rem;letter-spacing:.1em;
@@ -76,7 +70,6 @@ body{
 .field input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,212,255,.09)}
 .field input::placeholder{color:var(--text3)}
 
-/* ── BUTTON ────────────────────────────────────────────────────────────────── */
 .btn{
   width:100%;padding:.72rem;margin-top:.4rem;
   background:var(--accent);color:#000;
@@ -104,7 +97,6 @@ body{
 }
 .btn.danger-sm:hover{background:rgba(255,68,68,.1)}
 
-/* ── FLASH ─────────────────────────────────────────────────────────────────── */
 .flash{
   font-family:var(--mono);font-size:.73rem;padding:.6rem .8rem;
   border-radius:var(--r);margin-bottom:.9rem;display:none
@@ -114,7 +106,6 @@ body{
 .flash.show{display:block;animation:fi .2s ease}
 @keyframes fi{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
 
-/* ── SPINNER ───────────────────────────────────────────────────────────────── */
 .spin{
   display:inline-block;width:11px;height:11px;
   border:2px solid rgba(0,0,0,.25);border-top-color:#000;
@@ -123,7 +114,6 @@ body{
 }
 @keyframes sp{to{transform:rotate(360deg)}}
 
-/* ── IDENTITY CARD ─────────────────────────────────────────────────────────── */
 #identity{display:none}
 #identity.on{display:block}
 
@@ -154,7 +144,6 @@ body{
 .cell-value.accent{color:var(--accent)}
 .cell-value.green {color:var(--green)}
 
-/* ── TOKEN BOX ─────────────────────────────────────────────────────────────── */
 .token-box{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:.7rem .85rem;margin-bottom:1rem}
 .token-box-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:.35rem}
 .token-label{font-family:var(--mono);font-size:.58rem;letter-spacing:.1em;color:var(--text3);text-transform:uppercase}
@@ -165,7 +154,6 @@ body{
 
 .divider{height:1px;background:var(--border);margin:1.1rem 0}
 
-/* ── ADMIN PANEL ───────────────────────────────────────────────────────────── */
 #admin-panel{display:none}
 #admin-panel.on{display:block}
 
@@ -175,7 +163,6 @@ body{
   margin-bottom:.9rem;padding-bottom:.5rem;border-bottom:1px solid var(--border)
 }
 
-/* User table */
 .user-table{width:100%;border-collapse:collapse;font-size:.78rem;margin-bottom:1.2rem}
 .user-table th{
   font-family:var(--mono);font-size:.58rem;letter-spacing:.08em;
@@ -195,7 +182,6 @@ body{
   background:rgba(0,229,160,.07);color:var(--green);border:1px solid rgba(0,229,160,.22);border-radius:3px
 }
 
-/* Audit log */
 .audit-list{display:flex;flex-direction:column;gap:.45rem;max-height:260px;overflow-y:auto}
 .audit-list::-webkit-scrollbar{width:3px}
 .audit-list::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
@@ -214,17 +200,14 @@ body{
 .event-admin {color:var(--amber)}
 .event-reg   {color:var(--purple)}
 
-/* ── FOOTER NOTE ───────────────────────────────────────────────────────────── */
 .foot{font-family:var(--mono);font-size:.62rem;color:var(--text3);text-align:center;margin-top:1.4rem}
 .foot span{color:var(--accent)}
 
-/* ── ADMIN SHELL (wide) ────────────────────────────────────────────────────── */
 .admin-shell{width:100%;max-width:860px}
 </style>
 </head>
 <body>
 
-<!-- ── AUTH FORMS ──────────────────────────────────────────────────────────── -->
 <div class="shell" id="auth-shell">
   <div class="brand">
     <div class="brand-icon">
@@ -245,7 +228,6 @@ body{
   </div>
 
   <div class="card">
-    <!-- tabs -->
     <div class="tabs">
       <button class="tab active" id="tab-login" onclick="switchTab('login')">Sign In</button>
       <button class="tab" id="tab-register" onclick="switchTab('register')">Register</button>
@@ -253,7 +235,6 @@ body{
 
     <div id="flash" class="flash"></div>
 
-    <!-- LOGIN -->
     <div id="panel-login" class="panel active">
       <div class="field"><label>Username</label>
         <input id="l-user" type="text" placeholder="username" autocomplete="username"/>
@@ -264,7 +245,6 @@ body{
       <button class="btn" id="btn-login" onclick="doLogin()">Sign In</button>
     </div>
 
-    <!-- REGISTER -->
     <div id="panel-register" class="panel">
       <div class="field"><label>Full Name</label>
         <input id="r-name" type="text" placeholder="First Last" autocomplete="name"/>
@@ -279,7 +259,6 @@ body{
       <button class="btn" id="btn-register" onclick="doRegister()">Create Account</button>
     </div>
 
-    <!-- IDENTITY (post-login) -->
     <div id="identity">
       <div class="id-top">
         <div class="avatar" id="id-avatar">?</div>
@@ -337,7 +316,6 @@ body{
   <div class="foot">API: <span id="foot-api">—</span></div>
 </div>
 
-<!-- ── ADMIN PANEL ──────────────────────────────────────────────────────────── -->
 <div class="shell admin-shell" id="admin-shell" style="display:none">
   <div class="brand">
     <div class="brand-icon">
@@ -362,13 +340,8 @@ body{
     <table class="user-table">
       <thead>
         <tr>
-          <th>Full Name</th>
-          <th>Username</th>
-          <th>Role</th>
-          <th>Last Login</th>
-          <th>Last IP</th>
-          <th>Status</th>
-          <th>Actions</th>
+          <th>Full Name</th><th>Username</th><th>Role</th>
+          <th>Last Login</th><th>Last IP</th><th>Status</th><th>Actions</th>
         </tr>
       </thead>
       <tbody id="users-tbody"></tbody>
@@ -382,12 +355,17 @@ body{
 </div>
 
 <script>
-// ── CONFIG ────────────────────────────────────────────────────────────────────
-const API = 'https://open-intelligence-lab.fly.dev';
+// ── API URL — auto-detects local dev vs production ────────────────────────────
+const h = window.location.hostname;
+const isLocal = h === 'localhost' || h === '127.0.0.1';
+const API = isLocal
+  ? `${window.location.protocol}//${h}:${window.location.port || 8000}`
+  : 'https://open-intelligence-lab-cyrmjw.fly.dev';
+
 document.getElementById('foot-api').textContent = API;
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
-let _token = localStorage.getItem('oil_token') || '';
+let _token  = localStorage.getItem('oil_token') || '';
 let _claims = null;
 let _profile = null;
 
@@ -406,11 +384,6 @@ function fmt(unix) {
   return new Date(unix * 1000).toLocaleString([], {
     month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'
   });
-}
-
-function fmtShort(unix) {
-  if (!unix) return '—';
-  return new Date(unix * 1000).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
 }
 
 function initials(name) {
@@ -445,7 +418,7 @@ async function apiFetch(path, opts = {}) {
   return data;
 }
 
-// ── TAB SWITCH ────────────────────────────────────────────────────────────────
+// ── TABS ──────────────────────────────────────────────────────────────────────
 
 function switchTab(tab) {
   ['login','register'].forEach(t => {
@@ -455,35 +428,31 @@ function switchTab(tab) {
   document.getElementById('flash').classList.remove('show');
 }
 
-// ── SHOW IDENTITY ─────────────────────────────────────────────────────────────
+// ── IDENTITY ──────────────────────────────────────────────────────────────────
 
 function showIdentity(token, profile) {
   _claims = parseJWT(token);
   _profile = profile;
   if (!_claims) { doLogout(); return; }
 
-  const name  = profile?.full_name || _claims.name || _claims.sub;
-  const role  = _claims.role || 'analyst';
+  const name = profile?.full_name || _claims.name || _claims.sub;
+  const role = _claims.role || 'analyst';
 
-  document.getElementById('id-avatar').textContent  = initials(name);
+  document.getElementById('id-avatar').textContent   = initials(name);
   document.getElementById('id-name').textContent     = name;
   document.getElementById('id-sub').textContent      = `${role.toUpperCase()} · OIL Platform`;
-  document.getElementById('id-username').textContent  = _claims.sub;
-  document.getElementById('id-role').innerHTML        = `<span class="badge ${role}">${role}</span>`;
+  document.getElementById('id-username').textContent = _claims.sub;
+  document.getElementById('id-role').innerHTML       = `<span class="badge ${role}">${role}</span>`;
   document.getElementById('id-last-login').textContent = fmt(profile?.last_login);
-  document.getElementById('id-last-ip').textContent   = profile?.last_login_ip || '—';
-  document.getElementById('id-exp').textContent       = fmtShort(_claims.exp);
-  document.getElementById('id-since').textContent     = fmt(profile?.created);
-  document.getElementById('id-token').innerHTML       = tokenPreview(token);
-
-  // Show admin button if admin
+  document.getElementById('id-last-ip').textContent  = profile?.last_login_ip || '—';
+  document.getElementById('id-exp').textContent      = fmt(_claims.exp);
+  document.getElementById('id-since').textContent    = fmt(profile?.created);
+  document.getElementById('id-token').innerHTML      = tokenPreview(token);
   document.getElementById('btn-admin').style.display = role === 'admin' ? '' : 'none';
 
-  // Hide forms, show identity
   document.getElementById('panel-login').classList.remove('active');
   document.getElementById('panel-register').classList.remove('active');
   document.querySelector('.tabs').style.display = 'none';
-  document.getElementById('identity').id = 'identity'; // keep ref
   document.getElementById('identity').classList.add('on');
 }
 
@@ -499,8 +468,6 @@ async function doLogin() {
     const data    = await apiFetch('/auth/login', { method:'POST', body: JSON.stringify({ username, password }) });
     _token        = data.access_token;
     localStorage.setItem('oil_token', _token);
-
-    // Fetch real profile from /auth/me
     const profile = await apiFetch('/auth/me');
     showIdentity(_token, profile);
   } catch(e) {
@@ -517,19 +484,19 @@ async function doRegister() {
   const username  = document.getElementById('r-user').value.trim().toLowerCase();
   const password  = document.getElementById('r-pass').value;
 
-  if (!full_name) { flash('Full name is required.'); return; }
-  if (!username)  { flash('Username is required.'); return; }
+  if (!full_name)          { flash('Full name is required.'); return; }
+  if (!username)           { flash('Username is required.'); return; }
   if (password.length < 8) { flash('Password must be at least 8 characters.'); return; }
 
   setLoading('btn-register', true);
   try {
     await apiFetch('/auth/register', { method:'POST', body: JSON.stringify({ username, password, full_name }) });
-    // Auto-login
     const loginData = await apiFetch('/auth/login', { method:'POST', body: JSON.stringify({ username, password }) });
     _token = loginData.access_token;
     localStorage.setItem('oil_token', _token);
     const profile = await apiFetch('/auth/me');
     showIdentity(_token, profile);
+    flash('Account created and signed in.', 'ok');
   } catch(e) {
     flash(e.message);
   } finally {
@@ -549,8 +516,6 @@ async function doLogout() {
   closeAdmin();
 }
 
-// ── COPY TOKEN ────────────────────────────────────────────────────────────────
-
 function copyToken() {
   navigator.clipboard.writeText(_token).then(() => {
     const b = document.querySelector('.copy-btn');
@@ -559,7 +524,7 @@ function copyToken() {
   });
 }
 
-// ── ADMIN PANEL ───────────────────────────────────────────────────────────────
+// ── ADMIN ─────────────────────────────────────────────────────────────────────
 
 async function openAdmin() {
   document.getElementById('auth-shell').style.display  = 'none';
@@ -586,13 +551,10 @@ async function loadAdminData() {
 }
 
 function renderUsers(users) {
-  const now = Math.floor(Date.now() / 1000);
   document.getElementById('users-tbody').innerHTML = users.map(u => {
-    const locked = u.locked;
-    const statusHtml = locked
+    const statusHtml = u.locked
       ? `<span class="locked-badge">Locked</span>`
       : `<span class="ok-badge">Active</span>`;
-
     const actions = `
       <div style="display:flex;gap:.4rem;flex-wrap:wrap">
         <select id="role-${u.username}" style="font-family:var(--mono);font-size:.65rem;background:var(--bg3);border:1px solid var(--border);color:var(--text2);padding:.2rem .4rem;border-radius:3px">
@@ -600,15 +562,14 @@ function renderUsers(users) {
           <option value="admin"   ${u.role==='admin'  ?'selected':''}>admin</option>
         </select>
         <button class="btn sm" style="font-size:.65rem;padding:.28rem .6rem" onclick="promoteUser('${u.username}')">Set</button>
-        ${locked ? `<button class="btn danger-sm" onclick="unlockUser('${u.username}')">Unlock</button>` : ''}
+        ${u.locked ? `<button class="btn danger-sm" onclick="unlockUser('${u.username}')">Unlock</button>` : ''}
       </div>`;
-
     return `<tr>
-      <td style="font-weight:500">${u.full_name || '—'}</td>
+      <td style="font-weight:500">${u.full_name||'—'}</td>
       <td style="font-family:var(--mono);font-size:.75rem;color:var(--accent)">${u.username}</td>
       <td><span class="badge ${u.role}">${u.role}</span></td>
       <td style="font-family:var(--mono);font-size:.7rem;color:var(--text2)">${fmt(u.last_login)}</td>
-      <td style="font-family:var(--mono);font-size:.68rem;color:var(--text3)">${u.last_login_ip || '—'}</td>
+      <td style="font-family:var(--mono);font-size:.68rem;color:var(--text3)">${u.last_login_ip||'—'}</td>
       <td>${statusHtml}</td>
       <td>${actions}</td>
     </tr>`;
@@ -626,8 +587,8 @@ function renderAudit(events) {
     return `<div class="audit-row">
       <span class="audit-ts">${fmt(e.ts)}</span>
       <span class="audit-user">${e.username}</span>
-      <span class="audit-event ${cls}">${e.event}${e.detail ? ' · '+e.detail : ''}</span>
-      <span class="audit-ip">${e.ip || ''}</span>
+      <span class="audit-event ${cls}">${e.event}${e.detail?' · '+e.detail:''}</span>
+      <span class="audit-ip">${e.ip||''}</span>
     </div>`;
   }).join('');
 }
@@ -638,9 +599,7 @@ async function promoteUser(username) {
     await apiFetch('/auth/promote', { method:'POST', body: JSON.stringify({ username, role }) });
     flash(`${username} is now ${role}`, 'ok', true);
     await loadAdminData();
-  } catch(e) {
-    flash(e.message, 'err', true);
-  }
+  } catch(e) { flash(e.message, 'err', true); }
 }
 
 async function unlockUser(username) {
@@ -648,21 +607,16 @@ async function unlockUser(username) {
     await apiFetch('/auth/unlock', { method:'POST', body: JSON.stringify({ username }) });
     flash(`${username} unlocked`, 'ok', true);
     await loadAdminData();
-  } catch(e) {
-    flash(e.message, 'err', true);
-  }
+  } catch(e) { flash(e.message, 'err', true); }
 }
-
-// ── ENTER KEY ─────────────────────────────────────────────────────────────────
 
 document.addEventListener('keydown', e => {
   if (e.key !== 'Enter') return;
-  if (document.getElementById('panel-login').classList.contains('active'))    doLogin();
+  if (document.getElementById('panel-login').classList.contains('active'))         doLogin();
   else if (document.getElementById('panel-register').classList.contains('active')) doRegister();
 });
 
 // ── SESSION RESTORE ───────────────────────────────────────────────────────────
-
 (async function init() {
   if (!_token) return;
   const c = parseJWT(_token);
