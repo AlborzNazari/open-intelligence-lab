@@ -48,10 +48,10 @@ def get_db() -> sqlite3.Connection:
         with _mem_lock:
             if _mem_conn is None:
                 uri_mode = DB_PATH.startswith("file:")
-                _mem_conn = sqlite3.connect(DB_PATH, check_same_thread=False, uri=uri_mode)
+                _mem_conn = sqlite3.connect(DB_PATH, check_same_thread=False, timeout=30, uri=uri_mode)
                 _mem_conn.row_factory = sqlite3.Row
         return _mem_conn
-    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+    conn = sqlite3.connect(DB_PATH, check_same_thread=False, timeout=30)
     conn.row_factory = sqlite3.Row
     return conn
 
