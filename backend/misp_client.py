@@ -17,11 +17,14 @@ Author: Alborz Nazari
 License: MIT
 """
 
+import ipaddress
 import json
 import logging
+import socket
 import uuid
 from datetime import datetime, timezone
 from typing import Optional
+from urllib.parse import urlparse
 import urllib.request
 import urllib.error
 import ssl
@@ -30,6 +33,66 @@ from provenance import ProvenanceRecord, ProvenanceEngine
 from taxii_ingestor import safe_json_loads, TAXIIProtocolError
 
 logger = logging.getLogger(__name__)
+
+
+def _validate_outbound_url(url: str) -> None:
+    """
+    Reject any outbound request URL that is not plain HTTPS to a
+    publicly-routable address. Defends against SSRF — e.g. a feed
+    base_url of "http://127.0.0.1/..." or a hostname that DNS-rebinds
+    to a private/link-local address such as the 169.254.169.254 cloud
+    metadata endpoint.
+
+    Resolves the hostname via DNS and checks every resolved IP address,
+    not just the hostname string — a hostname-only blocklist can be
+    bypassed by pointing attacker-controlled DNS at a private IP.
+    """
+    parsed = urlparse(url)
+    if parsed.scheme != "https":
+        raise ValueError(
+            f"Refusing outbound MISP request to {url!r}: scheme "
+            f"{parsed.scheme!r} is not allowed — only https:// is permitted."
+        )
+
+    hostname = parsed.hostname
+    if not hostname:
+        raise ValueError(f"Refusing outbound MISP request to {url!r}: no hostname found.")
+
+    try:
+        resolved = socket.getaddrinfo(hostname, None)
+    except socket.gaierror as e:
+        raise ValueError(
+            f"Refusing outbound MISP request to {url!r}: hostname {hostname!r} "
+            f"could not be resolved: {e}"
+        ) from e
+
+    for *_rest, sockaddr in resolved:
+        ip = ipaddress.ip_address(sockaddr[0])
+        if (
+            ip.is_private
+            or ip.is_loopback
+            or ip.is_link_local
+            or ip.is_reserved
+            or ip.is_multicast
+            or ip.is_unspecified
+        ):
+            if ip.is_link_local:
+                reason = "link-local (this range covers the 169.254.169.254 cloud metadata address)"
+            elif ip.is_loopback:
+                reason = "loopback"
+            elif ip.is_private:
+                reason = "private/internal"
+            elif ip.is_reserved:
+                reason = "reserved"
+            elif ip.is_multicast:
+                reason = "multicast"
+            else:
+                reason = "unspecified"
+            raise ValueError(
+                f"Refusing outbound MISP request to {url!r}: hostname "
+                f"{hostname!r} resolves to {sockaddr[0]!r}, which is a "
+                f"{reason} address."
+            )
 
 
 # ─────────────────────────────────────────────
@@ -122,6 +185,7 @@ class MISPClient:
         All MISP API traffic runs over HTTPS (TLS mandatory).
         """
         url = f"{self.base_url}{path}"
+        _validate_outbound_url(url)
         data = json.dumps(payload).encode("utf-8") if payload else None
         method = "POST" if payload else "GET"
 

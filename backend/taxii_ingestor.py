@@ -19,9 +19,11 @@ Author: Alborz Nazari
 License: MIT
 """
 
+import ipaddress
 import json
 import logging
 import os
+import socket
 import uuid
 import base64
 import ssl
@@ -29,14 +31,78 @@ import urllib.request
 import urllib.error
 from datetime import datetime, timezone, timedelta
 from typing import Optional
+from urllib.parse import urlparse
 
 from provenance import ProvenanceEngine, ProvenanceRecord
 
 logger = logging.getLogger(__name__)
 
 
+def _validate_outbound_url(url: str) -> None:
+    """
+    Reject any outbound request URL that is not plain HTTPS to a
+    publicly-routable address. Defends against SSRF — e.g. a
+    server_url of "http://127.0.0.1/..." or a hostname that DNS-rebinds
+    to a private/link-local address such as the 169.254.169.254 cloud
+    metadata endpoint. Also covers server-supplied follow-on URLs (TAXII
+    discovery api_roots, "next" pagination links), since every outbound
+    call funnels through this check.
+
+    Resolves the hostname via DNS and checks every resolved IP address,
+    not just the hostname string — a hostname-only blocklist can be
+    bypassed by pointing attacker-controlled DNS at a private IP.
+    """
+    parsed = urlparse(url)
+    if parsed.scheme != "https":
+        raise ValueError(
+            f"Refusing outbound TAXII request to {url!r}: scheme "
+            f"{parsed.scheme!r} is not allowed — only https:// is permitted."
+        )
+
+    hostname = parsed.hostname
+    if not hostname:
+        raise ValueError(f"Refusing outbound TAXII request to {url!r}: no hostname found.")
+
+    try:
+        resolved = socket.getaddrinfo(hostname, None)
+    except socket.gaierror as e:
+        raise ValueError(
+            f"Refusing outbound TAXII request to {url!r}: hostname {hostname!r} "
+            f"could not be resolved: {e}"
+        ) from e
+
+    for *_rest, sockaddr in resolved:
+        ip = ipaddress.ip_address(sockaddr[0])
+        if (
+            ip.is_private
+            or ip.is_loopback
+            or ip.is_link_local
+            or ip.is_reserved
+            or ip.is_multicast
+            or ip.is_unspecified
+        ):
+            if ip.is_link_local:
+                reason = "link-local (this range covers the 169.254.169.254 cloud metadata address)"
+            elif ip.is_loopback:
+                reason = "loopback"
+            elif ip.is_private:
+                reason = "private/internal"
+            elif ip.is_reserved:
+                reason = "reserved"
+            elif ip.is_multicast:
+                reason = "multicast"
+            else:
+                reason = "unspecified"
+            raise ValueError(
+                f"Refusing outbound TAXII request to {url!r}: hostname "
+                f"{hostname!r} resolves to {sockaddr[0]!r}, which is a "
+                f"{reason} address."
+            )
+
+
 TAXII_CONTENT_TYPE = "application/taxii+json;version=2.1"
 STIX_CONTENT_TYPE = "application/stix+json;version=2.1"
+_DEFAULT_PORTS = {"http": 80, "https": 443}
 
 # Accept header required by TAXII 2.1 spec
 TAXII_ACCEPT = f"{TAXII_CONTENT_TYPE}, {STIX_CONTENT_TYPE}"
@@ -196,15 +262,45 @@ class TAXIIIngestor:
 
     # ── HTTP ───────────────────────────────────
 
+    def _is_configured_host(self, url: str) -> bool:
+        """
+        True only if `url`'s host AND port match the originally-configured
+        server_url's. Compares (hostname, effective port) pairs rather than
+        raw netloc strings, so "example.com" and "example.com:443" (both
+        https) are correctly treated as the same origin instead of a false
+        mismatch.
+        """
+        configured = urlparse(self.server_url)
+        requested = urlparse(url)
+        if configured.hostname is None or requested.hostname is None:
+            return False
+        configured_port = configured.port or _DEFAULT_PORTS.get(configured.scheme)
+        requested_port = requested.port or _DEFAULT_PORTS.get(requested.scheme)
+        return (
+            configured.hostname.lower() == requested.hostname.lower()
+            and configured_port == requested_port
+        )
+
     def _get(self, url: str, accept: str = TAXII_ACCEPT) -> dict:
         """
         Execute an authenticated TAXII GET request.
         TAXII 2.1 mandates HTTPS/TLS — all traffic is encrypted end-to-end.
+
+        The Authorization header is only attached when `url`'s host matches
+        the originally-configured server_url's host. Discovery api_roots and
+        pagination "next" links are server-supplied and can point to a
+        different host — credentials must not be forwarded there.
         """
+        _validate_outbound_url(url)
         req = urllib.request.Request(url)
         req.add_header("Accept", accept)
-        if self.auth_header:
+        if self.auth_header and self._is_configured_host(url):
             req.add_header("Authorization", self.auth_header)
+        elif self.auth_header:
+            logger.warning(
+                f"[TAXII] Withholding Authorization header for {url}: host does not "
+                f"match configured server_url {self.server_url!r}."
+            )
 
         ssl_ctx = ssl.create_default_context()
         if not self.verify_ssl:
