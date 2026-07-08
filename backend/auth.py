@@ -41,9 +41,12 @@ ROLES = {"analyst", "admin"}
 _mem_conn: Optional[sqlite3.Connection] = None
 _mem_lock = threading.Lock()
 
+_file_conn: Optional[sqlite3.Connection] = None
+_file_lock = threading.Lock()
+
 
 def get_db() -> sqlite3.Connection:
-    global _mem_conn
+    global _mem_conn, _file_conn
     if "memory" in DB_PATH or DB_PATH == ":memory:":
         with _mem_lock:
             if _mem_conn is None:
@@ -51,9 +54,11 @@ def get_db() -> sqlite3.Connection:
                 _mem_conn = sqlite3.connect(DB_PATH, check_same_thread=False, uri=uri_mode)
                 _mem_conn.row_factory = sqlite3.Row
         return _mem_conn
-    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
-    conn.row_factory = sqlite3.Row
-    return conn
+    with _file_lock:
+        if _file_conn is None:
+            _file_conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+            _file_conn.row_factory = sqlite3.Row
+    return _file_conn
 
 
 def init_db() -> None:
