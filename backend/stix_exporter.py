@@ -54,7 +54,7 @@ def threat_actor_to_stix(entity: dict) -> dict:
         "confidence": _confidence_to_stix(entity.get("confidence", 0.5)),
         "labels": ["threat-actor", entity.get("origin", "unknown").lower()],
         "x_oi_risk_score": entity.get("risk_score", 0.0),
-        "x_oi_entity_id": entity.get("id", ""),
+        "x_oi_entity_id": entity.get("entity_id", ""),
         "x_mitre_techniques": entity.get("mitre_techniques", []),
     }
 
@@ -75,7 +75,7 @@ def malware_to_stix(entity: dict) -> dict:
         "confidence": _confidence_to_stix(entity.get("confidence", 0.5)),
         "labels": ["malware"],
         "x_oi_risk_score": entity.get("risk_score", 0.0),
-        "x_oi_entity_id": entity.get("id", ""),
+        "x_oi_entity_id": entity.get("entity_id", ""),
     }
 
 
@@ -93,7 +93,7 @@ def infrastructure_to_stix(entity: dict) -> dict:
         "confidence": _confidence_to_stix(entity.get("confidence", 0.5)),
         "labels": ["infrastructure"],
         "x_oi_risk_score": entity.get("risk_score", 0.0),
-        "x_oi_entity_id": entity.get("id", ""),
+        "x_oi_entity_id": entity.get("entity_id", ""),
     }
 
 
@@ -117,7 +117,7 @@ def vulnerability_to_stix(entity: dict) -> dict:
         "confidence": _confidence_to_stix(entity.get("confidence", 0.5)),
         "labels": ["vulnerability"],
         "x_oi_risk_score": entity.get("risk_score", 0.0),
-        "x_oi_entity_id": entity.get("id", ""),
+        "x_oi_entity_id": entity.get("entity_id", ""),
         "x_oi_cvss_score": entity.get("cvss_score", None),
     }
 
@@ -138,21 +138,21 @@ def attack_pattern_to_stix(pattern: dict) -> dict:
         "id": _stix_id("attack-pattern"),
         "created": _now(),
         "modified": _now(),
-        "name": pattern.get("name", "Unknown"),
+        "name": pattern.get("pattern_name", "Unknown"),
         "description": pattern.get("description", ""),
         "kill_chain_phases": kill_chain_phases,
         "external_references": [
             {
                 "source_name": "mitre-attack",
-                "external_id": pattern.get("mitre_technique_id", ""),
-                "url": f"https://attack.mitre.org/techniques/{pattern.get('mitre_technique_id', '').replace('.', '/')}",
+                "external_id": pattern.get("mitre_ref", ""),
+                "url": f"https://attack.mitre.org/techniques/{pattern.get('mitre_ref', '').replace('.', '/')}",
             }
         ],
         "confidence": _confidence_to_stix(pattern.get("confidence", 0.8)),
         "labels": ["attack-pattern"],
         "x_oi_detection": pattern.get("detection", ""),
         "x_oi_mitigation": pattern.get("mitigation", ""),
-        "x_oi_pattern_id": pattern.get("id", ""),
+        "x_oi_pattern_id": pattern.get("pattern_id", ""),
     }
 
 
@@ -181,24 +181,26 @@ def relation_to_stix_relationship(
 
 def campaign_to_stix(campaign: dict) -> dict:
     """Convert a campaign (Diamond Model) to a STIX 2.1 campaign object."""
+    diamond = campaign.get("diamond_model", {})
+    timeline = campaign.get("timeline", {})
     return {
         "type": "campaign",
         "spec_version": "2.1",
         "id": _stix_id("campaign"),
         "created": _now(),
         "modified": _now(),
-        "name": campaign.get("name", "Unknown Campaign"),
+        "name": campaign.get("campaign_name", "Unknown Campaign"),
         "description": campaign.get("description", ""),
-        "objective": campaign.get("motivation", ""),
-        "first_seen": campaign.get("first_seen", _now()),
-        "last_seen": campaign.get("last_seen", _now()),
-        "confidence": _confidence_to_stix(campaign.get("confidence", 0.8)),
+        "objective": ", ".join(campaign.get("impact", {}).get("type", [])),
+        "first_seen": timeline.get("first_observed", _now()),
+        "last_seen": timeline.get("last_observed", _now()),
+        "confidence": _confidence_to_stix(campaign.get("attribution_confidence", 0.8)),
         "labels": ["campaign"],
-        "x_oi_diamond_adversary": campaign.get("adversary", ""),
-        "x_oi_diamond_capability": campaign.get("capability", ""),
-        "x_oi_diamond_infrastructure": campaign.get("infrastructure", ""),
-        "x_oi_diamond_victim": campaign.get("victim", ""),
-        "x_oi_campaign_id": campaign.get("id", ""),
+        "x_oi_diamond_adversary": diamond.get("adversary", {}),
+        "x_oi_diamond_capability": diamond.get("capability", {}),
+        "x_oi_diamond_infrastructure": diamond.get("infrastructure", {}),
+        "x_oi_diamond_victim": diamond.get("victim", {}),
+        "x_oi_campaign_id": campaign.get("campaign_id", ""),
     }
 
 
@@ -232,17 +234,17 @@ def build_stix_bundle(
         "malware": malware_to_stix,
         "infrastructure": infrastructure_to_stix,
         "vulnerability": vulnerability_to_stix,
-        "sector": None,  # STIX 2.1 uses identity for sectors
+        "target_sector": None,  # STIX 2.1 uses identity for sectors
     }
 
     for entity in entities:
-        etype = entity.get("type", "")
+        etype = entity.get("entity_type", "")
         converter = type_converters.get(etype)
         if converter:
             stix_obj = converter(entity)
             stix_objects.append(stix_obj)
-            id_map[entity["id"]] = stix_obj["id"]
-        elif etype == "sector":
+            id_map[entity["entity_id"]] = stix_obj["id"]
+        elif etype == "target_sector":
             # Represent sectors as STIX identity objects
             identity = {
                 "type": "identity",
@@ -255,17 +257,17 @@ def build_stix_bundle(
                 "sectors": [entity.get("sector_name", entity.get("name", "").lower())],
                 "description": entity.get("description", ""),
                 "labels": ["sector"],
-                "x_oi_entity_id": entity.get("id", ""),
+                "x_oi_entity_id": entity.get("entity_id", ""),
             }
             stix_objects.append(identity)
-            id_map[entity["id"]] = identity["id"]
+            id_map[entity["entity_id"]] = identity["id"]
 
     # 2. Attack patterns
     ap_id_map: dict[str, str] = {}
     for ap in attack_patterns:
         stix_obj = attack_pattern_to_stix(ap)
         stix_objects.append(stix_obj)
-        ap_id_map[ap["id"]] = stix_obj["id"]
+        ap_id_map[ap["pattern_id"]] = stix_obj["id"]
 
     # 3. Relationships
     for rel in relations:
@@ -413,7 +415,7 @@ def load_datasets(base_path: str = "datasets") -> tuple:
     def _load(filename):
         path = os.path.join(base_path, filename)
         if os.path.exists(path):
-            with open(path) as f:
+            with open(path, encoding="utf-8") as f:
                 return json.load(f)
         return []
 
