@@ -158,6 +158,12 @@ def root():
 def health():
     return {"status": "ok", "version": API_VERSION}
 
+from fastapi.responses import FileResponse
+
+@app.get("/dashboard")
+def dashboard():
+    return FileResponse(os.path.join(os.path.dirname(__file__), "..", "index.html"))
+
 
 # ─── Static UI ────────────────────────────────────────────────────────────────
 # Serve only index.html and auth.html from a safe subdirectory.
