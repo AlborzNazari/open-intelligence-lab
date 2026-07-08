@@ -12,11 +12,12 @@ Author: Alborz Nazari
 License: MIT
 """
 
-from fastapi import FastAPI, Response, HTTPException, Query, Body
+from fastapi import FastAPI, Response, HTTPException, Query, Body, Depends
 from fastapi.middleware.cors import CORSMiddleware
 import json
 from stix_exporter import load_datasets, build_stix_bundle, _now
 from feed_scheduler import get_scheduler, MISPFeedConfig, TAXIIFeedConfig
+from auth import require_role
 
 # ─────────────────────────────────────────────
 # App Setup
@@ -28,6 +29,7 @@ app = FastAPI(
     version="0.4.0",
     docs_url="/taxii/docs",
     redoc_url=None,
+    dependencies=[Depends(require_role("analyst", "admin"))],
 )
 
 app.add_middleware(
