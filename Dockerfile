@@ -49,6 +49,7 @@ COPY core_engine/ ./core_engine/
 COPY datasets/    ./datasets/
 COPY visualization/ ./visualization/
 COPY auth.html    ./auth.html
+COPY index.html   ./index.html
 
 # ── Runtime environment defaults ─────────────────────────────────────────────
 # MISP_URL / MISP_KEY unset → app runs on static curated datasets
