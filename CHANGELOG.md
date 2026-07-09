@@ -1,3 +1,70 @@
+## [Unreleased] / v0.8.0 — 2026-07-09
+
+### Fixed
+- **Production outage (data volatility):** Two Fly machines were configured against
+  one single-attach volume; the surviving machine was missing `OIL_USER_DB` and the
+  volume mount entirely, so it wrote to ephemeral local storage instead of persistent
+  disk — every restart wiped user data. Fixed by scaling to a single machine and
+  redeploying with correct volume/env config from `main`.
+- **Dashboard 404 after login:** `Dockerfile` never copied `index.html` into the
+  container, so `/dashboard` and `/ui/index.html` had nothing to serve.
+- **Dashboard API calls silently failing:** `index.html` had the wrong hardcoded API
+  hostname (`open-intelligence-lab.fly.dev` instead of the actual
+  `open-intelligence-lab-cyrmjw.fly.dev`), breaking every post-login API call even
+  though login itself worked.
+- **`/auth/audit?limit=-1` bypassed the 500-event cap:** negative `limit` values
+  passed straight through to SQLite's `LIMIT`, returning the full audit log instead
+  of the intended cap. Added `Query(ge=1, le=500)`.
+- **Unbounded DB connections in `get_db()`:** file-mode connections opened a fresh
+  `sqlite3.connect()` on every call with nothing ever closing them. Now a
+  process-lifetime singleton connection is reused, mirroring the existing in-memory
+  branch's pattern.
+- **STIX exporter schema mismatch:** entity/campaign converters read field names that
+  didn't match the real dataset (`id` vs `entity_id`, `type` vs `entity_type`, flat
+  campaign fields vs nested `timeline.*`/`diamond_model.*`), causing silent data loss
+  and a hard crash in `build_stix_bundle`. All four converters corrected against
+  actual data; verified end-to-end against the full dataset (22 entities, 15 attack
+  patterns, 28 relations, 7 campaigns).
+- **Non-ASCII data corruption on Windows:** `load_datasets()` opened JSON files
+  without explicit encoding, defaulting to cp1252 and mangling characters like
+  em-dashes. Added `encoding="utf-8"`.
+
+### Security
+- **TAXII server had zero authentication:** all 13 routes in `taxii_server.py`
+  (discovery, collections, objects, manifest, health, and all `/ingest/*` routes)
+  accepted anonymous requests. Added the same `require_role`/`get_current_user`
+  dependency pattern already enforced on `/auth/*` and `/intelligence/*`.
+- **SSRF via unvalidated outbound URLs:** `misp_client.py` and `taxii_ingestor.py`
+  made outbound requests to caller-supplied URLs (feed `base_url`, TAXII discovery
+  `api_roots`, pagination `next` links) with no scheme or host validation — an
+  authenticated caller could direct the server at internal hosts or cloud metadata
+  endpoints (`169.254.169.254`) and have it forward an attacker-chosen `Authorization`
+  header. Fixed: HTTPS-only enforcement, DNS-resolved IP checked against
+  private/loopback/link-local/reserved ranges, and the `Authorization` header is now
+  only forwarded when the resolved host+port matches the originally configured
+  `server_url` (implicit vs. explicit default ports normalized to avoid false
+  mismatches).
+
+### Known issues (not yet fixed)
+- **Risk-score saturation:** `min(1.0, base + degree/10.0)` clips at 1.0 for ~46% of
+  entities given the dataset's curated base scores, making rank-ordering by risk
+  score largely meaningless for the top half of the list. Fix formula proposed
+  (`base + degree_factor*(1-base)`), pending review of ranking impact.
+- **Feed-registration DoS cap:** `add_misp_feed`/`add_taxii_feed` have no cap, dedup,
+  or TTL — registrations accumulate and `run_once()` re-runs all of them on every
+  call (O(N²) cost). Confirmed **not currently reachable in production** since
+  `taxii_server.py` isn't mounted into the deployed app. Low-to-Medium severity;
+  deferred, not urgent.
+
+### Infra
+- Root cause of stale deploys confirmed: `fly.toml` edits weren't shipping because
+  auto-deploy was broken. Fresh `flyctl deploy` from `main` resolved the immediate
+  issue; ongoing deploy pipeline health still worth verifying after each future push.
+
+
+
+
+
 # Changelog
 
 All notable changes to Open Intelligence Lab are documented here.
